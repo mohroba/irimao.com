@@ -25,6 +25,7 @@ use IMAOCustom\Services\Endpoints\UserCourseList;
 use IMAOCustom\Services\Endpoints\CourseDetails;
 use IMAOCustom\Services\Endpoints\StyleCommittee;
 use IMAOCustom\Services\Avatar;
+use IMAOCustom\Services\SecurityHeaders;
 use IMAOCustom\ServiceManager;
 
 
@@ -38,6 +39,7 @@ class Plugin {
     /** @var array<int,string> */
     private array $service_classes = [
         Assets::class,
+        SecurityHeaders::class,
         Registration::class,
         SelfDeclarations::class,
         ClubApplications::class,
