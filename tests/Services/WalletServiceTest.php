@@ -2,7 +2,7 @@
 use PHPUnit\Framework\TestCase;
 use IMAOCustom\Services\Endpoints\Wallet;
 
-class WalletTest extends TestCase {
+class WalletServiceTest extends TestCase {
     protected function setUp(): void {
         if ( ! function_exists( 'get_user_meta' ) ) {
             $GLOBALS['test_user_meta'] = [];
