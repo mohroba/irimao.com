@@ -2,11 +2,11 @@
 
 namespace IMAOCustom\Services\Endpoints;
 
+use IMAOCustom\Helpers\Wallet as WalletHelper;
 use WC_Order;
 use WC_Order_Item_Fee;
 
 class Wallet {
-    private const META_BALANCE = '_wallet_balance';
     private const META_LOG     = 'crm_wallet_log';
     private const META_USED    = 'crm_used_wallet';
     private const META_LINKED  = 'crm_linked_course';
@@ -51,20 +51,19 @@ class Wallet {
     }
 
     public static function get_balance( int $user_id = 0 ): float {
-        $user_id = $user_id ?: get_current_user_id();
-        return (float) get_user_meta( $user_id, self::META_BALANCE, true );
+        return WalletHelper::get( $user_id );
     }
 
     public static function set_balance( int $user_id, float $amount ): void {
-        update_user_meta( $user_id, self::META_BALANCE, $amount );
+        WalletHelper::set( $user_id, $amount );
     }
 
     public static function add_balance( int $user_id, float $amount ): void {
-        self::set_balance( $user_id, self::get_balance( $user_id ) + $amount );
+        WalletHelper::add( $user_id, $amount );
     }
 
     public static function deduct_balance( int $user_id, float $amount ): void {
-        self::set_balance( $user_id, max( 0, self::get_balance( $user_id ) - $amount ) );
+        WalletHelper::deduct( $user_id, $amount );
     }
 
     private static function add_log( int $user_id, float $amount, string $note = '' ): void {
