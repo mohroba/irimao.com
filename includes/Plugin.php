@@ -24,12 +24,41 @@ use IMAOCustom\Services\Endpoints\CourseList;
 use IMAOCustom\Services\Endpoints\UserCourseList;
 use IMAOCustom\Services\Endpoints\CourseDetails;
 use IMAOCustom\Services\Endpoints\StyleCommittee;
+use IMAOCustom\ServiceManager;
 
 
 
 class Plugin {
     private static ?Plugin $instance = null;
+
+    /** @var array<int,object> */
     private array $services = [];
+
+    /** @var array<int,string> */
+    private array $service_classes = [
+        Assets::class,
+        Registration::class,
+        SelfDeclarations::class,
+        ClubApplications::class,
+        Courses::class,
+        EditBasicInfo::class,
+        IdentityProfessional::class,
+        Wallet::class,
+        UserManagement::class,
+        SmartcardIssue::class,
+        SelfDeclaration::class,
+        SelfDeclarationsListEndpoint::class,
+        ClubRegister::class,
+        Competitions::class,
+        CompetitionsList::class,
+        CompetitionDetails::class,
+        UserCompetitionsList::class,
+        Ranking::class,
+        CourseList::class,
+        UserCourseList::class,
+        CourseDetails::class,
+        StyleCommittee::class,
+    ];
 
     private function __construct() {
         add_action( 'plugins_loaded', [ $this, 'load_textdomain' ] );
@@ -45,36 +74,8 @@ class Plugin {
     }
 
     private function register_services(): void {
-        $this->services = [
-            new Assets(),
-            new Registration(),
-            new SelfDeclarations(),
-            new ClubApplications(),
-            new Courses(),
-            new EditBasicInfo(),
-            new IdentityProfessional(),
-            new Wallet(),
-            new UserManagement(),
-            new SmartcardIssue(),
-            new SelfDeclaration(),
-            new SelfDeclarationsListEndpoint(),
-            new ClubRegister(),
-            new Competitions(),
-            new CompetitionsList(),
-            new CompetitionDetails(),
-            new UserCompetitionsList(),
-            new Ranking(),
-            new CourseList(),
-            new UserCourseList(),
-            new CourseDetails(),
-            new StyleCommittee(),
-        ];
-
-        foreach ( $this->services as $service ) {
-            if ( method_exists( $service, 'register' ) ) {
-                $service->register();
-            }
-        }
+        $manager        = new ServiceManager( $this->service_classes );
+        $this->services = $manager->register_all();
     }
 }
 
