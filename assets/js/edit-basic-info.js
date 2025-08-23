@@ -31,7 +31,37 @@ jQuery(function($){
     }
     $('#gender').on('change', toggleMilitary);
     toggleMilitary(); // run on load
-    
+
     $('.crm-select2').select2({ dir: 'rtl', width: 'resolve' });
     jalaliDatepicker.startWatch();
+
+    const degreeOptions = (typeof IMAOSD !== 'undefined') ? IMAOSD.degreeOptions : {};
+    const $type   = $('#coursetype');
+    const $degree = $('#degree');
+    function fillDegrees(){
+        if(!$type.length || !$degree.length){return;}
+        const list = degreeOptions[$type.val()] || {};
+        const preselected = $degree.data('selected');
+        $degree.empty();
+        if(Object.keys(list).length === 0){
+            $('#degree_field').hide();
+            $degree.prop('required', false);
+            $degree.append(new Option('— نوع حکم را انتخاب کنید —',''));
+        }else{
+            $('#degree_field').show();
+            $degree.prop('required', true);
+            $degree.append(new Option('— انتخاب کنید —',''));
+            Object.entries(list).forEach(([val,label]) => {
+                $degree.append(new Option(label, val));
+            });
+            if(preselected && list[preselected]){
+                $degree.val(preselected);
+            }
+        }
+        if($.fn.select2){
+            $degree.trigger('change.select2');
+        }
+    }
+    $type.on('change', fillDegrees);
+    fillDegrees();
 });
