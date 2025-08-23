@@ -6,11 +6,23 @@ use Throwable;
 
 class ServiceManager
 {
-    /** @var array<int,object> */
+    /**
+     * @var array<int,object>
+     */
     private array $services = [];
 
-    /** @param array<int,string> $service_classes */
-    public function __construct(private array $service_classes) {}
+    /**
+     * @var array<int,string>
+     */
+    private array $service_classes;
+
+    /**
+     * @param array<int,string> $service_classes
+     */
+    public function __construct(array $service_classes)
+    {
+        $this->service_classes = $service_classes;
+    }
 
     /**
      * Instantiate and register all services.
