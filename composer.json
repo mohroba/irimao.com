@@ -7,10 +7,18 @@
       "IMAOCustom\\": "includes/"
     }
   },
+  "require": {
+    "php": ">=7.4"
+  },
   "require-dev": {
     "phpunit/phpunit": "^9"
   },
   "scripts": {
     "test": "phpunit"
+  },
+  "config": {
+    "platform": {
+      "php": "7.4.0"
+    }
   }
 }
