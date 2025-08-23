@@ -13,7 +13,7 @@ use IMAOCustom\Services\Endpoints\Wallet;
 use IMAOCustom\Services\Admin\UserManagement;
 use IMAOCustom\Services\Endpoints\SmartcardIssue;
 use IMAOCustom\Services\Endpoints\SelfDeclaration;
-use IMAOCustom\Services\Endpoints\SelfDeclarationsListEndpoint;
+use IMAOCustom\Services\Endpoints\SelfDeclarationsList;
 use IMAOCustom\Services\Endpoints\ClubRegister;
 use IMAOCustom\Services\Competitions;
 use IMAOCustom\Services\Ranking;
@@ -48,7 +48,7 @@ class Plugin {
         UserManagement::class,
         SmartcardIssue::class,
         SelfDeclaration::class,
-        SelfDeclarationsListEndpoint::class,
+        SelfDeclarationsList::class,
         ClubRegister::class,
         Competitions::class,
         CompetitionsList::class,

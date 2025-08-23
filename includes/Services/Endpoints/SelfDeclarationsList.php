@@ -2,9 +2,9 @@
 
 namespace IMAOCustom\Services\Endpoints;
 
-use IMAOCustom\Forms\SelfDeclarationsList;
+use IMAOCustom\Forms\SelfDeclarationsList as SelfDeclarationsListForm;
 
-class SelfDeclarationsListEndpoint {
+class SelfDeclarationsList {
     public function register(): void {
         add_action( 'init', [ $this, 'add_endpoint' ] );
         add_filter( 'woocommerce_account_menu_items', [ $this, 'menu_item' ] );
@@ -30,7 +30,7 @@ class SelfDeclarationsListEndpoint {
     }
 
     private function render_list(): string {
-        $form = new SelfDeclarationsList();
+        $form = new SelfDeclarationsListForm();
         return $form->render();
     }
 }
