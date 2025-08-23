@@ -10,6 +10,7 @@ class CompetitionsTest extends TestCase {
             function add_shortcode( $tag, $func ) { $GLOBALS['shortcodes'][$tag] = $func; }
             function add_action( $hook, $func ) { $GLOBALS['actions'][$hook][] = $func; }
             function do_action( $hook ) { foreach ( $GLOBALS['actions'][$hook] ?? [] as $f ) { $f(); } }
+            function add_rewrite_endpoint( $name, $places ) {}
         }
     }
 
