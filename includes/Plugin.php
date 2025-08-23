@@ -5,6 +5,7 @@ namespace IMAOCustom;
 use IMAOCustom\Services\Assets;
 use IMAOCustom\Services\Registration;
 use IMAOCustom\Services\SelfDeclarations;
+use IMAOCustom\Services\Courses;
 use IMAOCustom\Services\Endpoints\EditBasicInfo;
 use IMAOCustom\Services\Endpoints\IdentityProfessional;
 use IMAOCustom\Services\Endpoints\Wallet;
@@ -12,6 +13,9 @@ use IMAOCustom\Services\Admin\UserManagement;
 use IMAOCustom\Services\Endpoints\SmartcardIssue;
 use IMAOCustom\Services\Endpoints\SelfDeclaration;
 use IMAOCustom\Services\Endpoints\SelfDeclarationsListEndpoint;
+use IMAOCustom\Services\Endpoints\CourseList;
+use IMAOCustom\Services\Endpoints\UserCourseList;
+use IMAOCustom\Services\Endpoints\CourseDetails;
 
 
 class Plugin {
@@ -36,6 +40,7 @@ class Plugin {
             new Assets(),
             new Registration(),
             new SelfDeclarations(),
+            new Courses(),
             new EditBasicInfo(),
             new IdentityProfessional(),
             new Wallet(),
@@ -43,6 +48,9 @@ class Plugin {
             new SmartcardIssue(),
             new SelfDeclaration(),
             new SelfDeclarationsListEndpoint(),
+            new CourseList(),
+            new UserCourseList(),
+            new CourseDetails(),
         ];
 
         foreach ( $this->services as $service ) {

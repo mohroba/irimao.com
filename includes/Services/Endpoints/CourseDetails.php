@@ -1,2 +1,108 @@
 <?php
-// Silence is golden.
+
+namespace IMAOCustom\Services\Endpoints;
+
+class CourseDetails {
+    private const META_LINKED_PRODUCT = '_linked_product_id';
+    private const META_LINKED_COURSE  = '_linked_post_id';
+
+    public function register(): void {
+        add_action( 'init', [ $this, 'add_endpoint' ] );
+        add_action( 'woocommerce_account_course-details_endpoint', [ $this, 'content' ] );
+        add_shortcode( 'crm_course_details', [ $this, 'shortcode' ] );
+    }
+
+    public function add_endpoint(): void {
+        add_rewrite_endpoint( 'course-details', EP_ROOT | EP_PAGES );
+    }
+
+    public function content(): void {
+        echo $this->render();
+    }
+
+    public function shortcode( array $atts = [] ): string {
+        $atts = shortcode_atts( [ 'id' => 0 ], $atts, 'crm_course_details' );
+        return $this->render( (int) $atts['id'] );
+    }
+
+    private function render( int $cid = 0 ): string {
+        if ( ! $cid && isset( $_GET['course_id'] ) ) {
+            $cid = (int) $_GET['course_id'];
+        }
+        if ( ! $cid && isset( $_GET['id'] ) ) {
+            $cid = (int) $_GET['id'];
+        }
+        if ( ! $cid && is_singular( 'course' ) ) {
+            $cid = get_the_ID();
+        }
+        if ( ! $cid || get_post_type( $cid ) !== 'course' ) {
+            return '<p style="text-align:center;color:#c00;">دوره پیدا نشد.</p>';
+        }
+        $fields = [
+            'course_code'   => 'کد دوره',
+            'course_type'   => 'نوع دوره',
+            'course_level'  => 'درجه / زیرشاخه',
+            'start_date'    => 'تاریخ شروع',
+            'end_date'      => 'تاریخ پایان',
+            'exam_date'     => 'تاریخ آزمون',
+            'board'         => 'هیئت',
+            'style'         => 'سبک',
+            'scope'         => 'نوع',
+            'gender'        => 'جنسیت',
+            'attendance'    => 'حضور',
+            'organizer'     => 'مسئول',
+            'organizer_tel' => 'تلفن مسئول',
+            'price'         => 'قیمت',
+        ];
+        $prod_id = (int) get_post_meta( $cid, self::META_LINKED_PRODUCT, true );
+        if ( ! $prod_id ) {
+            $prod_id = $this->sync_product( $cid );
+        }
+        $cart_link = wc_get_cart_url() . '?add-to-cart=' . $prod_id;
+        ob_start();
+        ?>
+        <div class="crm-single-course">
+            <h3><?php echo esc_html( get_the_title( $cid ) ); ?></h3>
+            <table>
+                <tbody>
+                    <?php foreach ( $fields as $key => $label ) : $val = get_post_meta( $cid, $key, true );
+                        if ( $key === 'price' ) { $val = wc_price( (float) $val ); }
+                    ?>
+                        <tr>
+                            <th><?php echo esc_html( $label ); ?></th>
+                            <td><?php echo $val ? $val : '—'; ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+            <p style="text-align:center">
+                <a class="crm-buy-btn" href="<?php echo esc_url( $cart_link ); ?>">پرداخت و ثبت‌نام</a>
+            </p>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    private function sync_product( int $course_id ): int {
+        if ( ! class_exists( 'WC_Product' ) ) {
+            return 0;
+        }
+        $price   = (float) get_post_meta( $course_id, 'price', true );
+        $prod_id = (int) get_post_meta( $course_id, self::META_LINKED_PRODUCT, true );
+        if ( $prod_id && ( $prod = wc_get_product( $prod_id ) ) ) {
+            $prod->set_name( get_the_title( $course_id ) );
+            $prod->set_regular_price( $price );
+            $prod->save();
+        } else {
+            $prod = new \WC_Product_Simple();
+            $prod->set_name( get_the_title( $course_id ) );
+            $prod->set_regular_price( $price );
+            $prod->set_virtual( true );
+            $prod->set_catalog_visibility( 'hidden' );
+            $prod_id = $prod->save();
+            update_post_meta( $course_id, self::META_LINKED_PRODUCT, $prod_id );
+            update_post_meta( $prod_id, self::META_LINKED_COURSE, $course_id );
+        }
+        return $prod_id;
+    }
+}
