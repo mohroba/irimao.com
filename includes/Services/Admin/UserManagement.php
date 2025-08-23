@@ -1,0 +1,217 @@
+<?php
+
+namespace IMAOCustom\Services\Admin;
+
+class UserManagement {
+    public function register(): void {
+        add_action( 'admin_menu', [ $this, 'add_menu' ] );
+        add_action( 'admin_enqueue_scripts', [ $this, 'enqueue' ] );
+        add_action( 'wp_ajax_crm_admin_update_role', [ $this, 'update_role' ] );
+        add_action( 'wp_ajax_crm_admin_id_status', [ $this, 'change_status' ] );
+    }
+
+    public function add_menu(): void {
+        add_users_page( 'اطلاعات پایه', 'اطلاعات پایه', 'manage_options', 'imao-basic-info', [ $this, 'basic_info_page' ] );
+        add_users_page( 'تأیید هویت حرفه‌ای', 'هویت حرفه‌ای', 'manage_options', 'imao-prof-identity', [ $this, 'prof_identity_page' ] );
+    }
+
+    public function enqueue( string $hook ): void {
+        $page = $_GET['page'] ?? '';
+        if ( ! in_array( $page, [ 'imao-basic-info', 'imao-prof-identity' ], true ) ) {
+            return;
+        }
+        $base = plugin_dir_url( dirname( __DIR__, 2 ) ) . 'assets/';
+        wp_enqueue_style( 'imao-datatables', $base . 'css/jquery.dataTables.min.css' );
+        wp_enqueue_script( 'imao-datatables', $base . 'js/jquery.dataTables.min.js', [ 'jquery' ], null, true );
+        wp_enqueue_style( 'imao-select2', $base . 'css/select2.min.css' );
+        wp_enqueue_script( 'imao-select2', $base . 'js/select2.min.js', [ 'jquery' ], null, true );
+        wp_enqueue_style( 'imao-admin', $base . 'css/crm-admin.css' );
+        wp_enqueue_script( 'imao-admin', $base . 'js/crm-admin.js', [ 'jquery', 'imao-datatables', 'imao-select2' ], null, true );
+        wp_localize_script( 'imao-admin', 'CRM_ADMIN', [
+            'ajax'  => admin_url( 'admin-ajax.php' ),
+            'nonce' => wp_create_nonce( 'crm_admin_nonce' ),
+        ] );
+    }
+
+    public static function basic_fields(): array {
+        return [
+            'billing_phone'      => 'شماره موبایل',
+            'national_id'        => 'کد ملی',
+            'first_name_fa'      => 'نام (فا)',
+            'last_name_fa'       => 'نام‌خانوادگی (فا)',
+            'first_name_en'      => 'نام (En)',
+            'last_name_en'       => 'نام‌خانوادگی (En)',
+            'gender'             => 'جنسیت',
+            'father_name'        => 'نام پدر',
+            'birth_date'         => 'تاریخ تولد',
+            'birth_province'     => 'استان تولد',
+            'birth_city'         => 'شهر تولد',
+            'marital_status'     => 'وضعیت تاهل',
+            'education_status'   => 'وضعیت تحصیلی',
+            'military_status'    => 'وضعیت خدمت',
+            'residence_province' => 'استان سکونت',
+            'residence_city'     => 'شهر سکونت',
+            'postal_code'        => 'کدپستی',
+            'residence_address'  => 'آدرس',
+            'club_id'            => 'باشگاه',
+            'coach_id'           => 'مربی',
+        ];
+    }
+
+    private function display_value( string $key, $value ): string {
+        if ( in_array( $key, [ 'club_id', 'coach_id' ], true ) && $value ) {
+            if ( $key === 'club_id' ) {
+                $club_name = get_user_meta( (int) $value, 'club_name', true );
+                if ( $club_name ) {
+                    return (string) $club_name;
+                }
+            }
+            $u = get_userdata( (int) $value );
+            return $u ? $u->display_name : '';
+        }
+        return (string) $value;
+    }
+
+    public function basic_info_page(): void {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'Access denied' );
+        }
+        if ( isset( $_GET['edit_user'] ) ) {
+            $this->basic_info_edit_form( (int) $_GET['edit_user'] );
+            return;
+        }
+        $fields = self::basic_fields();
+        $users  = get_users();
+        echo '<div class="wrap table-responsive" style="max-width:90vw;overflow-x:auto;"><h1>اطلاعات پایه کاربران</h1>';
+        echo '<table id="crm-basic-table" class="wp-list-table widefat striped">';
+        echo '<thead><tr><th>ID</th><th>نام</th>';
+        foreach ( $fields as $lbl ) {
+            echo '<th>' . esc_html( $lbl ) . '</th>';
+        }
+        echo '<th>عملیات</th></tr></thead><tbody>';
+        foreach ( $users as $u ) {
+            echo '<tr>';
+            echo '<td>' . esc_html( $u->ID ) . '</td><td>' . esc_html( $u->display_name ) . '</td>';
+            foreach ( $fields as $k => $lbl ) {
+                $raw = get_user_meta( $u->ID, $k, true );
+                $val = $this->display_value( $k, $raw );
+                echo '<td>' . esc_html( $val ) . '</td>';
+            }
+            $link = admin_url( 'users.php?page=imao-basic-info&edit_user=' . $u->ID );
+            echo '<td><a class="button" href="' . esc_url( $link ) . '">ویرایش</a></td></tr>';
+        }
+        echo '</tbody></table></div>';
+    }
+
+    private function basic_info_edit_form( int $user_id ): void {
+        $fields = self::basic_fields();
+        if ( isset( $_POST['imao_save_basic_admin'] ) && check_admin_referer( 'imao_basic_admin', 'imao_nonce' ) ) {
+            foreach ( $fields as $meta_key => $label ) {
+                if ( isset( $_POST[ $meta_key ] ) ) {
+                    update_user_meta( $user_id, $meta_key, sanitize_text_field( $_POST[ $meta_key ] ) );
+                }
+            }
+            echo '<div class="updated"><p>اطلاعات ذخیره شد.</p></div>';
+        }
+        echo '<div class="wrap"><h1>ویرایش اطلاعات کاربر #' . $user_id . '</h1>';
+        echo '<form method="post">';
+        wp_nonce_field( 'imao_basic_admin', 'imao_nonce' );
+        echo '<table class="form-table">';
+        foreach ( $fields as $k => $lbl ) {
+            $val = esc_attr( get_user_meta( $user_id, $k, true ) );
+            echo '<tr><th>' . esc_html( $lbl ) . '</th><td><input type="text" name="' . esc_attr( $k ) . '" value="' . $val . '" class="regular-text"/></td></tr>';
+        }
+        echo '</table><p><input type="submit" name="imao_save_basic_admin" class="button-primary" value="ذخیره"></p>';
+        echo '</form><p><a href="' . esc_url( admin_url( 'users.php?page=imao-basic-info' ) ) . '">← بازگشت به لیست</a></p></div>';
+    }
+
+    public function prof_identity_page(): void {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'Access denied' );
+        }
+        $pro_fields = [
+            'personal_photo'         => 'عکس پرسنلی',
+            'birth_certificate'      => 'تصویر شناسنامه',
+            'national_id_card'       => 'تصویر کارت ملی',
+            'education_certificate'  => 'تصویر آخرین مدرک تحصیلی',
+            'military_service_status'=> 'کارت پایان خدمت/معافیت/اشتغال به تحصیل',
+        ];
+        $users = get_users();
+        echo '<div class="wrap"><h1>تأیید هویت حرفه‌ای</h1>';
+        echo '<table id="crm-prof-table" class="wp-list-table widefat striped"><thead><tr>';
+        echo '<th>ID</th><th>نام</th>';
+        foreach ( $pro_fields as $lbl ) {
+            echo '<th>' . esc_html( $lbl ) . '</th>';
+        }
+        echo '<th>وضعیت</th><th>نقش</th><th>عملیات</th></tr></thead><tbody>';
+        foreach ( $users as $u ) {
+            $status = get_user_meta( $u->ID, 'identity_verified_professional', true ) ?: 'pending';
+            $label  = $status === 'approved' ? 'مورد تایید' : ( $status === 'disapproved' ? 'مردود' : 'در انتظار' );
+            echo '<tr>';
+            echo '<td>' . esc_html( $u->ID ) . '</td><td>' . esc_html( $u->display_name ) . '</td>';
+            foreach ( $pro_fields as $key => $lbl ) {
+                $uurl = get_user_meta( $u->ID, $key, true );
+                $cell = $uurl ? '<a href="' . esc_url( $uurl ) . '" target="_blank">مشاهده</a>' : '-';
+                echo '<td>' . $cell . '</td>';
+            }
+            echo '<td>' . esc_html( $label ) . '</td>';
+            echo '<td><select class="role-select" data-user-id="' . $u->ID . '"><option value="">--</option>';
+            foreach ( wp_roles()->roles as $rk => $rd ) {
+                if ( $rk === 'administrator' ) {
+                    continue;
+                }
+                $sel = in_array( $rk, $u->roles, true ) ? 'selected' : '';
+                echo '<option value="' . esc_attr( $rk ) . '" ' . $sel . '>' . esc_html( $rd['name'] ) . '</option>';
+            }
+            echo '</select></td>';
+            echo '<td><form method="post" class="identity-action-form" style="display:inline;">';
+            echo '<input type="hidden" name="user_id" value="' . $u->ID . '">';
+            echo wp_nonce_field( 'crm_admin_nonce', '_wpnonce', true, false );
+            echo '<button class="button" name="crm_user_action" value="approve">تایید</button>';
+            echo '<button class="button disapprove-btn" data-user="' . $u->ID . '">رد</button>';
+            echo '<button class="button" name="crm_user_action" value="pending">در انتظار</button>';
+            echo '</form></td>';
+            echo '</tr>';
+        }
+        echo '</tbody></table></div>';
+    }
+
+    public function update_role(): void {
+        check_ajax_referer( 'crm_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error();
+        }
+        $user = get_userdata( (int) ( $_POST['user'] ?? 0 ) );
+        $role = sanitize_text_field( $_POST['role'] ?? '' );
+        if ( $user && $role && isset( wp_roles()->roles[ $role ] ) ) {
+            $user->set_role( $role );
+            wp_send_json_success( [ 'msg' => 'نقش بروز شد' ] );
+        }
+        wp_send_json_error( [ 'msg' => 'خطا' ] );
+    }
+
+    public function change_status(): void {
+        check_ajax_referer( 'crm_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die();
+        }
+        $user_id = (int) ( $_POST['user'] ?? 0 );
+        $act     = sanitize_text_field( $_POST['action_type'] ?? '' );
+        $meta    = 'identity_verified_professional';
+        if ( $act === 'approve' ) {
+            update_user_meta( $user_id, $meta, 'approved' );
+            delete_user_meta( $user_id, 'identity_rejection_reason_professional' );
+            $photo = get_user_meta( $user_id, 'personal_photo', true );
+            if ( $photo ) {
+                update_user_meta( $user_id, 'simple_local_avatar', [ 'full' => esc_url_raw( $photo ) ] );
+            }
+        } elseif ( $act === 'pending' ) {
+            update_user_meta( $user_id, $meta, 'pending' );
+            delete_user_meta( $user_id, 'identity_rejection_reason_professional' );
+        } elseif ( $act === 'disapprove' ) {
+            update_user_meta( $user_id, $meta, 'disapproved' );
+            update_user_meta( $user_id, 'identity_rejection_reason_professional', sanitize_text_field( $_POST['reason'] ?? '' ) );
+        }
+        wp_send_json_success();
+    }
+}

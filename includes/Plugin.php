@@ -6,6 +6,7 @@ use IMAOCustom\Services\Assets;
 use IMAOCustom\Services\Registration;
 use IMAOCustom\Services\Endpoints\EditBasicInfo;
 use IMAOCustom\Services\Endpoints\IdentityProfessional;
+use IMAOCustom\Services\Admin\UserManagement;
 
 class Plugin {
     private static ?Plugin $instance = null;
@@ -30,6 +31,7 @@ class Plugin {
             new Registration(),
             new EditBasicInfo(),
             new IdentityProfessional(),
+            new UserManagement(),
         ];
 
         foreach ( $this->services as $service ) {
