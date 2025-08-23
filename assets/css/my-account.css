@@ -9,3 +9,16 @@
 jdp-container{
     font-size: 75%;
 }
+
+/* Smartcard issue styles */
+.sc-container{background:#fff;border:1px solid #e0e0e0;padding:20px;margin:30px auto;direction:rtl;}
+.sc-header{background:#060097;color:#fff;padding:10px;font-size:18px;font-weight:600;}
+.sc-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;margin-bottom:16px;}
+.sc-field{display:flex;flex-direction:column;}
+.sc-price{background:#eee;padding:8px;border-radius:4px;text-align:center;}
+.sc-button{background:#1890ff;color:#fff;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;}
+.sc-apply{background:#555;color:#fff;border:none;padding:8px 12px;margin-left:8px;border-radius:4px;cursor:pointer;}
+.sc-warning{color:#c00;font-size:14px;margin:8px 0;}
+.sc-balance{margin:8px 0;font-weight:600;}
+.sc-disclaimer{font-size:13px;margin-top:12px;}
+.sc-post{display:flex;align-items:center;margin:8px 0;}

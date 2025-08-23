@@ -1,0 +1,14 @@
+.sd-container{background:#fff;border:1px solid #e0e0e0;padding:20px;margin:30px auto;font-family:Vazir,droid;font-size:14px;direction:rtl;}
+.sd-header{border-radius:5px;background:#060097;color:#fff;padding:10px;font-size:18px;font-weight:600;}
+.sd-header-warning{border-radius:5px;background:red;color:#fff;padding:10px;font-size:18px;font-weight:600;}
+.sd-instruction{margin:15px 0;color:#444;line-height:1.6;margin-bottom:20px!important;}
+.sd-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px;}
+.sd-field{display:flex;flex-direction:column;}
+.sd-field label{font-weight:500;margin-bottom:6px;}
+.sd-field input,.sd-field select,.sd-field textarea{padding:8px;border:1px solid #bdbdbd;border-radius:4px;background:#fafafa;font-size:14px;}
+.sd-field .helper-note{margin-top:4px;font-size:12px;background:#e6f7ff;color:#0050b3;padding:4px 6px;border-radius:3px;}
+.sd-divider{border:0;border-top:1px solid #ddd;margin:20px 0;}
+.sd-submit{text-align:left;}
+.sd-submit button{background:#1890ff;color:#fff;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;font-size:15px;}
+.sd-warning{color:#ff4d4f;font-size:13px;margin-top:12px;line-height:1.4;}
+.sd-disclaimer{color:#888;font-size:12px;margin-top:8px;line-height:1.5;}

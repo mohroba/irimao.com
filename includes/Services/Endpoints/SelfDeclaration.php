@@ -2,26 +2,27 @@
 
 namespace IMAOCustom\Services\Endpoints;
 
-use IMAOCustom\Forms\SmartcardIssueForm;
+use IMAOCustom\Forms\SelfDeclarationForm;
 
-class SmartcardIssue {
+class SelfDeclaration {
     public function register(): void {
         add_action( 'init', [ $this, 'add_endpoint' ] );
         add_filter( 'woocommerce_account_menu_items', [ $this, 'menu_item' ] );
-        add_action( 'woocommerce_account_smartcard-issue_endpoint', [ $this, 'content' ] );
+        add_action( 'woocommerce_account_self-declare_endpoint', [ $this, 'content' ] );
     }
 
     public function add_endpoint(): void {
-        add_rewrite_endpoint( 'smartcard-issue', EP_ROOT | EP_PAGES );
+        add_rewrite_endpoint( 'self-declare', EP_ROOT | EP_PAGES );
     }
 
     public function menu_item( array $items ): array {
-        $items['smartcard-issue'] = 'صدور/تمدید کارت';
+        $items = array_slice( $items, 0, 1, true ) + [ 'self-declare' => 'خوداظهاری' ] + array_slice( $items, 1, null, true );
         return $items;
     }
 
     public function content(): void {
-        $form = new SmartcardIssueForm();
+        $form = new SelfDeclarationForm();
         echo $form->render();
     }
 }
+
