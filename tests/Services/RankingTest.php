@@ -32,8 +32,14 @@ class RankingTest extends TestCase {
 
     public function test_competition_rankings_shortcode_outputs_table(): void {
         $service = new Ranking();
-        $html    = $service->competition_rankings_shortcode();
+        $html    = $service->competition_rankings_shortcode( [ 'id' => 1 ] );
         $this->assertStringContainsString( 'crm-rank-table', $html );
+    }
+
+    public function test_competition_rankings_shortcode_requires_id(): void {
+        $service = new Ranking();
+        $html    = $service->competition_rankings_shortcode();
+        $this->assertStringContainsString( 'مسابقه نامشخص', $html );
     }
 
     public function test_my_rankings_shortcode_outputs_section(): void {
