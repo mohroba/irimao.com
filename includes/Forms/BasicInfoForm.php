@@ -171,8 +171,9 @@ class BasicInfoForm extends BaseForm {
         $html .= '<div class="cbif-grid">';
 
         // national id & gender
-        $html .= '<div class="cbif-field"><label for="national_id">کد ملی<span class="required">*</span></label>';
-        $html .= '<input type="text" id="national_id" name="national_id" value="' . esc_attr( $f['national_id'] ) . '" disabled></div>';
+        $html .= '<div class="cbif-field"><label for="national_id_display">کد ملی<span class="required">*</span></label>';
+        $html .= '<input type="text" id="national_id_display" value="' . esc_attr( $f['national_id'] ) . '" disabled>';
+        $html .= '<input type="hidden" id="national_id" name="national_id" value="' . esc_attr( $f['national_id'] ) . '"></div>';
         $html .= '<div class="cbif-field"><label for="gender">جنسیت<span class="required">*</span></label><select id="gender" name="gender" class="crm-select2"><option value="">— انتخاب کنید —</option><option value="male"' . $this->sel( $f['gender'], 'male' ) . '>مرد</option><option value="female"' . $this->sel( $f['gender'], 'female' ) . '>زن</option></select></div>';
 
         // names

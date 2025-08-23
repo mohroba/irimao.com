@@ -32,3 +32,16 @@ jdp-container{
 .crm-my-rank table{width:100%;border-collapse:collapse}
 .crm-my-rank th,.crm-my-rank td{border:1px solid #dcdcdc;padding:6px 8px;text-align:center;font-size:13px}
 .crm-my-rank thead{background:#ff92008f;color:#000}
+
+/* Basic info form */
+.cbif-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.cbif-row{margin-bottom:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.cbif-field{display:flex;flex-direction:column}
+.cbif-field label{font-weight:600;margin-bottom:6px;text-align:right;color:#333}
+.cbif-field label .required{color:#d00;margin-left:4px}
+.cbif-field input,
+.cbif-field select,
+.cbif-field textarea{padding:8px;border:1px solid #ccc;border-radius:4px;background:#fff;font-size:14px;width:100%}
+.cbif-wide{grid-column:span 3}
+.cbif-submit{grid-column:3/4;text-align:left;margin-top:10px}
+.cbif-submit button{background:#20a8d8;color:#fff;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;font-size:15px}
