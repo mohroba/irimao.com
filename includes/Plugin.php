@@ -12,6 +12,7 @@ use IMAOCustom\Services\Admin\UserManagement;
 use IMAOCustom\Services\Endpoints\SmartcardIssue;
 use IMAOCustom\Services\Endpoints\SelfDeclaration;
 use IMAOCustom\Services\Endpoints\SelfDeclarationsListEndpoint;
+use IMAOCustom\Services\Endpoints\StyleCommittee;
 
 
 class Plugin {
@@ -43,6 +44,7 @@ class Plugin {
             new SmartcardIssue(),
             new SelfDeclaration(),
             new SelfDeclarationsListEndpoint(),
+            new StyleCommittee(),
         ];
 
         foreach ( $this->services as $service ) {
