@@ -6,6 +6,7 @@ use IMAOCustom\Forms\SelfDeclarationForm;
 
 class SelfDeclaration {
     public function register(): void {
+        register_activation_hook( IMAO_PLUGIN_FILE, [ $this, 'activate' ] );
         add_action( 'init', [ $this, 'add_endpoint' ] );
         add_filter( 'woocommerce_account_menu_items', [ $this, 'menu_item' ] );
         add_action( 'woocommerce_account_self-declare_endpoint', [ $this, 'content' ] );
@@ -14,6 +15,11 @@ class SelfDeclaration {
 
     public function add_endpoint(): void {
         add_rewrite_endpoint( 'self-declare', EP_ROOT | EP_PAGES );
+    }
+
+    public function activate(): void {
+        $this->add_endpoint();
+        flush_rewrite_rules();
     }
 
     public function menu_item( array $items ): array {
