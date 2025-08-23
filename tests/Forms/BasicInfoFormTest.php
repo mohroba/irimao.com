@@ -8,6 +8,8 @@ class BasicInfoFormTest extends TestCase {
             $this->markTestSkipped( 'WordPress functions not available.' );
         }
         $form = new BasicInfoForm();
-        $this->assertStringContainsString( 'نام', $form->render() );
+        $output = $form->render();
+        $this->assertStringContainsString( 'نام', $output );
+        $this->assertStringContainsString( 'جنسیت', $output );
     }
 }
