@@ -8,6 +8,7 @@ class Ranking {
         add_shortcode( 'crm_competition_rankings', [ $this, 'competition_rankings_shortcode' ] );
         add_shortcode( 'crm_my_rankings', [ $this, 'my_rankings_shortcode' ] );
         add_action( 'init', [ $this, 'register_endpoint' ] );
+        add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
         add_action( 'woocommerce_account_my-rankings_endpoint', fn() => print do_shortcode( '[crm_my_rankings]' ) );
     }
 
@@ -54,7 +55,7 @@ class Ranking {
         if ( $tab === 'settings' ) {
             $this->render_settings_tab();
         } elseif ( $tab === 'rank' ) {
-            echo $this->competition_rankings_shortcode();
+            $this->render_rank_tab();
         } else {
             $this->render_assign_tab();
         }
@@ -164,16 +165,40 @@ class Ranking {
         <?php
     }
 
-    public function competition_rankings_shortcode( $atts = [] ): string {
+    private function enqueue_admin_assets( string $hook ): void {
+        if ( $hook !== 'users_page_crm-points-manager' ) {
+            return;
+        }
+        $url = plugin_dir_url( dirname( __DIR__ ) );
+        wp_enqueue_style( 'select2', $url . 'assets/css/select2.min.css', [], '4.0.13' );
+        wp_enqueue_script( 'select2', $url . 'assets/js/select2.min.js', [ 'jquery' ], '4.0.13', true );
+        wp_add_inline_script( 'select2', "jQuery(function($){$('.crm-select2').select2();});" );
+    }
+
+    private function get_ranking_rows( int $competition_id = 0, int $weight_class = 0 ): array {
         global $wpdb;
-        $a = shortcode_atts( [ 'id' => 0, 'weight' => 0 ], $atts, 'crm_competition_rankings' );
+        $where = 'WHERE 1=1';
+        if ( $competition_id ) {
+            $where .= $wpdb->prepare( ' AND competition_id=%d', $competition_id );
+        }
+        if ( $weight_class ) {
+            $where .= $wpdb->prepare( ' AND weight_class=%d', $weight_class );
+        }
+        $expiry_days = (int) $wpdb->get_var( "SELECT opt_val FROM {$wpdb->prefix}crm_settings WHERE opt_key='points_expiry_days' LIMIT 1" );
+        if ( $expiry_days ) {
+            $where .= $wpdb->prepare( ' AND assigned_date >= DATE_SUB(NOW(), INTERVAL %d DAY)', $expiry_days );
+        }
+        return $wpdb->get_results( "SELECT user_id, SUM(points) AS pts FROM {$wpdb->prefix}crm_points $where GROUP BY user_id ORDER BY pts DESC" );
+    }
+
+    public function competition_rankings_shortcode( $atts = [] ): string {
+        $a   = shortcode_atts( [ 'id' => 0, 'weight' => 0 ], $atts, 'crm_competition_rankings' );
         $cid = intval( $a['id'] ?: ( $_GET['competition_id'] ?? 0 ) );
         $wt  = intval( $a['weight'] ?: ( $_GET['weight_class'] ?? 0 ) );
-        $where = $cid ? $wpdb->prepare( 'WHERE competition_id=%d', $cid ) : 'WHERE 1=1';
-        if ( $wt ) {
-            $where .= $wpdb->prepare( ' AND weight_class=%d', $wt );
+        if ( ! $cid ) {
+            return '<p>مسابقه نامشخص است.</p>';
         }
-        $rows = $wpdb->get_results( "SELECT user_id, SUM(points) pts FROM {$wpdb->prefix}crm_points $where GROUP BY user_id ORDER BY pts DESC" );
+        $rows = $this->get_ranking_rows( $cid, $wt );
         if ( ! $rows ) {
             return '<p>امتیازی ثبت نشده است.</p>';
         }
@@ -194,6 +219,61 @@ class Ranking {
         </table>
         <?php
         return ob_get_clean();
+    }
+
+    private function render_rank_tab(): void {
+        $comp_id = intval( $_GET['competition_id'] ?? 0 );
+        $w_term  = intval( $_GET['weight_class'] ?? 0 );
+
+        echo '<form method="get" style="margin-bottom:15px">';
+        echo '<input type="hidden" name="page" value="crm-points-manager">';
+        echo '<input type="hidden" name="tab" value="rank">';
+
+        echo '<select name="competition_id" class="crm-select2" style="min-width:200px">';
+        echo '<option value="0">همه مسابقات</option>';
+        foreach ( get_posts( [
+            'post_type'      => 'competition',
+            'posts_per_page' => -1,
+            'post_status'    => 'publish',
+            'orderby'        => 'date',
+            'order'          => 'DESC',
+        ] ) as $c ) {
+            printf( '<option value="%d"%s>%s</option>', $c->ID, selected( $comp_id, $c->ID, false ), esc_html( $c->post_title ) );
+        }
+        echo '</select> ';
+
+        echo str_replace( 'class=\'postform\'', 'class="postform crm-select2"', wp_dropdown_categories( [
+            'taxonomy'         => 'weight_class',
+            'name'             => 'weight_class',
+            'selected'         => $w_term,
+            'show_option_none' => 'همه کلاس‌ها',
+            'option_none_value'=> 0,
+            'hide_empty'       => false,
+            'echo'             => 0,
+        ] ) );
+
+        submit_button( 'نمایش', 'secondary', '', false );
+        echo '</form>';
+
+        $rows = $this->get_ranking_rows( $comp_id, $w_term );
+        if ( ! $rows ) {
+            echo '<p>موردی یافت نشد.</p>';
+            return;
+        }
+        $grand_total = array_sum( wp_list_pluck( $rows, 'pts' ) );
+        echo '<p style="font-weight:600;margin:10px 0;"> مجموع امتیازهای فعال در این نما: '
+             . esc_html( number_format_i18n( $grand_total ) )
+             . '</p>';
+
+        echo '<table class="widefat striped"><thead><tr><th>#</th><th>کاربر</th><th>امتیاز</th></tr></thead><tbody>';
+        $pos = 1;
+        foreach ( $rows as $row ) {
+            $user = get_userdata( $row->user_id );
+            $img  = get_user_meta( $row->user_id, 'personal_photo', true ) ?: get_avatar_url( $row->user_id );
+            printf( '<tr><td>%d</td><td><img src="%s" style="width:30px;border-radius:50%%;vertical-align:middle"> %s</td><td>%d</td></tr>',
+                $pos++, esc_url( $img ), esc_html( $user ? $user->display_name : '—' ), (int) $row->pts );
+        }
+        echo '</tbody></table>';
     }
 
     public function my_rankings_shortcode(): string {
