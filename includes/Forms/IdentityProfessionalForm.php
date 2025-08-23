@@ -125,6 +125,7 @@ class IdentityProfessionalForm extends BaseForm {
             echo '<div class="notice-error">دلیل رد هویت: ' . esc_html( $reject ) . '</div>';
         }
 
+        $placeholder = plugin_dir_url( IMAO_PLUGIN_FILE ) . 'assets/images/placeholder.png';
         foreach ( $this->upload_fields as $key => $label ) {
             $current = $fields[ $key ];
             echo '<div class="upload-item">';
@@ -149,6 +150,8 @@ class IdentityProfessionalForm extends BaseForm {
             echo '<div class="upload-thumbnail">';
             if ( $current ) {
                 echo '<a href="' . esc_url( $current ) . '" target="_blank"><img src="' . esc_url( $current ) . '" alt=""></a>';
+            } else {
+                echo '<img src="' . esc_url( $placeholder ) . '" alt="">';
             }
             echo '<div style="margin-top:10px;">';
             echo '<button type="submit" class="button-submit" name="submit_field" value="' . esc_attr( $key ) . '">ثبت اطلاعات</button>';

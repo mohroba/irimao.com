@@ -24,6 +24,7 @@ use IMAOCustom\Services\Endpoints\CourseList;
 use IMAOCustom\Services\Endpoints\UserCourseList;
 use IMAOCustom\Services\Endpoints\CourseDetails;
 use IMAOCustom\Services\Endpoints\StyleCommittee;
+use IMAOCustom\Services\Avatar;
 use IMAOCustom\ServiceManager;
 
 
@@ -58,6 +59,7 @@ class Plugin {
         UserCourseList::class,
         CourseDetails::class,
         StyleCommittee::class,
+        Avatar::class,
     ];
 
     private function __construct() {
