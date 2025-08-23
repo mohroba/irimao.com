@@ -1,0 +1,82 @@
+name: Build & Deploy WP plugin (SFTP password)
+
+on:
+  push:
+    branches: [ "main" , "master" ]
+    # Optional: only run when these change
+    # paths:
+    #   - '**'
+    #   - '!.github/**'
+
+env:
+  # Repo root IS the plugin root
+  PLUGIN_DIR: .
+  # Remote path to your plugin on cPanel
+  REMOTE_DIR: public_html/wp-content/plugins/irimao-plugin/
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # -------------------------
+      # PHP 7.4 + Composer build
+      # -------------------------
+      - name: Setup PHP 7.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache Composer deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.composer/cache/files
+            vendor
+          key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-
+
+      - name: Composer install (no-dev, optimized)
+        working-directory: ${{ env.PLUGIN_DIR }}
+        run: |
+          if [ -f composer.json ]; then
+            composer install --no-dev --prefer-dist --optimize-autoloader --no-ansi --no-interaction --no-progress
+          else
+            echo "No composer.json at repo root; skipping Composer."
+          fi      
+
+      # -------------------------
+      # Deploy over SFTP (password)
+      # -------------------------
+      - name: Deploy via SFTP
+        uses: SamKirkland/FTP-Deploy-Action@v4
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: ${{ secrets.FTP_PORT }} # set secret to 22 for SFTP
+          sftp: true
+          local-dir: ${{ env.PLUGIN_DIR }}/
+          server-dir: ${{ env.REMOTE_DIR }}
+          # set to true to wipe remote before upload (be careful)
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*/
+            **/.github/**
+            **/node_modules/**
+            **/*.map
+            **/*.log
+            **/.env
+            **/webpack.*.js
+            **/vite.config.*.js
+            **/tsconfig*.json
+            **/.editorconfig
+            **/.eslint*
+            **/.prettier*
+            **/.stylelint*
