@@ -9,6 +9,7 @@ class BasicInfoFormTest extends TestCase {
         }
         $form = new BasicInfoForm();
         $output = $form->render();
+        $this->assertStringContainsString( 'class="sd-container"', $output );
         $this->assertStringContainsString( 'نام', $output );
         $this->assertStringContainsString( 'جنسیت', $output );
         $this->assertStringContainsString( 'type="hidden" id="national_id" name="national_id"', $output );

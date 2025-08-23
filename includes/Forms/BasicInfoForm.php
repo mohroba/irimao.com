@@ -165,7 +165,8 @@ class BasicInfoForm extends BaseForm {
         $coaches   = $this->coach_options();
         $clubs     = $this->club_options();
 
-        $html  = '<form method="post" id="id-form" class="needs-swal" style="margin:auto;">';
+        $html  = '<div class="sd-container">';
+        $html .= '<form method="post" id="id-form" class="needs-swal">';
         $html .= wp_nonce_field( $this->nonce_action, $this->nonce_name, true, false );
         $html .= $this->error_list();
         $html .= '<div class="cbif-grid">';
@@ -266,6 +267,7 @@ class BasicInfoForm extends BaseForm {
         $html .= '</div>'; // grid
         $html .= '<p class="cbif-submit"><button type="submit" name="save_basic_info">ذخیره اطلاعات</button></p>';
         $html .= '</form>';
+        $html .= '</div>';
         return $html;
     }
 }
