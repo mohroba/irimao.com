@@ -12,7 +12,7 @@ env:
   # Repo root IS the plugin root
   PLUGIN_DIR: .
   # Remote path to your plugin on cPanel
-  REMOTE_DIR: public_html/wp-content/plugins/irimao-plugin/
+  REMOTE_DIR: wp-content/plugins/irimao-plugin/
 
 jobs:
   build-and-deploy:
@@ -55,7 +55,7 @@ jobs:
       # Deploy over SFTP (password)
       # -------------------------
       - name: Deploy via SFTP
-        uses: SamKirkland/FTP-Deploy-Action@v4
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
