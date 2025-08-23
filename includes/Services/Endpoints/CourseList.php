@@ -1,2 +1,76 @@
 <?php
-// Silence is golden.
+
+namespace IMAOCustom\Services\Endpoints;
+
+use IMAOCustom\Helpers\CourseData;
+use WP_Query;
+
+class CourseList {
+    public function register(): void {
+        add_action( 'init', [ $this, 'add_endpoint' ] );
+        add_filter( 'woocommerce_account_menu_items', [ $this, 'menu_item' ] );
+        add_action( 'woocommerce_account_course-list_endpoint', [ $this, 'content' ] );
+        add_shortcode( 'crm_courses_list', [ $this, 'shortcode' ] );
+    }
+
+    public function add_endpoint(): void {
+        add_rewrite_endpoint( 'course-list', EP_ROOT | EP_PAGES );
+    }
+
+    public function menu_item( array $items ): array {
+        $items['course-list'] = 'لیست دوره‌ها';
+        return $items;
+    }
+
+    public function content(): void {
+        echo $this->render();
+    }
+
+    public function shortcode(): string {
+        return $this->render();
+    }
+
+    private function render(): string {
+        $q = new WP_Query([
+            'post_type'      => 'course',
+            'posts_per_page' => -1,
+            'orderby'        => 'date',
+            'order'          => 'DESC',
+        ]);
+        if ( ! $q->have_posts() ) {
+            return '<p>دوره‌ای موجود نیست.</p>';
+        }
+        $cols = CourseData::columns();
+        ob_start();
+        ?>
+        <div class="crm-course-wrap">
+            <div class="crm-course-title">لیست دوره‌ها</div>
+            <table class="crm-course-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>عنوان</th>
+                        <?php foreach ( $cols as $label ) : ?>
+                            <th><?php echo esc_html( $label ); ?></th>
+                        <?php endforeach; ?>
+                        <th>اقدام</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php $i = 1; while ( $q->have_posts() ) : $q->the_post(); $cid = get_the_ID(); ?>
+                        <tr>
+                            <td><?php echo $i++; ?></td>
+                            <td><?php the_title(); ?></td>
+                            <?php foreach ( $cols as $key => $label ) : $val = get_post_meta( $cid, $key, true ); ?>
+                                <td><?php echo $val ? esc_html( $val ) : '—'; ?></td>
+                            <?php endforeach; ?>
+                            <td><a href="<?php echo esc_url( '/my-account/course-details/?course_id=' . $cid ); ?>">جزئیات / ثبت‌نام</a></td>
+                        </tr>
+                    <?php endwhile; wp_reset_postdata(); ?>
+                </tbody>
+            </table>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+}

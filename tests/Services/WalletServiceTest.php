@@ -1,4 +1,5 @@
 <?php
+
 use PHPUnit\Framework\TestCase;
 use IMAOCustom\Services\Endpoints\Wallet;
 
@@ -28,3 +29,4 @@ class WalletServiceTest extends TestCase {
         $this->assertSame( 80.0, Wallet::get_balance( $user_id ) );
     }
 }
+

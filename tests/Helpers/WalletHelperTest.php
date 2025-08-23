@@ -2,7 +2,7 @@
 use PHPUnit\Framework\TestCase;
 use IMAOCustom\Helpers\Wallet;
 
-class WalletTest extends TestCase {
+class WalletHelperTest extends TestCase {
     public function test_wallet_helpers(): void {
         if ( ! function_exists( 'get_user_meta' ) ) {
             $this->markTestSkipped( 'WordPress functions not available.' );

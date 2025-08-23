@@ -11,6 +11,8 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
 }
 
+define( 'IMAO_PLUGIN_FILE', __FILE__ );
+
 require_once __DIR__ . '/vendor/autoload.php';
 
 IMAOCustom\Plugin::get_instance();
