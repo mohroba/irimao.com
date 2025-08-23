@@ -29,6 +29,7 @@ class Wallet {
         add_action( 'woocommerce_order_status_cancelled', [ $this, 'refund_wallet' ], 10 );
         add_action( 'woocommerce_order_status_refunded', [ $this, 'refund_wallet' ], 10 );
 
+        add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_assets' ] );
         add_action( 'admin_menu', [ $this, 'register_admin_page' ] );
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
     }
@@ -188,10 +189,28 @@ class Wallet {
         if ( $hook !== 'users_page_crm-wallet-manager' ) {
             return;
         }
-        $url = plugin_dir_url( dirname( __DIR__, 2 ) );
-        wp_enqueue_style( 'dt-css', $url . 'assets/css/jquery.dataTables.min.css' );
-        wp_enqueue_script( 'dt-js', $url . 'assets/js/jquery.dataTables.min.js', [ 'jquery' ], null, true );
-        wp_add_inline_script( 'dt-js', 'jQuery(function($){$("#crm-wallet-table").DataTable({language:{url:"https://cdn.datatables.net/plug-ins/1.13.8/i18n/fa.json"},pageLength:50,order:[[1,"desc"]]});});' );
+        $base = plugin_dir_url( dirname( __DIR__, 2 ) ) . 'assets/';
+        wp_enqueue_style( 'imao-datatables', $base . 'css/jquery.dataTables.min.css' );
+        wp_enqueue_script( 'imao-datatables', $base . 'js/jquery.dataTables.min.js', [ 'jquery' ], null, true );
+        wp_add_inline_script( 'imao-datatables', 'jQuery(function($){$("#crm-wallet-table").DataTable({language:{url:"https://cdn.datatables.net/plug-ins/1.13.8/i18n/fa.json"},pageLength:50,order:[[1,"desc"]]});});' );
+    }
+
+    public function enqueue_assets(): void {
+        if ( is_admin() ) {
+            return;
+        }
+        $should_enqueue = is_account_page();
+        if ( ! $should_enqueue ) {
+            $post = get_post();
+            if ( $post && has_shortcode( $post->post_content, 'crm_wallet' ) ) {
+                $should_enqueue = true;
+            }
+        }
+        if ( ! $should_enqueue ) {
+            return;
+        }
+        $base = plugin_dir_url( dirname( __DIR__, 2 ) );
+        wp_enqueue_style( 'imao-wallet', $base . 'assets/css/wallet.css', [], '1.0.0' );
     }
 
     public function wallet_manager_page(): void {
