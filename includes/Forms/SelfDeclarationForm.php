@@ -87,7 +87,7 @@ class SelfDeclarationForm extends BaseForm {
         <div class="sd-container">
             <div class="sd-header">خوداظهاری</div>
             <?= $this->error_list(); ?>
-            <form method="POST" enctype="multipart/form-data">
+            <form class="needs-swal" method="POST" enctype="multipart/form-data">
                 <?php wp_nonce_field( $this->nonce_action, $this->nonce_name ); ?>
                 <input type="hidden" name="sd_check" value="1">
                 <div class="sd-grid">

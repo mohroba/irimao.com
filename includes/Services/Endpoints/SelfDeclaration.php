@@ -9,6 +9,7 @@ class SelfDeclaration {
         add_action( 'init', [ $this, 'add_endpoint' ] );
         add_filter( 'woocommerce_account_menu_items', [ $this, 'menu_item' ] );
         add_action( 'woocommerce_account_self-declare_endpoint', [ $this, 'content' ] );
+        add_shortcode( 'crm_self_declaration', [ $this, 'shortcode' ] );
     }
 
     public function add_endpoint(): void {
@@ -21,8 +22,16 @@ class SelfDeclaration {
     }
 
     public function content(): void {
+        echo $this->render_form();
+    }
+
+    public function shortcode(): string {
+        return $this->render_form();
+    }
+
+    private function render_form(): string {
         $form = new SelfDeclarationForm();
-        echo $form->render();
+        return $form->render();
     }
 }
 

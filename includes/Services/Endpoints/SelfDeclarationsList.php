@@ -9,6 +9,7 @@ class SelfDeclarationsListEndpoint {
         add_action( 'init', [ $this, 'add_endpoint' ] );
         add_filter( 'woocommerce_account_menu_items', [ $this, 'menu_item' ] );
         add_action( 'woocommerce_account_self-declarations-list_endpoint', [ $this, 'content' ] );
+        add_shortcode( 'crm_self_declarations_list', [ $this, 'shortcode' ] );
     }
 
     public function add_endpoint(): void {
@@ -21,8 +22,16 @@ class SelfDeclarationsListEndpoint {
     }
 
     public function content(): void {
+        echo $this->render_list();
+    }
+
+    public function shortcode(): string {
+        return $this->render_list();
+    }
+
+    private function render_list(): string {
         $form = new SelfDeclarationsList();
-        echo $form->render();
+        return $form->render();
     }
 }
 
