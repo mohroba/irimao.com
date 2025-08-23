@@ -12,6 +12,11 @@ use IMAOCustom\Services\Admin\UserManagement;
 use IMAOCustom\Services\Endpoints\SmartcardIssue;
 use IMAOCustom\Services\Endpoints\SelfDeclaration;
 use IMAOCustom\Services\Endpoints\SelfDeclarationsListEndpoint;
+use IMAOCustom\Services\Competitions;
+use IMAOCustom\Services\Ranking;
+use IMAOCustom\Services\Endpoints\CompetitionsList;
+use IMAOCustom\Services\Endpoints\CompetitionDetails;
+use IMAOCustom\Services\Endpoints\UserCompetitionsList;
 
 
 class Plugin {
@@ -43,6 +48,11 @@ class Plugin {
             new SmartcardIssue(),
             new SelfDeclaration(),
             new SelfDeclarationsListEndpoint(),
+            new Competitions(),
+            new CompetitionsList(),
+            new CompetitionDetails(),
+            new UserCompetitionsList(),
+            new Ranking(),
         ];
 
         foreach ( $this->services as $service ) {
