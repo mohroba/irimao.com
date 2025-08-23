@@ -1,0 +1,10 @@
+{
+  "name": "imao/custom-plugin",
+  "description": "پلاگین اختصاصی ایمائو",
+  "type": "wordpress-plugin",
+  "autoload": {
+    "psr-4": {
+      "IMAOCustom\\": "includes/"
+    }
+  }
+}
