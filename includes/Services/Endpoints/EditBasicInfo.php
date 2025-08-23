@@ -1,4 +1,5 @@
 <?php
+
 namespace IMAOCustom\Services\Endpoints;
 
 use IMAOCustom\Forms\BasicInfoForm;
@@ -24,3 +25,4 @@ class EditBasicInfo {
         echo $form->render();
     }
 }
+

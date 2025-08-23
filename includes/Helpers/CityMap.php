@@ -1,4 +1,5 @@
 <?php
+
 namespace IMAOCustom\Helpers;
 
 class CityMap {
@@ -86,3 +87,4 @@ class CityMap {
         ];
     }
 }
+

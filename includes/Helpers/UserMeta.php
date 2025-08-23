@@ -1,4 +1,5 @@
 <?php
+
 namespace IMAOCustom\Helpers;
 
 class UserMeta {
@@ -18,3 +19,4 @@ class UserMeta {
         return $value;
     }
 }
+

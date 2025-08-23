@@ -7,4 +7,3 @@
 ```bash
 composer install
 composer test
-```

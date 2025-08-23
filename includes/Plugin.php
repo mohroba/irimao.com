@@ -1,4 +1,5 @@
 <?php
+
 namespace IMAOCustom;
 
 use IMAOCustom\Services\Assets;
@@ -38,3 +39,4 @@ class Plugin {
         }
     }
 }
+

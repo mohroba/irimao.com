@@ -1,4 +1,5 @@
 <?php
+
 namespace IMAOCustom\Services;
 
 class Assets {
@@ -12,3 +13,4 @@ class Assets {
         wp_enqueue_script( 'imao-edit-basic-info', $url . 'assets/js/edit-basic-info.js', [ 'jquery' ], '1.0.0', true );
     }
 }
+

@@ -1,4 +1,5 @@
 <?php
+
 namespace IMAOCustom\Forms;
 
 use IMAOCustom\Helpers\UserMeta;
@@ -51,3 +52,4 @@ class BasicInfoForm extends BaseForm {
         return $html;
     }
 }
+

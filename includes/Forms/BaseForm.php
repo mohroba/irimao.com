@@ -1,4 +1,5 @@
 <?php
+
 namespace IMAOCustom\Forms;
 
 use IMAOCustom\Services\Validation;
@@ -38,3 +39,4 @@ abstract class BaseForm {
         return $out;
     }
 }
+
