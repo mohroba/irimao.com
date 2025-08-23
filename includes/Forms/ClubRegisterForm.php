@@ -2,6 +2,7 @@
 namespace IMAOCustom\Forms;
 
 use IMAOCustom\Helpers\CityMap;
+use IMAOCustom\Services\Validation;
 
 class ClubRegisterForm extends BaseForm {
     protected string $nonce_action = 'imao_club_register';
@@ -66,11 +67,16 @@ class ClubRegisterForm extends BaseForm {
         if ( empty( $_FILES['club_license_image']['name'] ) ) {
             $this->errors[] = 'آپلود تصویر مجوز الزامی است.';
         } else {
-            $up = wp_handle_upload( $_FILES['club_license_image'], [ 'test_form' => false ] );
-            if ( empty( $up['error'] ) && ! empty( $up['url'] ) ) {
-                $image_url = esc_url_raw( $up['url'] );
+            $file_error = Validation::file( $_FILES['club_license_image'], [ 'image/jpeg', 'image/png' ], 2 * 1024 * 1024, '۲ مگابایت' );
+            if ( $file_error ) {
+                $this->errors[] = $file_error;
             } else {
-                $this->errors[] = 'آپلود تصویر با خطا مواجه شد.';
+                $up = wp_handle_upload( $_FILES['club_license_image'], [ 'test_form' => false ] );
+                if ( empty( $up['error'] ) && ! empty( $up['url'] ) ) {
+                    $image_url = esc_url_raw( $up['url'] );
+                } else {
+                    $this->errors[] = 'آپلود تصویر با خطا مواجه شد.';
+                }
             }
         }
         if ( $this->errors ) {
