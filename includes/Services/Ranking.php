@@ -4,6 +4,7 @@ namespace IMAOCustom\Services;
 class Ranking {
     public function register(): void {
         register_activation_hook( IMAO_PLUGIN_FILE, [ $this, 'activate' ] );
+        register_deactivation_hook( IMAO_PLUGIN_FILE, [ $this, 'deactivate' ] );
         add_action( 'admin_menu', [ $this, 'add_admin_menu' ] );
         add_shortcode( 'crm_competition_rankings', [ $this, 'competition_rankings_shortcode' ] );
         add_shortcode( 'crm_my_rankings', [ $this, 'my_rankings_shortcode' ] );
@@ -34,10 +35,16 @@ class Ranking {
         ) $charset;";
         dbDelta( $sql_settings );
         $wpdb->replace( $wpdb->prefix . 'crm_settings', [ 'opt_key' => 'points_expiry_days', 'opt_val' => '365' ], [ '%s', '%s' ] );
+        $this->register_endpoint();
+        flush_rewrite_rules();
     }
 
     public function register_endpoint(): void {
         add_rewrite_endpoint( 'my-rankings', EP_ROOT | EP_PAGES );
+    }
+
+    public function deactivate(): void {
+        flush_rewrite_rules();
     }
 
     public function add_admin_menu(): void {
@@ -172,7 +179,7 @@ class Ranking {
         $url = plugin_dir_url( dirname( __DIR__ ) );
         wp_enqueue_style( 'select2', $url . 'assets/css/select2.min.css', [], '4.0.13' );
         wp_enqueue_script( 'select2', $url . 'assets/js/select2.min.js', [ 'jquery' ], '4.0.13', true );
-        wp_add_inline_script( 'select2', "jQuery(function($){$('.crm-select2').select2();});" );
+        wp_add_inline_script( 'select2', 'jQuery(function($){$(".crm-select2").select2();});' );
     }
 
     private function get_ranking_rows( int $competition_id = 0, int $weight_class = 0 ): array {

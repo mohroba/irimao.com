@@ -4,6 +4,14 @@ use IMAOCustom\Services\Ranking;
 
 class RankingTest extends TestCase {
     protected function setUp(): void {
+        if ( ! defined( 'ABSPATH' ) ) {
+            $dir = sys_get_temp_dir() . '/wp/';
+            if ( ! is_dir( $dir . 'wp-admin/includes' ) ) {
+                mkdir( $dir . 'wp-admin/includes', 0777, true );
+            }
+            file_put_contents( $dir . 'wp-admin/includes/upgrade.php', '<?php function dbDelta($sql){}' );
+            define( 'ABSPATH', $dir );
+        }
         if ( ! function_exists( 'get_userdata' ) ) {
             function get_userdata( $user_id ) { return (object) [ 'display_name' => "User $user_id" ]; }
             function get_user_meta( $user_id, $key, $single = true ) { return ''; }
@@ -17,6 +25,18 @@ class RankingTest extends TestCase {
             function esc_url( $url ) { return $url; }
             function esc_html( $str ) { return $str; }
         }
+        if ( ! function_exists( 'add_rewrite_endpoint' ) ) {
+            function add_rewrite_endpoint( $name, $places ) { $GLOBALS['add_rewrite_endpoint_called'] = true; }
+        }
+        if ( ! function_exists( 'flush_rewrite_rules' ) ) {
+            function flush_rewrite_rules() { $GLOBALS['flush_rewrite_rules_called'] = true; }
+        }
+        if ( ! defined( 'EP_ROOT' ) ) {
+            define( 'EP_ROOT', 1 );
+        }
+        if ( ! defined( 'EP_PAGES' ) ) {
+            define( 'EP_PAGES', 2 );
+        }
         $GLOBALS['wpdb'] = new class {
             public $prefix = 'wp_';
             public function prepare( $query, ...$args ) { return vsprintf( $query, $args ); }
@@ -27,6 +47,8 @@ class RankingTest extends TestCase {
                 return [];
             }
             public function get_var( $query ) { return 0; }
+            public function get_charset_collate() { return ''; }
+            public function replace( $table, $data, $format ) {}
         };
     }
 
@@ -46,5 +68,21 @@ class RankingTest extends TestCase {
         $service = new Ranking();
         $html    = $service->my_rankings_shortcode();
         $this->assertStringContainsString( 'crm-my-rank', $html );
+    }
+
+    public function test_activate_registers_endpoint_and_flushes_rules(): void {
+        $service = new Ranking();
+        $GLOBALS['add_rewrite_endpoint_called'] = false;
+        $GLOBALS['flush_rewrite_rules_called']  = false;
+        $service->activate();
+        $this->assertTrue( $GLOBALS['add_rewrite_endpoint_called'] );
+        $this->assertTrue( $GLOBALS['flush_rewrite_rules_called'] );
+    }
+
+    public function test_deactivate_flushes_rules(): void {
+        $service = new Ranking();
+        $GLOBALS['flush_rewrite_rules_called'] = false;
+        $service->deactivate();
+        $this->assertTrue( $GLOBALS['flush_rewrite_rules_called'] );
     }
 }
