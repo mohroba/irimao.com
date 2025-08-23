@@ -11,6 +11,7 @@ class Assets {
         $url = plugin_dir_url( dirname( __DIR__ ) );
         wp_enqueue_style( 'imao-my-account', $url . 'assets/css/my-account.css', [], '1.0.0' );
         wp_enqueue_script( 'imao-edit-basic-info', $url . 'assets/js/edit-basic-info.js', [ 'jquery' ], '1.0.0', true );
+        wp_enqueue_script( 'imao-sweetalert2', $url . 'assets/js/sweetalert2.all.min.js', [], '11.7.3', true );
     }
 }
 
