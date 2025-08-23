@@ -7,6 +7,7 @@ use IMAOCustom\Services\Registration;
 use IMAOCustom\Services\SelfDeclarations;
 use IMAOCustom\Services\Endpoints\EditBasicInfo;
 use IMAOCustom\Services\Endpoints\IdentityProfessional;
+use IMAOCustom\Services\Endpoints\SmartcardIssue;
 use IMAOCustom\Services\Endpoints\SelfDeclaration;
 use IMAOCustom\Services\Endpoints\SelfDeclarationsListEndpoint;
 
@@ -34,6 +35,7 @@ class Plugin {
             new SelfDeclarations(),
             new EditBasicInfo(),
             new IdentityProfessional(),
+            new SmartcardIssue(),
             new SelfDeclaration(),
             new SelfDeclarationsListEndpoint(),
         ];
