@@ -53,6 +53,8 @@ class Competitions {
 
         $tax_cols = [ 'weight_class' => 'کلاس وزنی' ];
         ob_start();
+        echo '<div class="sd-container">';
+        echo '<div class="sd-header">لیست مسابقات</div>';
         echo '<table class="shop_table shop_table_responsive"><thead><tr><th>#</th><th>عنوان</th>';
         foreach ( $tax_cols as $label ) {
             echo "<th>{$label}</th>";
@@ -72,7 +74,7 @@ class Competitions {
             echo '<td><a href="' . esc_url( '/my-account/competition-details/?competition_id=' . $pid ) . '">جزئیات / ثبت‌نام</a></td></tr>';
         endwhile;
         wp_reset_postdata();
-        echo '</tbody></table>';
+        echo '</tbody></table></div>';
         return ob_get_clean();
     }
 
@@ -91,23 +93,27 @@ class Competitions {
         ?>
         <form method="get" action="<?php echo esc_url( wc_get_cart_url() ); ?>" class="crm-competition-form">
             <input type="hidden" name="add-to-cart" value="<?php echo $prod_id; ?>">
-            <h3 style="text-align:center;"><?php echo esc_html( get_the_title( $cid ) ); ?></h3>
-            <table class="shop_table"><tbody>
-                <tr><th>کد</th><td><?php echo esc_html( get_post_meta( $cid, 'course_code', true ) ); ?></td></tr>
-                <tr><th>قیمت</th><td><?php echo wc_price( $price ); ?></td></tr>
-                <?php if ( $conditions = get_post_meta( $cid, 'special_conditions', true ) ) : ?>
-                    <tr><th>شرایط خاص</th><td><?php echo nl2br( esc_html( $conditions ) ); ?></td></tr>
-                <?php endif; ?>
-                <tr><th>کلاس وزنی</th><td>
-                    <select name="weight_class_term" required>
-                        <option value="">— انتخاب کنید —</option>
-                        <?php foreach ( $weights as $t ) : ?>
-                            <option value="<?php echo $t->term_id; ?>"><?php echo esc_html( $t->name ); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </td></tr>
-            </tbody></table>
-            <p style="text-align:center"><button type="submit" class="button alt">پرداخت و ثبت‌نام</button></p>
+            <div class="crm-single-course">
+                <h3><?php echo esc_html( get_the_title( $cid ) ); ?></h3>
+                <table>
+                    <tbody>
+                        <tr><th>کد</th><td><?php echo esc_html( get_post_meta( $cid, 'course_code', true ) ); ?></td></tr>
+                        <tr><th>قیمت</th><td><?php echo wc_price( $price ); ?></td></tr>
+                        <?php if ( $conditions = get_post_meta( $cid, 'special_conditions', true ) ) : ?>
+                            <tr><th>شرایط خاص</th><td><?php echo nl2br( esc_html( $conditions ) ); ?></td></tr>
+                        <?php endif; ?>
+                        <tr><th>کلاس وزنی</th><td>
+                            <select name="weight_class_term" required>
+                                <option value="">— انتخاب کنید —</option>
+                                <?php foreach ( $weights as $t ) : ?>
+                                    <option value="<?php echo $t->term_id; ?>"><?php echo esc_html( $t->name ); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </td></tr>
+                    </tbody>
+                </table>
+                <p style="text-align:center"><button type="submit" class="crm-buy-btn">پرداخت و ثبت‌نام</button></p>
+            </div>
         </form>
         <?php
         return ob_get_clean();
