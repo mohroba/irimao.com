@@ -1,9 +1,7 @@
 <?php
 use PHPUnit\Framework\TestCase;
 use IMAOCustom\Services\Endpoints\SelfDeclaration;
-use IMAOCustom\Services\Endpoints\SelfDeclarationsListEndpoint;
-
-require_once __DIR__ . '/../../../includes/Services/Endpoints/SelfDeclarationsList.php';
+use IMAOCustom\Services\Endpoints\SelfDeclarationsList;
 use IMAOCustom\Services\Endpoints\SmartcardIssue;
 
 class SelfDeclarationEndpointsTest extends TestCase {
@@ -34,7 +32,7 @@ class SelfDeclarationEndpointsTest extends TestCase {
     }
 
     public function test_self_declarations_list_registers_endpoint_and_shortcode(): void {
-        $endpoint = new SelfDeclarationsListEndpoint();
+        $endpoint = new SelfDeclarationsList();
         $endpoint->register();
         do_action( 'init' );
         $this->assertContains( 'self-declarations-list', $GLOBALS['endpoints'] );
