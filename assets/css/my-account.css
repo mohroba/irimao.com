@@ -22,3 +22,13 @@ jdp-container{
 .sc-balance{margin:8px 0;font-weight:600;}
 .sc-disclaimer{font-size:13px;margin-top:12px;}
 .sc-post{display:flex;align-items:center;margin:8px 0;}
+
+/* Ranking tables */
+.crm-rank-table{width:100%;border-collapse:collapse;margin:15px 0;direction:rtl}
+.crm-rank-table th,.crm-rank-table td{border:1px solid #dcdcdc;padding:6px 8px;text-align:center;font-size:13px}
+.crm-rank-table thead{background:#ff92008f;color:#000}
+
+.crm-my-rank{direction:rtl;margin:20px 0;font-family:'vaziri'}
+.crm-my-rank table{width:100%;border-collapse:collapse}
+.crm-my-rank th,.crm-my-rank td{border:1px solid #dcdcdc;padding:6px 8px;text-align:center;font-size:13px}
+.crm-my-rank thead{background:#ff92008f;color:#000}
