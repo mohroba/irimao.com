@@ -6,6 +6,7 @@ use IMAOCustom\Services\Assets;
 use IMAOCustom\Services\Registration;
 use IMAOCustom\Services\Endpoints\EditBasicInfo;
 use IMAOCustom\Services\Endpoints\IdentityProfessional;
+use IMAOCustom\Services\Endpoints\Wallet;
 use IMAOCustom\Services\Admin\UserManagement;
 
 class Plugin {
@@ -31,6 +32,7 @@ class Plugin {
             new Registration(),
             new EditBasicInfo(),
             new IdentityProfessional(),
+            new Wallet(),
             new UserManagement(),
         ];
 
