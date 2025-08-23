@@ -3,6 +3,7 @@
 namespace IMAOCustom\Forms;
 
 use IMAOCustom\Helpers\SelfDeclarationData;
+use IMAOCustom\Services\Validation;
 use WP_Query;
 
 class SelfDeclarationForm extends BaseForm {
@@ -40,11 +41,16 @@ class SelfDeclarationForm extends BaseForm {
 
         $image_url = '';
         if ( ! empty( $_FILES['course_imageurl']['name'] ) ) {
-            $upload = wp_handle_upload( $_FILES['course_imageurl'], [ 'test_form' => false ] );
-            if ( empty( $upload['error'] ) && ! empty( $upload['url'] ) ) {
-                $image_url = esc_url_raw( $upload['url'] );
+            $file_error = Validation::file( $_FILES['course_imageurl'], [ 'image/jpeg', 'image/png', 'application/pdf' ], 2 * 1024 * 1024, '۲ مگابایت' );
+            if ( $file_error ) {
+                $this->errors[] = $file_error;
             } else {
-                $this->errors[] = 'آپلود فایل با خطا مواجه شد.';
+                $upload = wp_handle_upload( $_FILES['course_imageurl'], [ 'test_form' => false ] );
+                if ( empty( $upload['error'] ) && ! empty( $upload['url'] ) ) {
+                    $image_url = esc_url_raw( $upload['url'] );
+                } else {
+                    $this->errors[] = 'آپلود فایل با خطا مواجه شد.';
+                }
             }
         } else {
             $this->errors[] = 'تصویر حکم الزامی است.';

@@ -2,6 +2,7 @@
 namespace IMAOCustom\Forms;
 
 use IMAOCustom\Logger;
+use IMAOCustom\Services\Validation;
 
 class IdentityProfessionalForm extends BaseForm {
     protected string $nonce_action = 'imao_identity_professional';
@@ -46,14 +47,9 @@ class IdentityProfessionalForm extends BaseForm {
         }
 
         $file = $_FILES[ $field ];
-        $mime = $file['type'] ?? '';
-        $size = (int) ( $file['size'] ?? 0 );
-        if ( ! in_array( $mime, [ 'image/jpeg', 'image/png', 'application/pdf' ], true ) ) {
-            $this->messages[ $field ] = [ 'error' => 'فرمت فایل نامعتبر است.' ];
-            return;
-        }
-        if ( $size > 1024 * 1024 ) {
-            $this->messages[ $field ] = [ 'error' => 'حجم فایل باید حداکثر ۱ مگابایت باشد.' ];
+        $file_error = Validation::file( $file, [ 'image/jpeg', 'image/png', 'application/pdf' ], 1024 * 1024, '۱ مگابایت' );
+        if ( $file_error ) {
+            $this->messages[ $field ] = [ 'error' => $file_error ];
             return;
         }
 
