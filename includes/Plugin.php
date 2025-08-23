@@ -5,6 +5,7 @@ namespace IMAOCustom;
 use IMAOCustom\Services\Assets;
 use IMAOCustom\Services\Registration;
 use IMAOCustom\Services\SelfDeclarations;
+use IMAOCustom\Services\ClubApplications;
 use IMAOCustom\Services\Courses;
 use IMAOCustom\Services\Endpoints\EditBasicInfo;
 use IMAOCustom\Services\Endpoints\IdentityProfessional;
@@ -13,6 +14,7 @@ use IMAOCustom\Services\Admin\UserManagement;
 use IMAOCustom\Services\Endpoints\SmartcardIssue;
 use IMAOCustom\Services\Endpoints\SelfDeclaration;
 use IMAOCustom\Services\Endpoints\SelfDeclarationsListEndpoint;
+use IMAOCustom\Services\Endpoints\ClubRegister;
 use IMAOCustom\Services\Competitions;
 use IMAOCustom\Services\Ranking;
 use IMAOCustom\Services\Endpoints\CompetitionsList;
@@ -22,6 +24,7 @@ use IMAOCustom\Services\Endpoints\CourseList;
 use IMAOCustom\Services\Endpoints\UserCourseList;
 use IMAOCustom\Services\Endpoints\CourseDetails;
 use IMAOCustom\Services\Endpoints\StyleCommittee;
+
 
 
 class Plugin {
@@ -46,6 +49,7 @@ class Plugin {
             new Assets(),
             new Registration(),
             new SelfDeclarations(),
+            new ClubApplications(),
             new Courses(),
             new EditBasicInfo(),
             new IdentityProfessional(),
@@ -54,6 +58,7 @@ class Plugin {
             new SmartcardIssue(),
             new SelfDeclaration(),
             new SelfDeclarationsListEndpoint(),
+            new ClubRegister(),
             new Competitions(),
             new CompetitionsList(),
             new CompetitionDetails(),

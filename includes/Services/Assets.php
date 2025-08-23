@@ -29,12 +29,14 @@ class Assets {
         wp_enqueue_style( 'imao-jdp', $url . 'assets/css/jalalidatepicker.min.css', [], '1.0.0' );
         wp_enqueue_style( 'imao-identity-professional', $url . 'assets/css/identity-professional.css', [], '1.0.0' );
         wp_enqueue_style( 'imao-wallet', $url . 'assets/css/wallet.css', [], '1.0.0' );
+        wp_enqueue_style( 'imao-club-register', $url . 'assets/css/club-register.css', [], '1.0.0' );
         wp_enqueue_style( 'imao-courses', $url . 'assets/css/courses.css', [], '1.0.0' );
         wp_enqueue_script( 'imao-select2', $url . 'assets/js/select2.min.js', [ 'jquery' ], '1.0.0', true );
         wp_enqueue_script( 'imao-jdp', $url . 'assets/js/jalalidatepicker.min.js', [], '1.0.0', true );
         wp_enqueue_script( 'imao-edit-basic-info', $url . 'assets/js/edit-basic-info.js', [ 'jquery', 'imao-select2', 'imao-jdp' ], '1.0.0', true );
         wp_localize_script( 'imao-edit-basic-info', 'CBIF_CITIES', CityMap::get_map() );
         wp_enqueue_script( 'imao-identity-professional', $url . 'assets/js/identity-professional.js', [], '1.0.0', true );
+        wp_enqueue_script( 'imao-club-register', $url . 'assets/js/club-register.js', [ 'jquery' ], '1.0.0', true );
     }
 }
 
