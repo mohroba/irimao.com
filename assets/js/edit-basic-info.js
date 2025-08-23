@@ -24,16 +24,24 @@ jQuery(function($){
   $('#residence_province').on('change', function(){
     loadCities(this.value, $('#residence_city'));
   });
-  
-   function toggleMilitary(){
+
+  $('.crm-select2').select2({ dir: 'rtl', width: 'resolve' });
+  jalaliDatepicker.startWatch();
+
+  function toggleMilitary(){
       var g = $('#gender').val();
-      $('#military_status').prop('disabled', g==='female');
+      var $ms = $('#military_status');
+      var $wrap = $ms.closest('.cbif-field');
+      if(g === 'female'){
+          $ms.prop('disabled', true);
+          $wrap.hide();
+      }else{
+          $ms.prop('disabled', false);
+          $wrap.show();
+      }
     }
     $('#gender').on('change', toggleMilitary);
     toggleMilitary(); // run on load
-
-    $('.crm-select2').select2({ dir: 'rtl', width: 'resolve' });
-    jalaliDatepicker.startWatch();
 
     const degreeOptions = (typeof IMAOSD !== 'undefined') ? IMAOSD.degreeOptions : {};
     const $type   = $('#coursetype');

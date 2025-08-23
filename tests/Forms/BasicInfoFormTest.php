@@ -11,5 +11,6 @@ class BasicInfoFormTest extends TestCase {
         $output = $form->render();
         $this->assertStringContainsString( 'نام', $output );
         $this->assertStringContainsString( 'جنسیت', $output );
+        $this->assertStringContainsString( 'type="hidden" id="national_id" name="national_id"', $output );
     }
 }
