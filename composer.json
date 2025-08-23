@@ -6,5 +6,11 @@
     "psr-4": {
       "IMAOCustom\\": "includes/"
     }
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9"
+  },
+  "scripts": {
+    "test": "phpunit"
   }
 }

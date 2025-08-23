@@ -1,3 +1,9 @@
 # پلاگین اختصاصی ایمائو
 
-Skeleton structure for custom login, register, and dashboard plugin.
+افزونه‌ای برای پیاده‌سازی ورود، ثبت‌نام و داشبورد کاربری.
+
+## توسعه
+
+```bash
+composer install
+composer test
