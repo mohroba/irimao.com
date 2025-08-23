@@ -7,9 +7,12 @@ use IMAOCustom\Services\Registration;
 use IMAOCustom\Services\SelfDeclarations;
 use IMAOCustom\Services\Endpoints\EditBasicInfo;
 use IMAOCustom\Services\Endpoints\IdentityProfessional;
+use IMAOCustom\Services\Endpoints\Wallet;
+use IMAOCustom\Services\Admin\UserManagement;
 use IMAOCustom\Services\Endpoints\SmartcardIssue;
 use IMAOCustom\Services\Endpoints\SelfDeclaration;
 use IMAOCustom\Services\Endpoints\SelfDeclarationsListEndpoint;
+
 
 class Plugin {
     private static ?Plugin $instance = null;
@@ -35,6 +38,8 @@ class Plugin {
             new SelfDeclarations(),
             new EditBasicInfo(),
             new IdentityProfessional(),
+            new Wallet(),
+            new UserManagement(),
             new SmartcardIssue(),
             new SelfDeclaration(),
             new SelfDeclarationsListEndpoint(),
