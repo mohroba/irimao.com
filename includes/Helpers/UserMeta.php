@@ -8,6 +8,27 @@ class UserMeta {
         return $value !== '' ? $value : $default;
     }
 
+    /**
+     * Retrieve multiple meta values for a user.
+     *
+     * Accepts a list of keys or an associative array of key => default.
+     *
+     * @param int   $user_id User ID.
+     * @param array $keys    Meta keys.
+     * @return array<string,mixed>
+     */
+    public static function get_many( int $user_id, array $keys ): array {
+        $out = [];
+        foreach ( $keys as $key => $default ) {
+            if ( is_int( $key ) ) {
+                $key     = $default;
+                $default = '';
+            }
+            $out[ $key ] = self::get( $user_id, $key, $default );
+        }
+        return $out;
+    }
+
     public static function set( int $user_id, string $key, $value ): void {
         update_user_meta( $user_id, $key, self::sanitize( $value ) );
     }

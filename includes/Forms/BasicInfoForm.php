@@ -2,43 +2,36 @@
 namespace IMAOCustom\Forms;
 
 use IMAOCustom\Helpers\CityMap;
+use IMAOCustom\Helpers\UserMeta;
 use IMAOCustom\Services\Validation;
 
 class BasicInfoForm extends BaseForm {
     protected string $nonce_action = 'imao_basic_info';
 
     /**
+     * Meta keys handled by this form.
+     *
+     * @return string[]
+     */
+    private function meta_keys(): array {
+        return [
+            'billing_phone', 'national_id', 'gender', 'first_name_fa', 'last_name_fa',
+            'first_name_en', 'last_name_en', 'father_name', 'birth_date', 'birth_province',
+            'birth_city', 'marital_status', 'education_status', 'military_status',
+            'residence_province', 'residence_city', 'postal_code', 'residence_address',
+            'iban', 'card_number', 'coach_id', 'club_id',
+        ];
+    }
+
+    /**
      * Fetch form field values for current user.
      */
     public function fields(): array {
-        $uid  = get_current_user_id();
-        $user = wp_get_current_user();
-        $get  = fn( $k ) => get_user_meta( $uid, $k, true );
-        return [
-            'billing_phone'      => $get( 'billing_phone' ),
-            'national_id'        => $get( 'national_id' ),
-            'gender'             => $get( 'gender' ),
-            'first_name_fa'      => $get( 'first_name_fa' ),
-            'last_name_fa'       => $get( 'last_name_fa' ),
-            'first_name_en'      => $get( 'first_name_en' ),
-            'last_name_en'       => $get( 'last_name_en' ),
-            'father_name'        => $get( 'father_name' ),
-            'birth_date'         => $get( 'birth_date' ),
-            'birth_province'     => $get( 'birth_province' ),
-            'birth_city'         => $get( 'birth_city' ),
-            'marital_status'     => $get( 'marital_status' ),
-            'education_status'   => $get( 'education_status' ),
-            'military_status'    => $get( 'military_status' ),
-            'residence_province' => $get( 'residence_province' ),
-            'residence_city'     => $get( 'residence_city' ),
-            'postal_code'        => $get( 'postal_code' ),
-            'residence_address'  => $get( 'residence_address' ),
-            'billing_email'      => $user->user_email,
-            'iban'               => $get( 'iban' ),
-            'card_number'        => $get( 'card_number' ),
-            'coach_id'           => $get( 'coach_id' ),
-            'club_id'            => $get( 'club_id' ),
-        ];
+        $uid   = get_current_user_id();
+        $user  = wp_get_current_user();
+        $fields = UserMeta::get_many( $uid, $this->meta_keys() );
+        $fields['billing_email'] = $user->user_email;
+        return $fields;
     }
 
     /**
@@ -48,9 +41,10 @@ class BasicInfoForm extends BaseForm {
         if ( ! is_user_logged_in() ) {
             return;
         }
-        $uid   = get_current_user_id();
-        $data  = [];
-        foreach ( array_keys( $this->fields() ) as $key ) {
+        $uid  = get_current_user_id();
+        $data = [];
+        $all_keys = array_merge( $this->meta_keys(), [ 'billing_email' ] );
+        foreach ( $all_keys as $key ) {
             if ( $key === 'residence_address' ) {
                 $data[ $key ] = sanitize_textarea_field( $_POST[ $key ] ?? '' );
             } elseif ( $key === 'billing_email' ) {
@@ -113,8 +107,8 @@ class BasicInfoForm extends BaseForm {
             update_user_meta( $uid, 'billing_email', $data['billing_email'] );
         }
         unset( $data['billing_email'] );
-        foreach ( $data as $k => $v ) {
-            update_user_meta( $uid, $k, $v );
+        foreach ( $this->meta_keys() as $k ) {
+            update_user_meta( $uid, $k, $data[ $k ] ?? '' );
         }
     }
 
