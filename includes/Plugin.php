@@ -16,6 +16,7 @@ use IMAOCustom\Services\Endpoints\SelfDeclarationsListEndpoint;
 use IMAOCustom\Services\Endpoints\CourseList;
 use IMAOCustom\Services\Endpoints\UserCourseList;
 use IMAOCustom\Services\Endpoints\CourseDetails;
+use IMAOCustom\Services\Endpoints\StyleCommittee;
 
 
 class Plugin {
@@ -51,6 +52,7 @@ class Plugin {
             new CourseList(),
             new UserCourseList(),
             new CourseDetails(),
+            new StyleCommittee(),
         ];
 
         foreach ( $this->services as $service ) {
