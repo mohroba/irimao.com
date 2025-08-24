@@ -41,7 +41,7 @@ jdp-container{
 .cbif-field label .required{color:#d00;margin-left:4px}
 .cbif-field input,
 .cbif-field select,
-.cbif-field textarea{padding:8px;border:1px solid #ccc;border-radius:4px;background:#fff;font-size:14px;width:100%}
+.cbif-field textarea{padding:8px !Important;border:1px solid #ccc !Important;border-radius:4px !Important;font-size:14px !Important; background-color: #F9FAFB !important;width:100%}
 .cbif-wide{grid-column:span 3}
 .cbif-submit{grid-column:3/4;text-align:left;margin-top:10px}
 .cbif-submit button{background:#20a8d8;color:#fff;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;font-size:15px}

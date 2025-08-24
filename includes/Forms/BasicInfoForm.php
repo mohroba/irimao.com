@@ -177,14 +177,14 @@ class BasicInfoForm extends BaseForm {
         $coaches   = $this->coach_options();
         $clubs     = $this->club_options();
 
-        $html  = '<div class="sd-container">';
-        $html .= '<div class="sd-header" style="margin-bottom: 15px">اطلاعات پایه</div>';
-        $html .= '<div style="background:#ffe8e8;border:1px solid #f5c6cb;color:#721c24;padding:15px;border-radius:4px;margin-bottom:20px;">'
+        $html = '<div style="background:#ffe8e8;border:1px solid #f5c6cb;color:#721c24;padding:15px;border-radius:4px;margin-bottom:20px;">'
             . __( 'شما فقط یکبار اجازه ورود و بروزرسانی اطلاعات پایه را دارید، پس در تکمیل اطلاعات پایه، دقت کافی را داشته باشید. پس از ثبت اطلاعات، تغییر یا بروزرسانی اطلاعات فقط با هماهنگی کمیته آموزش سبک امکان‌پذیر خواهد بود.', 'imao-custom-plugin' )
             . '</div>';
         $html .= '<div style="background:#ffe8e8;border:1px solid #f5c6cb;color:#721c24;padding:15px;border-radius:4px;margin-bottom:20px;">'
             . __( 'مسئولیت هرگونه مغایرت اطلاعات وارد شده در این صفحه با فایل‌ها و مستندات آپلود شده در سیستم، کاملا بعهده کاربر بوده و در صورت مشاهده مغایرت، این امر تخلف شمرده شده و احتمال مسدود شدن حساب کاربری وجود خواهد داشت.', 'imao-custom-plugin' )
             . '</div>';
+        $html .= '<div class="sd-container">';
+        $html .= '<div class="sd-header" style="margin-bottom: 15px">اطلاعات پایه</div>';
         $html .= '<form method="post" id="id-form" class="needs-swal" data-status="' . esc_attr( $status ) . '">';
         $html .= wp_nonce_field( $this->nonce_action, $this->nonce_name, true, false );
         $html .= $this->error_list();
