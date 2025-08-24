@@ -140,14 +140,15 @@ class Ranking {
                     <th>کلاس وزنی<span style="color:#d00">*</span></th>
                     <td>
                         <?php
-                        echo str_replace( 'class=\'postform\'', 'class="postform crm-select2"', wp_dropdown_categories( [
-                            'taxonomy' => 'weight_class',
-                            'name' => 'weight_class',
+                        echo wp_dropdown_categories( [
+                            'taxonomy'         => 'weight_class',
+                            'name'             => 'weight_class',
                             'show_option_none' => '— انتخاب —',
-                            'option_none_value' => '',
-                            'hide_empty' => false,
-                            'echo' => 0,
-                        ] ) );
+                            'option_none_value'=> '',
+                            'hide_empty'       => false,
+                            'echo'             => 0,
+                            'class'            => 'crm-select2',
+                        ] );
                         ?>
                     </td>
                 </tr>
@@ -179,7 +180,7 @@ class Ranking {
         $url = plugin_dir_url( dirname( __DIR__ ) );
         wp_enqueue_style( 'select2', $url . 'assets/css/select2.min.css', [], '4.0.13' );
         wp_enqueue_script( 'select2', $url . 'assets/js/select2.min.js', [ 'jquery' ], '4.0.13', true );
-        wp_add_inline_script( 'select2', 'jQuery(function($){$(".crm-select2").select2();});' );
+        wp_add_inline_script( 'select2', 'jQuery(function($){$(".crm-select2").select2({dir:"rtl",width:"resolve"});});' );
     }
 
     private function get_ranking_rows( int $competition_id = 0, int $weight_class = 0 ): array {
@@ -249,7 +250,7 @@ class Ranking {
         }
         echo '</select> ';
 
-        echo str_replace( 'class=\'postform\'', 'class="postform crm-select2"', wp_dropdown_categories( [
+        echo wp_dropdown_categories( [
             'taxonomy'         => 'weight_class',
             'name'             => 'weight_class',
             'selected'         => $w_term,
@@ -257,7 +258,8 @@ class Ranking {
             'option_none_value'=> 0,
             'hide_empty'       => false,
             'echo'             => 0,
-        ] ) );
+            'class'            => 'crm-select2',
+        ] );
 
         submit_button( 'نمایش', 'secondary', '', false );
         echo '</form>';
