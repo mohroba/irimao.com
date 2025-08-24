@@ -112,7 +112,7 @@ class ClubRegisterForm extends BaseForm {
         ob_start();
         ?>
         <div class="club-form-container">
-            <div class="sd-header" style="margin-bottom: 15px">اطلاعات پایه</div>;
+            <div class="sd-header" style="margin-bottom: 15px">درخواست ثبت باشگاه</div>;
             <?= $this->error_list(); ?>
             <form method="post" enctype="multipart/form-data" id="club-form">
                 <?php wp_nonce_field( $this->nonce_action, $this->nonce_name ); ?>
@@ -175,7 +175,7 @@ class ClubRegisterForm extends BaseForm {
             'post_status'    => 'any',
         ]);
         if ( $q->have_posts() ) {
-            echo '<div class="club-form-container" style="margin-top:20px"><table class="shop_table" style="text-align:center"><thead><tr>'
+            echo '<div class="club-form-container" style="margin-top:20px"><div class="sd-header" style="margin-bottom: 15px">درخواست های شما</div>;<table class="shop_table" style="text-align:center"><thead><tr>'
                 .'<th>#</th><th>نام باشگاه</th><th>صاحب امتیاز</th><th>استان</th><th>شهر</th><th>وضعیت</th><th>دلیل رد</th><th>مجوز</th>'
                 .'</tr></thead><tbody>';
             $i = 1;
