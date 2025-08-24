@@ -281,7 +281,7 @@ class Wallet {
             ] );
             if ( $orders ) : ?>
                 <h4 class="wallet-section-title">جدول پرداخت های شما</h4>
-                <table class="wallet-table">
+                <table class="wallet-table striped">
                     <thead><tr><th>#</th><th>تاریخ</th><th>مبلغ شارژ</th><th>وضعیت سفارش</th></tr></thead>
                     <tbody>
                     <?php $i = 1; foreach ( $orders as $o ) : $amount = (float) $o->get_meta( 'wallet_topup' ); $status = wc_get_order_status_name( $o->get_status() ); $date = $o->get_date_created()->date_i18n( 'Y/m/d H:i' ); ?>
@@ -297,7 +297,7 @@ class Wallet {
             usort( $logs, fn( $a, $b ) => strtotime( $b['date'] ) <=> strtotime( $a['date'] ) );
             if ( $logs ) : ?>
                 <h4 class="wallet-section-title">جدول تراکنش های سامانه</h4>
-                <table class="wallet-table log-table">
+                <table class="wallet-table log-table striped">
                     <thead><tr><th>تاریخ</th><th>مبلغ</th><th>پرداخت بابت</th></tr></thead>
                     <tbody>
                     <?php foreach ( $logs as $l ) : ?>

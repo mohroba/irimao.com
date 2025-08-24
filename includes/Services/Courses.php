@@ -154,7 +154,7 @@ class Courses {
         $number_field = [ 'points', 'min_degree' ];
         $tel_fields   = [ 'organizer_tel' ];
         $date_fields  = [ 'start_date', 'end_date', 'exam_date', 'registration_start', 'registration_end' ];
-        echo '<table class="form-table"><tbody>';
+        echo '<table class="form-table striped"><tbody>';
         foreach ( $fields as $k => $label ) {
             $type  = 'text';
             $class = '';
@@ -190,7 +190,7 @@ class Courses {
             }
             return $opts;
         };
-        echo '<table class="widefat" id="crm-payout-table"><thead><tr><th>کاربر</th><th>نوع</th><th>مقدار</th><th></th></tr></thead><tbody id="crm-payout-body">';
+        echo '<table class="widefat striped" id="crm-payout-table"><thead><tr><th>کاربر</th><th>نوع</th><th>مقدار</th><th></th></tr></thead><tbody id="crm-payout-body">';
         $rowTpl = function( $uid = '', $type = 'percent', $val = '' ) use ( $user_opts ) {
             return '<tr>'
                 . '<td><select name="payout_user_id[]" class="crm-select2" style="width:100%">' . $user_opts( $uid ) . '</select></td>'

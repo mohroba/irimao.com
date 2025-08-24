@@ -81,7 +81,7 @@ class Ranking {
         ?>
         <form method="post">
             <?php wp_nonce_field( 'crm_points_settings' ); ?>
-            <table class="form-table">
+            <table class="form-table striped">
                 <tr>
                     <th scope="row">انقضای امتیازها (روز)</th>
                     <td><input type="number" name="expiry_days" value="<?php echo $expiry; ?>" min="0"><p class="description">0 = بدون انقضا</p></td>
@@ -116,7 +116,7 @@ class Ranking {
         ?>
         <form method="post">
             <?php wp_nonce_field( 'crm_assign_points' ); ?>
-            <table class="form-table">
+            <table class="form-table striped">
                 <tr>
                     <th>مسابقه<span style="color:#d00">*</span></th>
                     <td>
@@ -211,7 +211,7 @@ class Ranking {
         }
         ob_start();
         ?>
-        <table class="crm-rank-table">
+        <table class="crm-rank-table striped">
             <thead><tr><th>#</th><th>کاربر</th><th>امتیاز</th></tr></thead><tbody>
             <?php $i = 1; foreach ( $rows as $r ) :
                 $u   = get_userdata( $r->user_id );
@@ -307,7 +307,7 @@ class Ranking {
             <div class="sd-header">امتیازات من</div>
             <p style="margin-bottom: 20px"><strong>امتیاز کل:</strong> <?php echo $overall_pts; ?> ‖ <strong>رتبه:</strong> <?php echo $overall_rank; ?></p>
             <h3>جزئیات امتیازات</h3>
-            <table class="shop_table shop_table_responsive">
+            <table class="shop_table shop_table_responsive striped">
                 <thead><tr><th>#</th><th>مسابقه</th><th>کلاس وزنی</th><th>امتیاز</th></tr></thead><tbody>
                 <?php $i = 1; foreach ( $my as $row ) :
                     $title = get_the_title( $row->competition_id );

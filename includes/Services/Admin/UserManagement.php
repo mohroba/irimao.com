@@ -116,7 +116,7 @@ class UserManagement {
         echo '<div class="wrap"><h1>ویرایش اطلاعات کاربر #' . $user_id . '</h1>';
         echo '<form method="post">';
         wp_nonce_field( 'imao_basic_admin', 'imao_nonce' );
-        echo '<table class="form-table">';
+        echo '<table class="form-table striped">';
         foreach ( $fields as $k => $lbl ) {
             $val = esc_attr( get_user_meta( $user_id, $k, true ) );
             echo '<tr><th>' . esc_html( $lbl ) . '</th><td><input type="text" name="' . esc_attr( $k ) . '" value="' . $val . '" class="regular-text"/></td></tr>';

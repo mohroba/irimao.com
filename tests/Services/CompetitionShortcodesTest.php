@@ -12,6 +12,7 @@ class CompetitionShortcodesTest extends TestCase {
         $this->assertStringContainsString( 'class="sd-container"', $output );
         $this->assertStringContainsString( 'class="sd-header"', $output );
         $this->assertStringContainsString( 'crm-competition-table', $output );
+        $this->assertStringContainsString( 'striped', $output );
     }
 
     public function test_competition_details_uses_course_design(): void {
@@ -21,5 +22,6 @@ class CompetitionShortcodesTest extends TestCase {
         $svc = new Competitions();
         $output = $svc->competition_details_shortcode();
         $this->assertStringContainsString( 'class="crm-single-course"', $output );
+        $this->assertStringContainsString( 'class="striped"', $output );
     }
 }

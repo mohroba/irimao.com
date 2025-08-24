@@ -55,7 +55,7 @@ class Competitions {
         ob_start();
         echo '<div class="sd-container">';
         echo '<div class="sd-header">لیست مسابقات</div>';
-        echo '<table class="shop_table shop_table_responsive crm-competition-table"><thead><tr><th>#</th><th>عنوان</th>';
+        echo '<table class="shop_table shop_table_responsive crm-competition-table striped"><thead><tr><th>#</th><th>عنوان</th>';
         foreach ( $tax_cols as $label ) {
             echo "<th>{$label}</th>";
         }
@@ -95,7 +95,7 @@ class Competitions {
             <input type="hidden" name="add-to-cart" value="<?php echo $prod_id; ?>">
             <div class="crm-single-course">
                 <h3><?php echo esc_html( get_the_title( $cid ) ); ?></h3>
-                <table>
+                <table class="striped">
                     <tbody>
                         <tr><th>کد</th><td><?php echo esc_html( get_post_meta( $cid, 'course_code', true ) ); ?></td></tr>
                         <tr><th>قیمت</th><td><?php echo wc_price( $price ); ?></td></tr>
@@ -157,7 +157,7 @@ class Competitions {
         }
 
         ob_start();
-        echo '<table class="shop_table shop_table_responsive"><thead><tr><th>#</th><th>مسابقه</th><th>کلاس وزنی</th><th>تاریخ</th><th>مبلغ</th><th>وضعیت</th></tr></thead><tbody>';
+        echo '<table class="shop_table shop_table_responsive striped"><thead><tr><th>#</th><th>مسابقه</th><th>کلاس وزنی</th><th>تاریخ</th><th>مبلغ</th><th>وضعیت</th></tr></thead><tbody>';
         $i = 1;
         foreach ( $rows as $r ) {
             echo '<tr>';
