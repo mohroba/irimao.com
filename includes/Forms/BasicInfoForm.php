@@ -171,7 +171,7 @@ class BasicInfoForm extends BaseForm {
         $f         = $this->fields();
         $uid       = get_current_user_id();
         $status    = get_user_meta( $uid, 'identity_verified_professional', true );
-        $provinces = class_exists( '\\WC_Countries' ) ? ( new \WC_Countries() )->get_states( 'IR' ) : [];
+        $provinces = CityMap::get_provinces();
         $birth     = CityMap::get_cities( (string) $f['birth_province'] );
         $res       = CityMap::get_cities( (string) $f['residence_province'] );
         $coaches   = $this->coach_options();
