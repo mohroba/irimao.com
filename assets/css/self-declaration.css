@@ -15,3 +15,6 @@
 .sd-field input,
 .sd-field select,
 .sd-field textarea{padding:8px !Important;border:1px solid #ccc !Important;border-radius:4px !Important;font-size:14px !Important; background-color: #F9FAFB !important;width:100%}
+.sd-table-responsive{overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;}
+@media (max-width:1024px){.sd-grid{grid-template-columns:1fr 1fr;}}
+@media (max-width:768px){.sd-grid{grid-template-columns:1fr;}.sd-submit{text-align:center;}}

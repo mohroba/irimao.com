@@ -29,7 +29,7 @@ class Assets {
     });
 });"
         );
-        wp_enqueue_style( 'imao-self-declaration', $url . 'assets/css/self-declaration.css', [], '1.0.0' );
+        wp_enqueue_style( 'imao-self-declaration', $url . 'assets/css/self-declaration.css', [], '1.0.1' );
         wp_enqueue_style( 'select2', $url . 'assets/css/select2.min.css', [], '4.0.13' );
         wp_enqueue_style( 'jalali-datepicker', $url . 'assets/css/jalalidatepicker.min.css', [], '1.0.0' );
 

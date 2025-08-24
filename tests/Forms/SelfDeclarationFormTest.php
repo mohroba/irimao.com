@@ -8,6 +8,8 @@ class SelfDeclarationFormTest extends TestCase {
             $this->markTestSkipped( 'WordPress functions not available.' );
         }
         $form = new SelfDeclarationForm();
-        $this->assertStringContainsString( 'خوداظهاری', $form->render() );
+        $out = $form->render();
+        $this->assertStringContainsString( 'خوداظهاری', $out );
+        $this->assertStringContainsString( 'sd-table-responsive', $out );
     }
 }

@@ -29,7 +29,7 @@ class SelfDeclarationsList {
         ?>
         <div class="sd-container"><div class="col-md-9">
         <div class="sd-header" style="margin-bottom:20px">لیست احکام ثبت شده</div>
-        <table class="table table-striped table-hover table-responsive-sm custom-table rtl tbl-loader" style="width:100%;">
+        <div class="sd-table-responsive"><table class="table table-striped table-hover table-responsive-sm custom-table rtl tbl-loader" style="width:100%;">
             <thead style="background:#ff92008f;color:#000;">
                 <tr>
                     <th class="text-center" style="font-size:12px;text-align:center">ردیف</th>
@@ -67,7 +67,7 @@ class SelfDeclarationsList {
                 </tr>
             <?php $i++; endwhile; wp_reset_postdata(); ?>
             </tbody>
-        </table>
+        </table></div>
         </div></div>
         <?php
         return ob_get_clean();
