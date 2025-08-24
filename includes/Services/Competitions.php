@@ -4,6 +4,7 @@ namespace IMAOCustom\Services;
 use IMAOCustom\Helpers\UserMeta;
 use WP_Post;
 use WP_Query;
+use IMAOCustom\Helpers\FieldLabel;
 
 class Competitions {
     private const META_LINKED_PRODUCT     = '_linked_product_id';
@@ -261,7 +262,8 @@ class Competitions {
                     $row[ $key ] = get_user_meta( $u->ID, 'billing_email', true ) ?: $u->user_email;
                     break;
                 default:
-                    $row[ $key ] = get_user_meta( $u->ID, $key, true );
+                    $meta = get_user_meta( $u->ID, $key, true );
+                    $row[ $key ] = FieldLabel::get( $key, $meta );
             }
         }
         return $row;
