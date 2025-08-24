@@ -37,8 +37,30 @@ class Courses {
         ];
     }
 
+    /**
+     * Province names used for the board taxonomy.
+     *
+     * @return array<string,string> slug => name
+     */
+    public static function province_terms(): array {
+        $file = dirname(__DIR__, 2) . '/provinces.json';
+        $data = json_decode(@file_get_contents($file) ?: '[]', true);
+        $terms = [];
+        if (is_array($data)) {
+            foreach ($data as $province) {
+                $name = $province['name'] ?? '';
+                $slug = $province['slug'] ?? '';
+                if ($name && $slug && !isset($terms[$slug])) {
+                    $terms[$slug] = $name;
+                }
+            }
+        }
+        return $terms;
+    }
+
     public function register(): void {
         add_action( 'init', [ $this, 'register_taxonomies' ], 5 );
+        add_action( 'init', [ $this, 'populate_board_terms' ], 6 );
         add_action( 'init', [ $this, 'register_cpt' ] );
         add_action( 'add_meta_boxes', [ $this, 'add_meta_boxes' ] );
         add_action( 'save_post', [ $this, 'save_meta' ], 10, 3 );
@@ -74,6 +96,20 @@ class Courses {
         $tax( 'course_type', 'نوع دوره',   'انواع دوره' );
         $tax( 'age_category','رده سنی',    'رده‌های سنی', true );
         $tax( 'level',       'سطح',        'سطوح', true );
+    }
+
+    /**
+     * Ensure board taxonomy is populated with province terms.
+     */
+    public function populate_board_terms(): void {
+        if (!function_exists('wp_insert_term') || !function_exists('term_exists')) {
+            return;
+        }
+        foreach (self::province_terms() as $slug => $name) {
+            if (!term_exists($slug, 'board')) {
+                wp_insert_term($name, 'board', ['slug' => $slug]);
+            }
+        }
     }
 
     public function register_cpt(): void {
