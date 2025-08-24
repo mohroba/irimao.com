@@ -35,12 +35,36 @@ class ClubStudentsEndpointTest extends TestCase {
                 ];
             }
         }
+        if ( ! function_exists( 'get_user_meta' ) ) {
+            function get_user_meta( $uid, $key, $single = true ) {
+                $data = [
+                    1 => [ 'billing_phone' => '111', 'national_id' => '001' ],
+                    2 => [ 'billing_phone' => '222', 'national_id' => '002' ],
+                ];
+                return $data[ $uid ][ $key ] ?? '';
+            }
+        }
         if ( ! function_exists( 'esc_html' ) ) {
             function esc_html( $str ) { return $str; }
         }
+        if ( ! function_exists( 'esc_attr' ) ) {
+            function esc_attr( $str ) { return $str; }
+        }
+        if ( ! function_exists( 'plugin_dir_url' ) ) {
+            function plugin_dir_url( $path ) { return '/'; }
+        }
+        if ( ! function_exists( 'wp_enqueue_style' ) ) {
+            function wp_enqueue_style( $handle ) { $GLOBALS['styles'][] = $handle; }
+        }
+        if ( ! function_exists( 'wp_enqueue_script' ) ) {
+            function wp_enqueue_script( $handle ) { $GLOBALS['scripts'][] = $handle; }
+        }
+        if ( ! function_exists( 'wp_add_inline_script' ) ) {
+            function wp_add_inline_script( $handle, $code ) { $GLOBALS['inline'][ $handle ] = $code; }
+        }
         if ( ! defined( 'EP_ROOT' ) ) { define( 'EP_ROOT', 1 ); }
         if ( ! defined( 'EP_PAGES' ) ) { define( 'EP_PAGES', 1 ); }
-        $GLOBALS['endpoints'] = $GLOBALS['actions'] = [];
+        $GLOBALS['endpoints'] = $GLOBALS['actions'] = $GLOBALS['styles'] = $GLOBALS['scripts'] = $GLOBALS['inline'] = [];
     }
 
     public function test_endpoint_registration_and_output(): void {
@@ -51,7 +75,8 @@ class ClubStudentsEndpointTest extends TestCase {
         ob_start();
         do_action( 'woocommerce_account_club-students_endpoint' );
         $out = ob_get_clean();
-        $this->assertStringContainsString( '<table', $out );
-        $this->assertStringContainsString( 'Alpha', $out );
+        $this->assertStringContainsString( 'club-students-table', $out );
+        $this->assertStringContainsString( '111', $out );
+        $this->assertContains( 'imao-dt', $GLOBALS['scripts'] );
     }
 }
