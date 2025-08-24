@@ -191,11 +191,23 @@ class Courses {
             echo '<p>شرکت‌کننده‌ای ثبت نشده است.</p>';
             return;
         }
-        echo '<ul>';
-        foreach ( $users as $u ) {
-            printf( '<li>%s (%s)</li>', esc_html( $u->display_name ), esc_html( $u->user_email ) );
+        $fields = $this->attendee_fields();
+        echo '<div style="max-width:100%;overflow:auto">';
+        echo '<table id="crm-attendees-table" class="wp-list-table widefat striped"><thead><tr>';
+        foreach ( $fields as $lbl ) {
+            echo '<th>' . esc_html( $lbl ) . '</th>';
         }
-        echo '</ul>';
+        echo '</tr></thead><tbody>';
+        foreach ( $users as $u ) {
+            $row = $this->attendee_row( $u );
+            echo '<tr>';
+            foreach ( $fields as $key => $lbl ) {
+                $val = $row[ $key ] ?? '';
+                echo '<td>' . esc_html( (string) $val ) . '</td>';
+            }
+            echo '</tr>';
+        }
+        echo '</tbody></table></div>';
     }
 
     /**
@@ -229,6 +241,96 @@ class Courses {
         return array_values( $users );
     }
 
+    /**
+     * Field map for attendee data.
+     *
+     * @return array<string,string>
+     */
+    private function attendee_fields(): array {
+        return [
+            'ID'                => 'ID',
+            'display_name'      => 'نام',
+            'billing_email'     => 'ایمیل',
+            'billing_phone'     => 'شماره موبایل',
+            'national_id'       => 'کد ملی',
+            'gender'            => 'جنسیت',
+            'first_name_fa'     => 'نام (فا)',
+            'last_name_fa'      => 'نام خانوادگی (فا)',
+            'first_name_en'     => 'نام (En)',
+            'last_name_en'      => 'نام خانوادگی (En)',
+            'father_name'       => 'نام پدر',
+            'birth_date'        => 'تاریخ تولد',
+            'birth_province'    => 'استان تولد',
+            'birth_city'        => 'شهر تولد',
+            'marital_status'    => 'وضعیت تأهل',
+            'education_status'  => 'وضعیت تحصیلی',
+            'military_status'   => 'وضعیت خدمت',
+            'residence_province'=> 'استان سکونت',
+            'residence_city'    => 'شهر سکونت',
+            'postal_code'       => 'کدپستی',
+            'residence_address' => 'آدرس',
+            'iban'              => 'شماره شبا',
+            'card_number'       => 'شماره کارت',
+            'coach_id'          => 'مربی',
+            'club_id'           => 'باشگاه',
+        ];
+    }
+
+    /**
+     * Build a row of attendee data.
+     *
+     * @return array<string,string|int>
+     */
+    private function attendee_row( \WP_User $u ): array {
+        $row = [];
+        foreach ( $this->attendee_fields() as $key => $lbl ) {
+            switch ( $key ) {
+                case 'ID':
+                    $row[ $key ] = $u->ID;
+                    break;
+                case 'display_name':
+                    $row[ $key ] = $u->display_name;
+                    break;
+                case 'billing_email':
+                    $row[ $key ] = get_user_meta( $u->ID, 'billing_email', true ) ?: $u->user_email;
+                    break;
+                case 'coach_id':
+                case 'club_id':
+                    $id  = (int) get_user_meta( $u->ID, $key, true );
+                    if ( ! $id ) {
+                        $row[ $key ] = '';
+                        break;
+                    }
+                    if ( $key === 'club_id' ) {
+                        $club_name = get_user_meta( $id, 'club_name', true );
+                        if ( $club_name ) {
+                            $row[ $key ] = $club_name;
+                            break;
+                        }
+                    }
+                    $target = get_user_by( 'id', $id );
+                    $row[ $key ] = $target ? $target->display_name : $id;
+                    break;
+                default:
+                    $row[ $key ] = get_user_meta( $u->ID, $key, true );
+            }
+        }
+        return $row;
+    }
+
+    /**
+     * Generate CSV content for attendees.
+     */
+    protected function build_csv( array $users ): string {
+        $fh = fopen( 'php://temp', 'r+' );
+        fputcsv( $fh, array_values( $this->attendee_fields() ), ',', '"', '\\' );
+        foreach ( $users as $u ) {
+            fputcsv( $fh, array_values( $this->attendee_row( $u ) ), ',', '"', '\\' );
+        }
+        rewind( $fh );
+        return (string) stream_get_contents( $fh );
+    }
+
     public function add_export_column( array $cols ): array {
         $cols['crm_export'] = 'شرکت‌کنندگان';
         return $cols;
@@ -251,13 +353,7 @@ class Courses {
         $users = $this->get_attendees( $course_id );
         header( 'Content-Type: text/csv; charset=utf-8' );
         header( 'Content-Disposition: attachment; filename="course-' . $course_id . '-attendees.csv"' );
-        $out = fopen( 'php://output', 'w' );
-        fputcsv( $out, [ 'ID', 'Name', 'Email', 'Phone' ] );
-        foreach ( $users as $u ) {
-            $phone = get_user_meta( $u->ID, 'billing_phone', true );
-            fputcsv( $out, [ $u->ID, $u->display_name, $u->user_email, $phone ] );
-        }
-        fclose( $out );
+        echo $this->build_csv( $users );
         exit;
     }
 
@@ -337,11 +433,17 @@ class Courses {
         $url = plugin_dir_url( dirname( __DIR__ ) );
         wp_enqueue_style( 'imao-jdp', $url . 'assets/css/jalalidatepicker.min.css', [], '1.0.0' );
         wp_enqueue_style( 'imao-select2', $url . 'assets/css/select2.min.css', [], '1.0.0' );
+        wp_enqueue_style( 'imao-dt', $url . 'assets/css/jquery.dataTables.min.css', [], '1.0.0' );
         wp_enqueue_script( 'imao-jdp', $url . 'assets/js/jalalidatepicker.min.js', [ 'jquery' ], '1.0.0', true );
         wp_enqueue_script( 'imao-select2', $url . 'assets/js/select2.min.js', [ 'jquery' ], '1.0.0', true );
+        wp_enqueue_script( 'imao-dt', $url . 'assets/js/jquery.dataTables.min.js', [ 'jquery' ], '1.0.0', true );
         wp_add_inline_script(
             'imao-jdp',
             'jQuery(function($){$(".crm-select2").select2({dir:"rtl",width:"resolve"});jalaliDatepicker.startWatch();});'
+        );
+        wp_add_inline_script(
+            'imao-dt',
+            'jQuery(function($){$("#crm-attendees-table").DataTable({language:{url:"https://cdn.datatables.net/plug-ins/1.13.8/i18n/fa.json"},pageLength:20});});'
         );
     }
 }
