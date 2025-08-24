@@ -29,6 +29,21 @@ class UserMeta {
         return $out;
     }
 
+    /**
+     * Retrieve the gender term slug for a user.
+     */
+    public static function gender_slug( int $user_id ): string {
+        $g = strtolower( (string) self::get( $user_id, 'gender', '' ) );
+        switch ( $g ) {
+            case 'male':
+                return 'men';
+            case 'female':
+                return 'women';
+            default:
+                return $g;
+        }
+    }
+
     public static function set( int $user_id, string $key, $value ): void {
         update_user_meta( $user_id, $key, self::sanitize( $value ) );
     }
