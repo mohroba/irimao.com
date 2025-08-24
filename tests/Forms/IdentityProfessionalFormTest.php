@@ -23,5 +23,6 @@ class IdentityProfessionalFormTest extends TestCase {
         $form   = new IdentityProfessionalForm();
         $output = $form->render();
         $this->assertStringContainsString( 'تصویر پرسنلی', $output );
+        $this->assertStringContainsString( 'data-status="', $output );
     }
 }

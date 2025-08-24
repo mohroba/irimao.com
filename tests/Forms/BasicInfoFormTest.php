@@ -13,5 +13,8 @@ class BasicInfoFormTest extends TestCase {
         $this->assertStringContainsString( 'نام', $output );
         $this->assertStringContainsString( 'جنسیت', $output );
         $this->assertStringContainsString( 'type="hidden" id="national_id" name="national_id"', $output );
+        $this->assertStringContainsString( 'شما فقط یکبار اجازه ورود و بروزرسانی اطلاعات پایه را دارید', $output );
+        $this->assertStringContainsString( 'مسئولیت هرگونه مغایرت اطلاعات وارد شده در این صفحه با فایل‌ها', $output );
+        $this->assertStringContainsString( 'data-status', $output );
     }
 }
