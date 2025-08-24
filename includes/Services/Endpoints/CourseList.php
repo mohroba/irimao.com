@@ -31,15 +31,6 @@ class CourseList {
     }
 
     private function render(): string {
-        $gender = '';
-        if ( function_exists( 'get_current_user_id' ) ) {
-            $uid    = get_current_user_id();
-            $gender = $uid ? (string) get_user_meta( $uid, 'gender', true ) : '';
-        }
-        if ( ! $gender ) {
-            return '<p>برای مشاهدهٔ دوره‌ها ابتدا جنسیت خود را در بخش اطلاعات پایه ثبت کنید.</p>';
-        }
-
         $today = function_exists( 'current_time' ) ? current_time( 'Y-m-d' ) : date( 'Y-m-d' );
         $q     = new WP_Query([
             'post_type'      => 'course',
@@ -59,13 +50,6 @@ class CourseList {
                     'value'   => $today,
                     'compare' => '>=',
                     'type'    => 'DATE',
-                ],
-            ],
-            'tax_query'      => [
-                [
-                    'taxonomy' => 'gender',
-                    'field'    => 'slug',
-                    'terms'    => $gender,
                 ],
             ],
         ]);

@@ -402,27 +402,11 @@ class Competitions {
     }
 
     public function competitions_list_shortcode(): string {
-        $gender = '';
-        if ( function_exists( 'get_current_user_id' ) ) {
-            $uid    = get_current_user_id();
-            $gender = $uid ? (string) get_user_meta( $uid, 'gender', true ) : '';
-        }
-        if ( ! $gender ) {
-            return '<p>برای مشاهدهٔ لیست مسابقات ابتدا جنسیت خود را در بخش اطلاعات پایه ثبت کنید.</p>';
-        }
-
         $q = new WP_Query( [
-            'post_type'      => 'competition',
+            'post_type' => 'competition',
             'posts_per_page' => -1,
-            'orderby'        => 'date',
-            'order'          => 'DESC',
-            'tax_query'      => [
-                [
-                    'taxonomy' => 'gender',
-                    'field'    => 'slug',
-                    'terms'    => $gender,
-                ],
-            ],
+            'orderby' => 'date',
+            'order' => 'DESC',
         ] );
         if ( ! $q->have_posts() ) {
             return '<p>مسابقه‌ای موجود نیست.</p>';
@@ -466,20 +450,6 @@ class Competitions {
         $cid  = intval( $atts['id'] ?: ( $_GET['competition_id'] ?? 0 ) );
         if ( ! $cid || get_post_type( $cid ) !== 'competition' ) {
             return '<p>مسابقه پیدا نشد.</p>';
-        }
-
-        if ( ! is_user_logged_in() ) {
-            return '<p style="text-align:center;color:#c00;">برای ثبت‌نام ابتدا وارد شوید.</p>';
-        }
-        $uid    = get_current_user_id();
-        $gender = (string) get_user_meta( $uid, 'gender', true );
-        $status = (string) get_user_meta( $uid, 'identity_verified_professional', true );
-        if ( ! $gender || $status !== 'approved' ) {
-            return '<p style="text-align:center;color:#c00;">برای ثبت‌نام در مسابقات، ابتدا اطلاعات پایه را تکمیل و هویت خود را تأیید کنید.</p>';
-        }
-        $gterms = wp_get_post_terms( $cid, 'gender', [ 'fields' => 'slugs' ] );
-        if ( $gterms && ! in_array( $gender, $gterms, true ) ) {
-            return '<p style="text-align:center;color:#c00;">این مسابقه با جنسیت شما سازگار نیست.</p>';
         }
 
         $weights = wp_get_post_terms( $cid, 'weight_class' );
