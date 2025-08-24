@@ -177,10 +177,13 @@ class Ranking {
         if ( $hook !== 'users_page_crm-points-manager' ) {
             return;
         }
-        $url = plugin_dir_url( dirname( __DIR__ ) );
-        wp_enqueue_style( 'select2', $url . 'assets/css/select2.min.css', [], '4.0.13' );
-        wp_enqueue_script( 'select2', $url . 'assets/js/select2.min.js', [ 'jquery' ], '4.0.13', true );
-        wp_add_inline_script( 'select2', 'jQuery(function($){$(".crm-select2").select2({dir:"rtl",width:"resolve"});});' );
+        $url = plugin_dir_url( IMAO_PLUGIN_FILE );
+        wp_enqueue_style( 'imao-select2', $url . 'assets/css/select2.min.css', [], '4.0.13' );
+        wp_enqueue_script( 'imao-select2', $url . 'assets/js/select2.min.js', [ 'jquery' ], '4.0.13', true );
+        wp_add_inline_script(
+            'imao-select2',
+            'jQuery(function($){$("select.crm-select2").select2({dir:"rtl",width:"resolve"});});'
+        );
     }
 
     private function get_ranking_rows( int $competition_id = 0, int $weight_class = 0 ): array {
