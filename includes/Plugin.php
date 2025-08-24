@@ -9,6 +9,7 @@ use IMAOCustom\Services\ClubApplications;
 use IMAOCustom\Services\Courses;
 use IMAOCustom\Services\Endpoints\EditBasicInfo;
 use IMAOCustom\Services\Endpoints\IdentityProfessional;
+use IMAOCustom\Services\Endpoints\ChangePassword;
 use IMAOCustom\Services\Endpoints\Wallet;
 use IMAOCustom\Services\Admin\UserManagement;
 use IMAOCustom\Services\Endpoints\SmartcardIssue;
@@ -46,6 +47,7 @@ class Plugin {
         Courses::class,
         EditBasicInfo::class,
         IdentityProfessional::class,
+        ChangePassword::class,
         Wallet::class,
         UserManagement::class,
         SmartcardIssue::class,
