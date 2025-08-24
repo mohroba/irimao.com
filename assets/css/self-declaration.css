@@ -12,3 +12,6 @@
 .sd-submit button{background:#1890ff;color:#fff;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;font-size:15px;}
 .sd-warning{color:#ff4d4f;font-size:13px;margin-top:12px;line-height:1.4;}
 .sd-disclaimer{color:#888;font-size:12px;margin-top:8px;line-height:1.5;}
+.sd-field input,
+.sd-field select,
+.sd-field textarea{padding:8px !Important;border:1px solid #ccc !Important;border-radius:4px !Important;font-size:14px !Important; background-color: #F9FAFB !important;width:100%}
