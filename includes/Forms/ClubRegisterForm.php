@@ -176,8 +176,9 @@ class ClubRegisterForm extends BaseForm {
             'post_status'    => 'any',
         ]);
         if ( $q->have_posts() ) {
+            $students_url = esc_url( wc_get_account_endpoint_url( 'club-students' ) );
             echo '<div class="club-form-container" style="margin-top:20px"><div class="sd-header" style="margin-bottom: 15px">درخواست های شما</div><table class="shop_table striped" style="text-align:center"><thead><tr>'
-                .'<th>#</th><th>نام باشگاه</th><th>صاحب امتیاز</th><th>استان</th><th>شهر</th><th>وضعیت</th><th>دلیل رد</th><th>مجوز</th>'
+                .'<th>#</th><th>نام باشگاه</th><th>صاحب امتیاز</th><th>استان</th><th>شهر</th><th>وضعیت</th><th>دلیل رد</th><th>مجوز</th><th>شاگردان</th>'
                 .'</tr></thead><tbody>';
             $i = 1;
             while ( $q->have_posts() ) { $q->the_post();
@@ -197,6 +198,7 @@ class ClubRegisterForm extends BaseForm {
                     .'<td>'. $label .'</td>'
                     .'<td>'. ( $reason ?: '—' ) .'</td>'
                     .'<td>'. ( $image ? '<a href="'.$image.'" target="_blank">🔍</a>' : '—' ) .'</td>'
+                    .'<td>'. ( $status === 'publish' ? '<a href="'.$students_url.'" title="لیست شاگردان">👥</a>' : '—' ) .'</td>'
                     .'</tr>';
             }
             \wp_reset_postdata();
