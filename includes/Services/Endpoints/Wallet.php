@@ -11,6 +11,7 @@ class Wallet {
     private const META_USED    = 'crm_used_wallet';
     private const META_LINKED  = 'crm_linked_course';
     private const META_PAYOUT  = 'crm_payout_meta';
+    private const CRON_HOOK    = 'crm_cancel_unpaid_wallet_orders';
 
     public function register(): void {
         add_action( 'init', [ $this, 'add_endpoint' ] );
@@ -19,6 +20,8 @@ class Wallet {
         add_shortcode( 'crm_wallet', [ $this, 'shortcode' ] );
 
         add_action( 'woocommerce_order_status_completed', [ $this, 'credit_topup' ] );
+        add_action( 'init', [ $this, 'schedule_cancellation' ] );
+        add_action( self::CRON_HOOK, [ $this, 'cancel_unpaid_orders' ] );
 
         add_action( 'woocommerce_review_order_after_order_total', [ $this, 'checkout_checkbox' ] );
         add_action( 'woocommerce_cart_totals_after_order_total', [ $this, 'checkout_checkbox' ] );
@@ -74,6 +77,34 @@ class Wallet {
             'note'   => $note,
         ];
         update_user_meta( $user_id, self::META_LOG, $log );
+    }
+
+    public function schedule_cancellation(): void {
+        if ( ! function_exists( 'wp_next_scheduled' ) || ! function_exists( 'wp_schedule_event' ) ) {
+            return;
+        }
+        if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
+            wp_schedule_event( time(), 'hourly', self::CRON_HOOK );
+        }
+    }
+
+    public function cancel_unpaid_orders(): void {
+        if ( ! function_exists( 'wc_get_orders' ) ) {
+            return;
+        }
+        $threshold = time() - ( defined( 'HOUR_IN_SECONDS' ) ? HOUR_IN_SECONDS : 3600 );
+        $orders    = wc_get_orders( [
+            'status'      => 'pending',
+            'limit'       => -1,
+            'meta_query'  => [ [ 'key' => 'wallet_topup', 'value' => 0, 'compare' => '>' ] ],
+            'date_created' => '<=' . $threshold,
+        ] );
+        foreach ( $orders as $order ) {
+            $created = $order->get_date_created();
+            if ( $created && $created->getTimestamp() <= $threshold && $order->get_status() === 'pending' ) {
+                $order->update_status( 'cancelled', 'Wallet topup not paid within one hour' );
+            }
+        }
     }
 
     public function credit_topup( int $order_id ): void {

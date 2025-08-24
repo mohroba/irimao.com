@@ -4,6 +4,9 @@ namespace IMAOCustom\Services;
 use WP_Query;
 
 class Competitions {
+    private const META_LINKED_PRODUCT    = '_linked_product_id';
+    private const META_LINKED_COMPETITION = '_linked_post_id';
+
     public function register(): void {
         add_action( 'init', [ $this, 'register_post_type' ] );
         add_shortcode( 'crm_competitions_list', [ $this, 'competitions_list_shortcode' ] );
@@ -87,7 +90,10 @@ class Competitions {
 
         $weights = wp_get_post_terms( $cid, 'weight_class' );
         $price   = get_post_meta( $cid, 'price', true );
-        $prod_id = (int) get_post_meta( $cid, '_linked_product_id', true );
+        $prod_id = (int) get_post_meta( $cid, self::META_LINKED_PRODUCT, true );
+        if ( ! $prod_id ) {
+            $prod_id = $this->sync_product( $cid );
+        }
 
         ob_start();
         ?>
@@ -137,7 +143,7 @@ class Competitions {
 
         foreach ( $orders as $order ) {
             foreach ( $order->get_items() as $item ) {
-                $comp_id = (int) get_post_meta( $item->get_product_id(), '_linked_post_id', true );
+                $comp_id = (int) get_post_meta( $item->get_product_id(), self::META_LINKED_COMPETITION, true );
                 if ( ! $comp_id || get_post_type( $comp_id ) !== 'competition' ) {
                     continue;
                 }
@@ -171,5 +177,28 @@ class Competitions {
         }
         echo '</tbody></table>';
         return ob_get_clean();
+    }
+
+    private function sync_product( int $competition_id ): int {
+        if ( ! class_exists( 'WC_Product' ) ) {
+            return 0;
+        }
+        $price   = (float) get_post_meta( $competition_id, 'price', true );
+        $prod_id = (int) get_post_meta( $competition_id, self::META_LINKED_PRODUCT, true );
+        if ( $prod_id && ( $prod = wc_get_product( $prod_id ) ) ) {
+            $prod->set_name( get_the_title( $competition_id ) );
+            $prod->set_regular_price( $price );
+            $prod->save();
+        } else {
+            $prod = new \WC_Product_Simple();
+            $prod->set_name( get_the_title( $competition_id ) );
+            $prod->set_regular_price( $price );
+            $prod->set_virtual( true );
+            $prod->set_catalog_visibility( 'hidden' );
+            $prod_id = $prod->save();
+            update_post_meta( $competition_id, self::META_LINKED_PRODUCT, $prod_id );
+            update_post_meta( $prod_id, self::META_LINKED_COMPETITION, $competition_id );
+        }
+        return $prod_id;
     }
 }
