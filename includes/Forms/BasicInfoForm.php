@@ -41,8 +41,11 @@ class BasicInfoForm extends BaseForm {
         if ( ! is_user_logged_in() ) {
             return;
         }
-        $uid  = get_current_user_id();
-        $data = [];
+        $uid     = get_current_user_id();
+        $status  = get_user_meta( $uid, 'identity_verified_professional', true );
+        $locked  = ! in_array( $status, [ 'pending', 'rejected' ], true );
+
+        $data     = [];
         $all_keys = array_merge( $this->meta_keys(), [ 'billing_email' ] );
         foreach ( $all_keys as $key ) {
             if ( $key === 'residence_address' ) {
@@ -54,8 +57,15 @@ class BasicInfoForm extends BaseForm {
             }
         }
 
-        $gender    = $data['gender'] ?? '';
-        $required  = [
+        if ( $locked ) {
+            foreach ( [ 'coach_id', 'club_id' ] as $k ) {
+                update_user_meta( $uid, $k, $data[ $k ] ?? '' );
+            }
+            return;
+        }
+
+        $gender   = $data['gender'] ?? '';
+        $required = [
             'billing_phone','national_id','first_name_fa','last_name_fa','gender','father_name',
             'birth_date','birth_province','birth_city','marital_status','education_status',
             'residence_province','residence_city','residence_address',
@@ -159,15 +169,23 @@ class BasicInfoForm extends BaseForm {
             return '<p>لطفاً وارد شوید.</p>';
         }
         $f         = $this->fields();
+        $uid       = get_current_user_id();
+        $status    = get_user_meta( $uid, 'identity_verified_professional', true );
         $provinces = class_exists( '\\WC_Countries' ) ? ( new \WC_Countries() )->get_states( 'IR' ) : [];
         $birth     = CityMap::get_cities( (string) $f['birth_province'] );
         $res       = CityMap::get_cities( (string) $f['residence_province'] );
         $coaches   = $this->coach_options();
         $clubs     = $this->club_options();
 
-        $html  = '<div class="sd-container">';
-        $html  .= '<div class="sd-header" style="margin-bottom: 15px">اطلاعات پایه</div>';
-        $html .= '<form method="post" id="id-form" class="needs-swal">';
+        $html = '<div style="background:#ffe8e8;border:1px solid #f5c6cb;color:#721c24;padding:15px;border-radius:4px;margin-bottom:20px;">'
+            . __( 'شما فقط یکبار اجازه ورود و بروزرسانی اطلاعات پایه را دارید، پس در تکمیل اطلاعات پایه، دقت کافی را داشته باشید. پس از ثبت اطلاعات، تغییر یا بروزرسانی اطلاعات فقط با هماهنگی کمیته آموزش سبک امکان‌پذیر خواهد بود.', 'imao-custom-plugin' )
+            . '</div>';
+        $html .= '<div style="background:#ffe8e8;border:1px solid #f5c6cb;color:#721c24;padding:15px;border-radius:4px;margin-bottom:20px;">'
+            . __( 'مسئولیت هرگونه مغایرت اطلاعات وارد شده در این صفحه با فایل‌ها و مستندات آپلود شده در سیستم، کاملا بعهده کاربر بوده و در صورت مشاهده مغایرت، این امر تخلف شمرده شده و احتمال مسدود شدن حساب کاربری وجود خواهد داشت.', 'imao-custom-plugin' )
+            . '</div>';
+        $html .= '<div class="sd-container">';
+        $html .= '<div class="sd-header" style="margin-bottom: 15px">اطلاعات پایه</div>';
+        $html .= '<form method="post" id="id-form" class="needs-swal" data-status="' . esc_attr( $status ) . '">';
         $html .= wp_nonce_field( $this->nonce_action, $this->nonce_name, true, false );
         $html .= $this->error_list();
         $html .= '<div class="cbif-grid">';

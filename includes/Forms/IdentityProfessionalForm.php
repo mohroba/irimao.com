@@ -41,6 +41,14 @@ class IdentityProfessionalForm extends BaseForm {
         }
         $label   = $this->upload_fields[ $field ];
         $user_id = get_current_user_id();
+
+        $status = get_user_meta( $user_id, 'identity_verified_professional', true );
+        $locked = ! in_array( $status, [ 'pending', 'disapproved' ], true );
+        if ( $locked ) {
+            $this->messages[ $field ] = [ 'error' => 'مدارک شما تایید شده و قابل ویرایش نیست.' ];
+            return;
+        }
+
         if ( empty( $_FILES[ $field ]['name'] ) ) {
             $this->messages[ $field ] = [ 'error' => 'فایل الزامی است.' ];
             return;
@@ -109,7 +117,7 @@ class IdentityProfessionalForm extends BaseForm {
 
         ob_start();
         echo '<div class="crm-identity-verification-form">';
-        echo '<form method="post" enctype="multipart/form-data">';
+        echo '<form method="post" class="needs-swal" data-status="' . esc_attr( $status ) . '" enctype="multipart/form-data">';
         echo wp_nonce_field( $this->nonce_action, $this->nonce_name, true, false );
         echo $this->error_list();
 

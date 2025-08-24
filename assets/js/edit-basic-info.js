@@ -72,4 +72,33 @@ jQuery(function($){
     }
     $type.on('change', fillDegrees);
     fillDegrees();
+
+    const $form  = $('#id-form');
+    const status = $form.data('status');
+    if (status && status !== 'pending' && status !== 'rejected') {
+        const $coach = $('#coach_id');
+        const $club  = $('#club_id');
+        const initialCoach = $coach.val();
+        const initialClub  = $club.val();
+
+        $form
+            .find(
+                'input:not([name="coach_id"]):not([name="club_id"]):not([type="hidden"]), ' +
+                'select:not([name="coach_id"]):not([name="club_id"]), textarea:not([name="coach_id"]):not([name="club_id"])'
+            )
+            .prop('disabled', true);
+
+        $form.on('submit', function(e){
+            const coachChanged = $coach.val() !== initialCoach;
+            const clubChanged  = $club.val() !== initialClub;
+            if (!coachChanged && !clubChanged) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                Swal.fire({
+                    icon: 'warning',
+                    text: 'اطلاعات پایه شما تایید شده و قابل ویرایش نیست.',
+                });
+            }
+        });
+    }
 });
