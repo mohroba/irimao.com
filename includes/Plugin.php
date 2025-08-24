@@ -16,6 +16,7 @@ use IMAOCustom\Services\Endpoints\SmartcardIssue;
 use IMAOCustom\Services\Endpoints\SelfDeclaration;
 use IMAOCustom\Services\Endpoints\SelfDeclarationsList;
 use IMAOCustom\Services\Endpoints\ClubRegister;
+use IMAOCustom\Services\Endpoints\ClubStudents;
 use IMAOCustom\Services\Competitions;
 use IMAOCustom\Services\Ranking;
 use IMAOCustom\Services\Endpoints\CompetitionsList;
@@ -54,6 +55,7 @@ class Plugin {
         SelfDeclaration::class,
         SelfDeclarationsList::class,
         ClubRegister::class,
+        ClubStudents::class,
         Competitions::class,
         CompetitionsList::class,
         CompetitionDetails::class,
