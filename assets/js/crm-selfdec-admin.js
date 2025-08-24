@@ -45,4 +45,18 @@ jQuery(function($){
       });
     }
   });
+
+  // Delete button
+  $('.delete-btn').on('click', function(){
+    const row = $(this).closest('tr'),
+          pid = row.data('id');
+    if (!confirm('آیا از حذف این رکورد اطمینان دارید؟')) return;
+    $.post(CRM_SELFDEC.ajax_url, {
+      action  : 'crm_selfdec_delete',
+      nonce   : CRM_SELFDEC.nonce,
+      post_id : pid
+    }, function(){
+      location.reload();
+    });
+  });
 });
