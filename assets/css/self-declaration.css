@@ -18,3 +18,10 @@
 .sd-table-responsive{overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;}
 @media (max-width:1024px){.sd-grid{grid-template-columns:1fr 1fr;}}
 @media (max-width:768px){.sd-grid{grid-template-columns:1fr;}.sd-submit{text-align:center;}}
+
+/* Self declaration list table */
+.custom-table{width:100%;border-collapse:collapse;margin:15px 0;direction:rtl;}
+.custom-table th,.custom-table td{border:1px solid #dcdcdc;padding:6px 8px;text-align:center;font-size:13px;}
+.custom-table thead{background:#ff92008f;color:#000;}
+.custom-table tbody tr:nth-child(odd){background:#f9f9f9;}
+.custom-table tbody tr:hover{background:#f1f1f1;}
