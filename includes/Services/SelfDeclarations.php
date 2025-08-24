@@ -10,6 +10,7 @@ class SelfDeclarations {
         add_action( 'admin_menu', [ $this, 'admin_menu' ] );
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
         add_action( 'wp_ajax_crm_selfdec_change_status', [ $this, 'ajax_change_status' ] );
+        add_action( 'wp_ajax_crm_selfdec_delete', [ $this, 'ajax_delete' ] );
     }
 
     public function register_cpt(): void {
@@ -84,7 +85,7 @@ class SelfDeclarations {
             echo '<td>'. esc_html( $board_label ) .'</td>';
             echo '<td>'. ( $image_url ? '<a href="'.$image_url.'" target="_blank">مشاهده</a>' : '—' ) .'</td>';
             echo '<td>'. $status_label .'</td>';
-            echo '<td><button class="button approve-btn" data-id="'.$pid.'">تأیید</button> <button class="button disapprove-btn" data-id="'.$pid.'">رد</button></td>';
+            echo '<td><button class="button approve-btn" data-id="'.$pid.'">تأیید</button> <button class="button disapprove-btn" data-id="'.$pid.'">رد</button> <button class="button delete-btn" data-id="'.$pid.'">حذف</button></td>';
             echo '</tr>';
         }
         \wp_reset_postdata();
@@ -109,6 +110,19 @@ class SelfDeclarations {
             wp_send_json_error();
         }
         wp_send_json_success();
+    }
+
+    public function ajax_delete(): void {
+        check_ajax_referer( 'crm_selfdec_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error();
+        }
+        $post_id = intval( $_POST['post_id'] ?? 0 );
+        if ( $post_id && get_post_type( $post_id ) === 'self_declaration' ) {
+            wp_delete_post( $post_id, true );
+            wp_send_json_success();
+        }
+        wp_send_json_error();
     }
 }
 

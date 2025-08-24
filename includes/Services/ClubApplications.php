@@ -10,6 +10,7 @@ class ClubApplications {
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
         add_action( 'wp_ajax_crm_club_get', [ $this, 'ajax_get' ] );
         add_action( 'wp_ajax_crm_club_decide', [ $this, 'ajax_decide' ] );
+        add_action( 'wp_ajax_crm_club_delete', [ $this, 'ajax_delete' ] );
     }
 
     public function register_cpt(): void {
@@ -32,9 +33,10 @@ class ClubApplications {
             wp_enqueue_style( 'imao-club-admin', $url . 'assets/css/club-admin.css' );
             wp_enqueue_script( 'imao-club-admin', $url . 'assets/js/club-admin.js', [ 'jquery', 'thickbox' ], '1.0.0', true );
             wp_localize_script( 'imao-club-admin', 'CLUB_ADMIN', [
-                'ajax'        => admin_url( 'admin-ajax.php' ),
-                'nonce_get'   => wp_create_nonce( 'crm_club_get' ),
-                'nonce_decide'=> wp_create_nonce( 'crm_club_decide' ),
+                'ajax'         => admin_url( 'admin-ajax.php' ),
+                'nonce_get'    => wp_create_nonce( 'crm_club_get' ),
+                'nonce_decide' => wp_create_nonce( 'crm_club_decide' ),
+                'nonce_delete' => wp_create_nonce( 'crm_club_delete' ),
             ] );
         }
     }
@@ -68,7 +70,7 @@ class ClubApplications {
             echo '<td>'. esc_html( $province ) .'</td>';
             echo '<td>'. esc_html( $city ) .'</td>';
             echo '<td>'. esc_html( $status_label ) .'</td>';
-            echo '<td><button class="button view-club" data-pid="'. esc_attr( $pid ) .'">جزئیات</button> <button class="button approve-club">تأیید</button> <button class="button reject-club">رد</button></td>';
+            echo '<td><button class="button view-club" data-pid="'. esc_attr( $pid ) .'">جزئیات</button> <button class="button approve-club">تأیید</button> <button class="button reject-club">رد</button> <button class="button delete-club">حذف</button></td>';
             echo '</tr>';
         }
         \wp_reset_postdata();
@@ -124,5 +126,18 @@ class ClubApplications {
             wp_send_json_error();
         }
         wp_send_json_success();
+    }
+
+    public function ajax_delete(): void {
+        check_ajax_referer( 'crm_club_delete', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error();
+        }
+        $pid = intval( $_POST['post'] ?? 0 );
+        if ( $pid && get_post_type( $pid ) === 'club_application' ) {
+            wp_delete_post( $pid, true );
+            wp_send_json_success();
+        }
+        wp_send_json_error();
     }
 }

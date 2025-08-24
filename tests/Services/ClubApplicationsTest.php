@@ -11,4 +11,13 @@ class ClubApplicationsTest extends TestCase {
         $service->register_cpt();
         $this->assertTrue( post_type_exists( 'club_application' ) );
     }
+
+    public function test_register_hooks_delete_action(): void {
+        if ( ! function_exists( 'add_action' ) || ! function_exists( 'has_action' ) ) {
+            $this->markTestSkipped( 'WordPress functions not available.' );
+        }
+        $service = new ClubApplications();
+        $service->register();
+        $this->assertNotFalse( has_action( 'wp_ajax_crm_club_delete', [ $service, 'ajax_delete' ] ) );
+    }
 }

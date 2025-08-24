@@ -32,4 +32,13 @@ jQuery(function($){
       else alert('خطا در انجام عملیات');
     });
   });
+
+  $('#club-table').on('click','.delete-club',function(){
+    if(!confirm('حذف این درخواست؟')) return;
+    var $tr=$(this).closest('tr');
+    $.post(CLUB_ADMIN.ajax,{action:'crm_club_delete',nonce:CLUB_ADMIN.nonce_delete,post:$tr.data('id')},function(r){
+      if(r.success) location.reload();
+      else alert('خطا در حذف');
+    });
+  });
 });
