@@ -10,6 +10,33 @@ class Courses {
     private const META_PAYOUTS       = '_course_payouts';
     private const META_MANUAL        = '_manual_attendees';
 
+    /**
+     * Fields for course details meta box.
+     *
+     * @return array<string,string>
+     */
+    public static function detail_fields(): array {
+        return [
+            'course_code'       => 'کد',
+            'start_date'        => 'تاریخ شروع',
+            'end_date'          => 'تاریخ پایان',
+            'exam_date'         => 'تاریخ آزمون',
+            'registration_start'=> 'شروع ثبت‌نام',
+            'registration_end'  => 'پایان ثبت‌نام',
+            'attendance'        => 'نوع حضور',
+            'course_time'       => 'ساعت برگزاری دوره',
+            'organizer'         => 'مسئول برگزاری',
+            'organizer_tel'     => 'شماره همراه مسئول برگزاری',
+            'instructor'        => 'مدرس دوره',
+            'examiner'          => 'ممتحن',
+            'supervisor'        => 'ناظر',
+            'address'           => 'آدرس محل برگزاری',
+            'min_degree'        => 'حداقل درجه فنی',
+            'points'            => 'امتیاز دوره',
+            'price'             => 'شهریه دوره (تومان)',
+        ];
+    }
+
     public function register(): void {
         add_action( 'init', [ $this, 'register_taxonomies' ], 5 );
         add_action( 'init', [ $this, 'register_cpt' ] );
@@ -80,30 +107,31 @@ class Courses {
 
     public function render_details_box( WP_Post $post ): void {
         wp_nonce_field( 'crm_save_details', 'crm_details_nonce' );
-        $val = static fn( string $k ) => esc_attr( get_post_meta( $post->ID, $k, true ) );
-        $fields = [
-            'course_code'  => 'کد',
-            'course_type'  => 'نوع/عنوان کوتاه',
-            'course_level' => 'درجه / زیرشاخه',
-            'level'        => 'سطح',
-            'gender'       => 'جنسیت',
-            'start_date'   => 'تاریخ شروع',
-            'end_date'     => 'تاریخ پایان',
-            'exam_date'    => 'تاریخ آزمون',
-            'board'        => 'هیئت',
-            'price'        => 'قیمت (تومان)',
-        ];
+        $val          = static fn( string $k ) => esc_attr( get_post_meta( $post->ID, $k, true ) );
+        $fields       = self::detail_fields();
+        $number_field = [ 'points', 'min_degree' ];
+        $tel_fields   = [ 'organizer_tel' ];
+        $date_fields  = [ 'start_date', 'end_date', 'exam_date', 'registration_start', 'registration_end' ];
         echo '<table class="form-table"><tbody>';
         foreach ( $fields as $k => $label ) {
-            $type = in_array( $k, [ 'start_date', 'end_date', 'exam_date' ], true ) ? 'text' : ( $k === 'price' ? 'number' : 'text' );
-            $step = $k === 'price' ? 'step="1000"' : '';
+            $type  = 'text';
+            $class = '';
+            if ( in_array( $k, $date_fields, true ) ) {
+                $class = 'class="crm-date" data-jdp data-jdp-only-date';
+            } elseif ( $k === 'price' ) {
+                $class = 'class="crm-price"';
+            } elseif ( in_array( $k, $number_field, true ) ) {
+                $type = 'number';
+            } elseif ( in_array( $k, $tel_fields, true ) ) {
+                $type = 'tel';
+            }
             printf(
                 '<tr><th><label for="%1$s">%2$s</label></th><td><input type="%3$s" id="%1$s" name="%1$s" value="%4$s" style="width:100%%" %5$s></td></tr>',
                 esc_attr( $k ),
                 esc_html( $label ),
                 $type,
                 $val( $k ),
-                $step
+                $class
             );
         }
         echo '</tbody></table>';
@@ -161,11 +189,15 @@ class Courses {
         }
 
         if ( isset( $_POST['crm_details_nonce'] ) ) {
-            $keys = [ 'course_code','course_type','course_level','level','gender','start_date','end_date','exam_date','board','price' ];
-            foreach ( $keys as $k ) {
-                if ( isset( $_POST[ $k ] ) ) {
-                    update_post_meta( $post_id, $k, sanitize_text_field( $_POST[ $k ] ) );
+            foreach ( array_keys( self::detail_fields() ) as $k ) {
+                if ( ! isset( $_POST[ $k ] ) ) {
+                    continue;
                 }
+                $val = sanitize_text_field( $_POST[ $k ] );
+                if ( $k === 'price' ) {
+                    $val = str_replace( [',', ' '], '', $val );
+                }
+                update_post_meta( $post_id, $k, $val );
             }
         }
 
@@ -225,6 +257,9 @@ class Courses {
         wp_enqueue_style( 'imao-select2', $url . 'assets/css/select2.min.css', [], '1.0.0' );
         wp_enqueue_script( 'imao-jdp', $url . 'assets/js/jalalidatepicker.min.js', [ 'jquery' ], '1.0.0', true );
         wp_enqueue_script( 'imao-select2', $url . 'assets/js/select2.min.js', [ 'jquery' ], '1.0.0', true );
-        wp_add_inline_script( 'imao-jdp', 'jQuery(function($){$(".crm-select2").select2({dir:"rtl",width:"resolve"});});' );
+        wp_add_inline_script(
+            'imao-jdp',
+            'jQuery(function($){$(".crm-select2").select2({dir:"rtl",width:"resolve"});jalaliDatepicker.startWatch();$(".crm-price").each(function(){var v=$(this).val().replace(/[\s,]/g,"");if(v){$(this).val(Number(v).toLocaleString("fa-IR"));}}).on("input",function(){var v=$(this).val().replace(/[\s,]/g,"");if(v){$(this).val(Number(v).toLocaleString("fa-IR"));}});});'
+        );
     }
 }

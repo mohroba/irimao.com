@@ -6,6 +6,38 @@ class CourseDetails {
     private const META_LINKED_PRODUCT = '_linked_product_id';
     private const META_LINKED_COURSE  = '_linked_post_id';
 
+    /**
+     * Fields displayed on course details page.
+     *
+     * @return array<string,string>
+     */
+    public static function fields(): array {
+        return [
+            'course_code'        => 'کد دوره',
+            'course_type'        => 'نوع دوره',
+            'course_name'        => 'نام دوره',
+            'start_date'         => 'تاریخ شروع دوره',
+            'end_date'           => 'تاریخ پایان دوره',
+            'exam_date'          => 'تاریخ آزمون',
+            'registration_start' => 'شروع ثبت‌نام',
+            'registration_end'   => 'پایان ثبت‌نام',
+            'board'              => 'هیئت',
+            'gender'             => 'جنسیت دوره',
+            'level'              => 'سطح دوره',
+            'attendance'         => 'نوع حضور',
+            'course_time'        => 'ساعت برگزاری دوره',
+            'organizer'          => 'مسئول برگزاری',
+            'organizer_tel'      => 'شماره همراه مسئول برگزاری',
+            'instructor'         => 'مدرس دوره',
+            'examiner'           => 'ممتحن',
+            'supervisor'         => 'ناظر',
+            'address'            => 'آدرس محل برگزاری',
+            'min_degree'         => 'حداقل درجه فنی',
+            'points'             => 'امتیاز دوره',
+            'price'              => 'شهریه دوره',
+        ];
+    }
+
     public function register(): void {
         add_action( 'init', [ $this, 'add_endpoint' ] );
         add_action( 'woocommerce_account_course-details_endpoint', [ $this, 'content' ] );
@@ -38,23 +70,9 @@ class CourseDetails {
         if ( ! $cid || get_post_type( $cid ) !== 'course' ) {
             return '<p style="text-align:center;color:#c00;">دوره پیدا نشد.</p>';
         }
-        $fields = [
-            'course_code'   => 'کد دوره',
-            'course_type'   => 'نوع دوره',
-            'course_level'  => 'درجه / زیرشاخه',
-            'start_date'    => 'تاریخ شروع',
-            'end_date'      => 'تاریخ پایان',
-            'exam_date'     => 'تاریخ آزمون',
-            'board'         => 'هیئت',
-            'style'         => 'سبک',
-            'scope'         => 'نوع',
-            'gender'        => 'جنسیت',
-            'attendance'    => 'حضور',
-            'organizer'     => 'مسئول',
-            'organizer_tel' => 'تلفن مسئول',
-            'price'         => 'قیمت',
-        ];
-        $prod_id = (int) get_post_meta( $cid, self::META_LINKED_PRODUCT, true );
+        $fields     = self::fields();
+        $tax_fields = [ 'course_type', 'board', 'gender', 'level' ];
+        $prod_id    = (int) get_post_meta( $cid, self::META_LINKED_PRODUCT, true );
         if ( ! $prod_id ) {
             $prod_id = $this->sync_product( $cid );
         }
@@ -65,8 +83,18 @@ class CourseDetails {
             <h3><?php echo esc_html( get_the_title( $cid ) ); ?></h3>
             <table>
                 <tbody>
-                    <?php foreach ( $fields as $key => $label ) : $val = get_post_meta( $cid, $key, true );
-                        if ( $key === 'price' ) { $val = wc_price( (float) $val ); }
+                    <?php foreach ( $fields as $key => $label ) :
+                        if ( $key === 'course_name' ) {
+                            $val = get_the_title( $cid );
+                        } elseif ( in_array( $key, $tax_fields, true ) ) {
+                            $terms = get_the_terms( $cid, $key );
+                            $val   = $terms && ! is_wp_error( $terms ) ? join( ', ', wp_list_pluck( $terms, 'name' ) ) : '';
+                        } else {
+                            $val = get_post_meta( $cid, $key, true );
+                            if ( $key === 'price' ) {
+                                $val = wc_price( (float) $val );
+                            }
+                        }
                     ?>
                         <tr>
                             <th><?php echo esc_html( $label ); ?></th>

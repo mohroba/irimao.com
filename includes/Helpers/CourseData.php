@@ -10,13 +10,12 @@ class CourseData {
      */
     public static function columns(): array {
         return [
-            'course_code'  => 'کد دوره',
-            'course_type'  => 'نوع دوره',
-            'course_level' => 'درجه/زیرشاخه',
-            'board'        => 'هیئت',
-            'style'        => 'سبک',
-            'scope'        => 'نوع',
-            'gender'       => 'جنسیت',
+            'course_code' => 'کد دوره',
+            'course_type' => 'نوع دوره',
+            'level'       => 'سطح دوره',
+            'board'       => 'هیئت',
+            'attendance'  => 'نوع حضور',
+            'gender'      => 'جنسیت دوره',
         ];
     }
 }
