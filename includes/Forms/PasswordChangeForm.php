@@ -48,7 +48,7 @@ class PasswordChangeForm extends BaseForm {
         $html .= '<form method="post" class="needs-swal">';
         $html .= wp_nonce_field( $this->nonce_action, $this->nonce_name, true, false );
         $html .= $this->error_list();
-        $html .= '<div class="cbif-grid">';
+        $html .= '<div class="cbif-grid" style="margin-bottom: 15px">';
         $html .= '<div class="cbif-field"><label for="user_login">نام کاربری</label><input type="text" id="user_login" value="' . esc_attr( $f['user_login'] ) . '" disabled></div>';
         $html .= '<div class="cbif-field"><label for="current_pass">رمز عبور فعلی<span class="required">*</span></label><input type="password" id="current_pass" name="current_pass"></div>';
         $html .= '<div class="cbif-field"><label for="new_pass">رمز عبور جدید<span class="required">*</span></label><input type="password" id="new_pass" name="new_pass"></div>';
