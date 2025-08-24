@@ -43,6 +43,9 @@ class Courses {
         add_action( 'add_meta_boxes', [ $this, 'add_meta_boxes' ] );
         add_action( 'save_post', [ $this, 'save_meta' ], 10, 3 );
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
+        add_filter( 'manage_course_posts_columns', [ $this, 'add_export_column' ] );
+        add_action( 'manage_course_posts_custom_column', [ $this, 'render_export_column' ], 10, 2 );
+        add_action( 'admin_post_export_course_attendees', [ $this, 'export_attendees' ] );
     }
 
     public function register_taxonomies(): void {
@@ -103,6 +106,7 @@ class Courses {
         add_meta_box( 'crm_details', 'جزئیات', [ $this, 'render_details_box' ], 'course', 'normal', 'high' );
         add_meta_box( 'crm_payouts', 'ذی‌نفعان', [ $this, 'render_payouts_box' ], 'course', 'normal', 'default' );
         add_meta_box( 'crm_manual',  'حضور دستی', [ $this, 'render_manual_box' ],  'course', 'side',   'default' );
+        add_meta_box( 'crm_attendees', 'شرکت‌کنندگان', [ $this, 'render_attendees_box' ], 'course', 'side', 'default' );
     }
 
     public function render_details_box( WP_Post $post ): void {
@@ -119,7 +123,8 @@ class Courses {
             if ( in_array( $k, $date_fields, true ) ) {
                 $class = 'class="crm-date" data-jdp data-jdp-only-date';
             } elseif ( $k === 'price' ) {
-                $class = 'class="crm-price"';
+                $type  = 'number';
+                $class = 'min="0" step="1000"';
             } elseif ( in_array( $k, $number_field, true ) ) {
                 $type = 'number';
             } elseif ( in_array( $k, $tel_fields, true ) ) {
@@ -180,6 +185,82 @@ class Courses {
         echo '</select></p><p style="font-size:12px">نگه‌داشتن CTRL برای چند انتخاب.</p>';
     }
 
+    public function render_attendees_box( WP_Post $post ): void {
+        $users = $this->get_attendees( $post->ID );
+        if ( empty( $users ) ) {
+            echo '<p>شرکت‌کننده‌ای ثبت نشده است.</p>';
+            return;
+        }
+        echo '<ul>';
+        foreach ( $users as $u ) {
+            printf( '<li>%s (%s)</li>', esc_html( $u->display_name ), esc_html( $u->user_email ) );
+        }
+        echo '</ul>';
+    }
+
+    /**
+     * Get users who purchased the linked product.
+     *
+     * @return \WP_User[]
+     */
+    private function get_attendees( int $course_id ): array {
+        if ( ! function_exists( 'wc_get_orders' ) ) {
+            return [];
+        }
+        $prod_id = (int) get_post_meta( $course_id, self::META_LINKED_PRODUCT, true );
+        if ( ! $prod_id ) {
+            return [];
+        }
+        $orders = wc_get_orders( [
+            'limit'      => -1,
+            'status'     => [ 'processing', 'completed' ],
+            'product_id' => $prod_id,
+        ] );
+        $users = [];
+        foreach ( $orders as $order ) {
+            $uid = (int) $order->get_user_id();
+            if ( ! $uid || isset( $users[ $uid ] ) ) {
+                continue;
+            }
+            if ( $user = get_user_by( 'id', $uid ) ) {
+                $users[ $uid ] = $user;
+            }
+        }
+        return array_values( $users );
+    }
+
+    public function add_export_column( array $cols ): array {
+        $cols['crm_export'] = 'شرکت‌کنندگان';
+        return $cols;
+    }
+
+    public function render_export_column( string $col, int $post_id ): void {
+        if ( $col !== 'crm_export' ) {
+            return;
+        }
+        $url = wp_nonce_url( admin_url( 'admin-post.php?action=export_course_attendees&course=' . $post_id ), 'export_course_attendees_' . $post_id );
+        echo '<a class="button" href="' . esc_url( $url ) . '">خروجی اکسل</a>';
+    }
+
+    public function export_attendees(): void {
+        $course_id = (int) ( $_GET['course'] ?? 0 );
+        if ( ! $course_id ) {
+            wp_die( 'Course not specified.' );
+        }
+        check_admin_referer( 'export_course_attendees_' . $course_id );
+        $users = $this->get_attendees( $course_id );
+        header( 'Content-Type: text/csv; charset=utf-8' );
+        header( 'Content-Disposition: attachment; filename="course-' . $course_id . '-attendees.csv"' );
+        $out = fopen( 'php://output', 'w' );
+        fputcsv( $out, [ 'ID', 'Name', 'Email', 'Phone' ] );
+        foreach ( $users as $u ) {
+            $phone = get_user_meta( $u->ID, 'billing_phone', true );
+            fputcsv( $out, [ $u->ID, $u->display_name, $u->user_email, $phone ] );
+        }
+        fclose( $out );
+        exit;
+    }
+
     public function save_meta( int $post_id, WP_Post $post, bool $update ): void {
         if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
             return;
@@ -193,9 +274,10 @@ class Courses {
                 if ( ! isset( $_POST[ $k ] ) ) {
                     continue;
                 }
-                $val = sanitize_text_field( $_POST[ $k ] );
                 if ( $k === 'price' ) {
-                    $val = str_replace( [',', ' '], '', $val );
+                    $val = absint( $_POST[ $k ] );
+                } else {
+                    $val = sanitize_text_field( $_POST[ $k ] );
                 }
                 update_post_meta( $post_id, $k, $val );
             }
@@ -259,7 +341,7 @@ class Courses {
         wp_enqueue_script( 'imao-select2', $url . 'assets/js/select2.min.js', [ 'jquery' ], '1.0.0', true );
         wp_add_inline_script(
             'imao-jdp',
-            'jQuery(function($){$(".crm-select2").select2({dir:"rtl",width:"resolve"});jalaliDatepicker.startWatch();$(".crm-price").each(function(){var v=$(this).val().replace(/[\s,]/g,"");if(v){$(this).val(Number(v).toLocaleString("fa-IR"));}}).on("input",function(){var v=$(this).val().replace(/[\s,]/g,"");if(v){$(this).val(Number(v).toLocaleString("fa-IR"));}});});'
+            'jQuery(function($){$(".crm-select2").select2({dir:"rtl",width:"resolve"});jalaliDatepicker.startWatch();});'
         );
     }
 }
