@@ -1,46 +1,404 @@
 <?php
 namespace IMAOCustom\Services;
 
+use WP_Post;
 use WP_Query;
 
 class Competitions {
-    private const META_LINKED_PRODUCT    = '_linked_product_id';
+    private const META_LINKED_PRODUCT     = '_linked_product_id';
     private const META_LINKED_COMPETITION = '_linked_post_id';
+    private const META_MANUAL             = '_manual_attendees';
+
+    /**
+     * Fields for competition details meta box.
+     *
+     * @return array<string,string>
+     */
+    public static function detail_fields(): array {
+        return [
+            'competition_code' => 'کد',
+            'start_date'       => 'تاریخ شروع',
+            'end_date'         => 'تاریخ پایان',
+            'registration_start'=> 'شروع ثبت‌نام',
+            'registration_end' => 'پایان ثبت‌نام',
+            'organizer'        => 'مسئول برگزاری',
+            'organizer_tel'    => 'شماره همراه مسئول برگزاری',
+            'supervisor'       => 'ناظر',
+            'address'          => 'آدرس محل برگزاری',
+            'min_degree'       => 'حداقل درجه فنی',
+            'price'            => 'هزینه ثبت نام مسابقه (تومان)',
+        ];
+    }
 
     public function register(): void {
-        add_action( 'init', [ $this, 'register_post_type' ] );
+        add_action( 'init', [ $this, 'register_taxonomies' ], 5 );
+        add_action( 'init', [ $this, 'populate_board_terms' ], 6 );
+        add_action( 'init', [ $this, 'register_cpt' ] );
+        add_action( 'add_meta_boxes', [ $this, 'add_meta_boxes' ] );
+        add_action( 'save_post', [ $this, 'save_meta' ], 10, 3 );
+        add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
+        add_filter( 'manage_competition_posts_columns', [ $this, 'add_export_column' ] );
+        add_action( 'manage_competition_posts_custom_column', [ $this, 'render_export_column' ], 10, 2 );
+        add_action( 'admin_post_export_competition_attendees', [ $this, 'export_attendees' ] );
         add_shortcode( 'crm_competitions_list', [ $this, 'competitions_list_shortcode' ] );
         add_shortcode( 'crm_competition_details', [ $this, 'competition_details_shortcode' ] );
         add_shortcode( 'crm_user_competitions', [ $this, 'user_competitions_shortcode' ] );
+        add_filter( 'woocommerce_add_cart_item_data', [ $this, 'add_cart_item_data' ], 10, 2 );
+        add_filter( 'woocommerce_get_item_data', [ $this, 'add_item_data' ], 10, 2 );
+        add_action( 'woocommerce_checkout_create_order_line_item', [ $this, 'add_order_line_item_meta' ], 10, 2 );
     }
 
-    public function register_post_type(): void {
-        register_post_type( 'competition', [
-            'labels' => [
-                'name' => 'مسابقات',
-                'singular_name' => 'مسابقه',
-            ],
-            'public' => true,
-            'show_ui' => true,
-            'show_in_menu' => true,
-            'menu_icon' => 'dashicons-awards',
-            'has_archive' => true,
-            'rewrite' => [ 'slug' => 'competitions' ],
-            'supports' => [ 'title', 'thumbnail' ],
-            'taxonomies' => [ 'weight_class' ],
-            'show_in_rest' => true,
-        ] );
+    public function register_taxonomies(): void {
+        $tax = function ( string $slug, string $singular, string $plural, bool $hier = false ): void {
+            $labels = [
+                'name'          => $plural,
+                'singular_name' => $singular,
+                'add_new_item'  => "افزودن $singular جدید",
+                'edit_item'     => "ویرایش $singular",
+                'search_items'  => "جستجوی $plural",
+                'all_items'     => "همه $plural",
+            ];
+            $args = [
+                'hierarchical'      => $hier,
+                'labels'            => $labels,
+                'public'            => true,
+                'show_admin_column' => true,
+                'rewrite'           => [ 'slug' => $slug ],
+                'show_in_rest'      => true,
+            ];
+            if ( taxonomy_exists( $slug ) ) {
+                register_taxonomy_for_object_type( $slug, 'competition' );
+            } else {
+                register_taxonomy( $slug, [ 'competition' ], $args );
+            }
+        };
 
-        register_taxonomy( 'weight_class', [ 'competition' ], [
-            'labels' => [
-                'name' => 'کلاس‌های وزنی',
-                'singular_name' => 'کلاس وزنی',
-            ],
-            'public' => true,
-            'hierarchical' => true,
-            'show_ui' => true,
+        $tax( 'gender',           'جنسیت',       'جنسیت' );
+        $tax( 'board',            'هیئت',        'هیئت‌ها', true );
+        $tax( 'competition_type', 'نوع مسابقه',  'انواع مسابقه' );
+        $tax( 'age_category',     'رده سنی',    'رده‌های سنی', true );
+        $tax( 'level',            'سطح',         'سطوح', true );
+        $tax( 'weight_class',     'کلاس وزنی',   'کلاس‌های وزنی' );
+    }
+
+    /**
+     * Ensure board taxonomy is populated with province terms.
+     */
+    public function populate_board_terms(): void {
+        if ( ! function_exists( 'wp_insert_term' ) || ! function_exists( 'term_exists' ) ) {
+            return;
+        }
+        foreach ( Courses::province_terms() as $slug => $name ) {
+            if ( ! term_exists( $slug, 'board' ) ) {
+                wp_insert_term( $name, 'board', [ 'slug' => $slug ] );
+            }
+        }
+    }
+
+    public function register_cpt(): void {
+        $labels = [
+            'name'          => 'مسابقات',
+            'singular_name' => 'مسابقه',
+            'add_new'       => 'افزودن مسابقه',
+            'add_new_item'  => 'مسابقهٔ جدید',
+            'edit_item'     => 'ویرایش مسابقه',
+            'new_item'      => 'مسابقهٔ جدید',
+            'view_item'     => 'مشاهدهٔ مسابقه',
+            'search_items'  => 'جستجوی مسابقه',
+            'menu_name'     => 'مسابقات',
+        ];
+
+        register_post_type( 'competition', [
+            'labels'       => $labels,
+            'public'       => true,
+            'show_ui'      => true,
+            'show_in_menu' => true,
+            'menu_icon'    => 'dashicons-awards',
+            'has_archive'  => true,
+            'rewrite'      => [ 'slug' => 'competitions' ],
+            'supports'     => [ 'title', 'thumbnail' ],
+            'taxonomies'   => [ 'gender','board','competition_type','age_category','weight_class','level' ],
             'show_in_rest' => true,
         ] );
+    }
+
+    public function add_meta_boxes(): void {
+        add_meta_box( 'crm_details', 'جزئیات', [ $this, 'render_details_box' ], 'competition', 'normal', 'high' );
+        add_meta_box( 'crm_manual',  'افزودن شرکت کننده به صورت دستی', [ $this, 'render_manual_box' ],  'competition', 'side',   'default' );
+        add_meta_box( 'crm_attendees', 'شرکت‌کنندگان', [ $this, 'render_attendees_box' ], 'competition', 'side', 'default' );
+    }
+
+    public function render_details_box( WP_Post $post ): void {
+        wp_nonce_field( 'crm_save_details', 'crm_details_nonce' );
+        $val          = static fn( string $k ) => esc_attr( get_post_meta( $post->ID, $k, true ) );
+        $fields       = self::detail_fields();
+        $number_field = [ 'min_degree' ];
+        $tel_fields   = [ 'organizer_tel' ];
+        $date_fields  = [ 'start_date', 'end_date', 'registration_start', 'registration_end' ];
+        echo '<table class="form-table striped"><tbody>';
+        foreach ( $fields as $k => $label ) {
+            $type  = 'text';
+            $class = '';
+            if ( in_array( $k, $date_fields, true ) ) {
+                $class = 'class="crm-date" data-jdp data-jdp-only-date';
+            } elseif ( $k === 'price' ) {
+                $type  = 'number';
+                $class = 'min="0" step="1000"';
+            } elseif ( in_array( $k, $number_field, true ) ) {
+                $type = 'number';
+            } elseif ( in_array( $k, $tel_fields, true ) ) {
+                $type = 'tel';
+            }
+            printf(
+                '<tr><th><label for="%1$s">%2$s</label></th><td><input type="%3$s" id="%1$s" name="%1$s" value="%4$s" style="width:100%%" %5$s></td></tr>',
+                esc_attr( $k ),
+                esc_html( $label ),
+                $type,
+                $val( $k ),
+                $class
+            );
+        }
+        echo '</tbody></table>';
+    }
+
+    public function render_manual_box( WP_Post $post ): void {
+        wp_nonce_field( 'crm_save_manual', 'crm_manual_nonce' );
+        $att = (array) get_post_meta( $post->ID, self::META_MANUAL, true );
+        echo '<p><select multiple name="manual_attendees[]" class="crm-select2" style="width:100%">';
+        foreach ( get_users( [ 'fields' => [ 'ID', 'display_name' ] ] ) as $u ) {
+            printf( '<option value="%d"%s>%s</option>', $u->ID, selected( in_array( $u->ID, $att, true ), true, false ), esc_html( $u->display_name ) );
+        }
+        echo '</select></p><p style="font-size:12px">نگه‌داشتن CTRL برای چند انتخاب.</p>';
+    }
+
+    public function render_attendees_box( WP_Post $post ): void {
+        $users = $this->get_attendees( $post->ID );
+        if ( empty( $users ) ) {
+            echo '<p>شرکت‌کننده‌ای ثبت نشده است.</p>';
+            return;
+        }
+        $fields = $this->attendee_fields();
+        echo '<div style="max-width:100%;overflow:auto">';
+        echo '<table id="crm-attendees-table" class="wp-list-table widefat striped"><thead><tr>';
+        foreach ( $fields as $lbl ) {
+            echo '<th>' . esc_html( $lbl ) . '</th>';
+        }
+        echo '</tr></thead><tbody>';
+        foreach ( $users as $u ) {
+            $row = $this->attendee_row( $u );
+            echo '<tr>';
+            foreach ( $fields as $key => $lbl ) {
+                $val = $row[ $key ] ?? '';
+                echo '<td>' . esc_html( (string) $val ) . '</td>';
+            }
+            echo '</tr>';
+        }
+        echo '</tbody></table></div>';
+    }
+
+    /**
+     * Get users who purchased the linked product.
+     *
+     * @return \WP_User[]
+     */
+    private function get_attendees( int $competition_id ): array {
+        if ( ! function_exists( 'wc_get_orders' ) ) {
+            return [];
+        }
+        $prod_id = (int) get_post_meta( $competition_id, self::META_LINKED_PRODUCT, true );
+        if ( ! $prod_id ) {
+            return [];
+        }
+        $orders = wc_get_orders( [
+            'limit'      => -1,
+            'status'     => [ 'processing', 'completed' ],
+            'product_id' => $prod_id,
+        ] );
+        $users = [];
+        foreach ( $orders as $order ) {
+            $uid = (int) $order->get_user_id();
+            if ( ! $uid || isset( $users[ $uid ] ) ) {
+                continue;
+            }
+            if ( $user = get_user_by( 'id', $uid ) ) {
+                $users[ $uid ] = $user;
+            }
+        }
+        return array_values( $users );
+    }
+
+    /**
+     * Field map for attendee data.
+     *
+     * @return array<string,string>
+     */
+    private function attendee_fields(): array {
+        return [
+            'ID'            => 'ID',
+            'display_name'  => 'نام',
+            'billing_email' => 'ایمیل',
+            'billing_phone' => 'شماره موبایل',
+        ];
+    }
+
+    /**
+     * Build a row of attendee data.
+     *
+     * @return array<string,string|int>
+     */
+    private function attendee_row( \WP_User $u ): array {
+        $row = [];
+        foreach ( $this->attendee_fields() as $key => $lbl ) {
+            switch ( $key ) {
+                case 'ID':
+                    $row[ $key ] = $u->ID;
+                    break;
+                case 'display_name':
+                    $row[ $key ] = $u->display_name;
+                    break;
+                case 'billing_email':
+                    $row[ $key ] = get_user_meta( $u->ID, 'billing_email', true ) ?: $u->user_email;
+                    break;
+                default:
+                    $row[ $key ] = get_user_meta( $u->ID, $key, true );
+            }
+        }
+        return $row;
+    }
+
+    /**
+     * Generate XLSX content for attendees.
+     */
+    protected function build_xlsx( array $users ): string {
+        $sheet  = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $active = $sheet->getActiveSheet();
+        $active->fromArray( [ array_values( $this->attendee_fields() ) ] );
+        $row = 2;
+        foreach ( $users as $u ) {
+            $active->fromArray( [ array_values( $this->attendee_row( $u ) ) ], null, 'A' . $row );
+            $row++;
+        }
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx( $sheet );
+        ob_start();
+        $writer->save( 'php://output' );
+        return (string) ob_get_clean();
+    }
+
+    public function add_export_column( array $cols ): array {
+        $cols['crm_export'] = 'شرکت‌کنندگان';
+        return $cols;
+    }
+
+    public function render_export_column( string $col, int $post_id ): void {
+        if ( $col !== 'crm_export' ) {
+            return;
+        }
+        $url = wp_nonce_url( admin_url( 'admin-post.php?action=export_competition_attendees&competition=' . $post_id ), 'export_competition_attendees_' . $post_id );
+        echo '<a class="button" href="' . esc_url( $url ) . '">خروجی اکسل</a>';
+    }
+
+    public function export_attendees(): void {
+        $competition_id = (int) ( $_GET['competition'] ?? 0 );
+        if ( ! $competition_id ) {
+            wp_die( 'Competition not specified.' );
+        }
+        check_admin_referer( 'export_competition_attendees_' . $competition_id );
+        $users = $this->get_attendees( $competition_id );
+        header( 'Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' );
+        header( 'Content-Disposition: attachment; filename="competition-' . $competition_id . '-attendees.xlsx"' );
+        echo $this->build_xlsx( $users );
+        exit;
+    }
+
+    public function save_meta( int $post_id, WP_Post $post, bool $update ): void {
+        if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+            return;
+        }
+        if ( $post->post_type !== 'competition' ) {
+            return;
+        }
+        if ( isset( $_POST['crm_details_nonce'] ) ) {
+            foreach ( array_keys( self::detail_fields() ) as $k ) {
+                if ( ! isset( $_POST[ $k ] ) ) {
+                    continue;
+                }
+                if ( $k === 'price' ) {
+                    $val = absint( $_POST[ $k ] );
+                } else {
+                    $val = sanitize_text_field( $_POST[ $k ] );
+                }
+                update_post_meta( $post_id, $k, $val );
+            }
+        }
+
+        if ( isset( $_POST['crm_manual_nonce'] ) ) {
+            $att = array_map( 'intval', $_POST['manual_attendees'] ?? [] );
+            update_post_meta( $post_id, self::META_MANUAL, $att );
+        }
+        $this->sync_product( $post_id );
+    }
+
+    public function enqueue_admin_assets(): void {
+        $screen = get_current_screen();
+        if ( ! $screen || $screen->post_type !== 'competition' ) {
+            return;
+        }
+        $url = plugin_dir_url( dirname( __DIR__ ) );
+        wp_enqueue_style( 'imao-jdp', $url . 'assets/css/jalalidatepicker.min.css', [], '1.0.0' );
+        wp_enqueue_style( 'imao-select2', $url . 'assets/css/select2.min.css', [], '1.0.0' );
+        wp_enqueue_style( 'imao-dt', $url . 'assets/css/jquery.dataTables.min.css', [], '1.0.0' );
+        wp_enqueue_script( 'imao-jdp', $url . 'assets/js/jalalidatepicker.min.js', [ 'jquery' ], '1.0.0', true );
+        wp_enqueue_script( 'imao-select2', $url . 'assets/js/select2.min.js', [ 'jquery' ], '1.0.0', true );
+        wp_enqueue_script( 'imao-dt', $url . 'assets/js/jquery.dataTables.min.js', [ 'jquery' ], '1.0.0', true );
+        wp_add_inline_script(
+            'imao-jdp',
+            'jQuery(function($){$(".crm-select2").select2({dir:"rtl",width:"resolve"});jalaliDatepicker.startWatch();});'
+        );
+        wp_add_inline_script(
+            'imao-dt',
+            'jQuery(function($){$("#crm-attendees-table").DataTable({language:{url:"https://cdn.datatables.net/plug-ins/1.13.8/i18n/fa.json"},pageLength:20});});'
+        );
+    }
+
+    public function add_cart_item_data( $data, $prod_id ) {
+        if ( isset( $_REQUEST['weight_class_term'] ) ) {
+            $data['weight_class_term'] = (int) $_REQUEST['weight_class_term'];
+        }
+        if ( isset( $_REQUEST['age_category_term'] ) ) {
+            $data['age_category_term'] = (int) $_REQUEST['age_category_term'];
+        }
+        return $data;
+    }
+
+    public function add_item_data( $data, $cart_item ) {
+        if ( ! empty( $cart_item['weight_class_term'] ) ) {
+            $term = get_term( $cart_item['weight_class_term'], 'weight_class' );
+            if ( $term ) {
+                $data[] = [ 'name' => 'کلاس وزنی', 'value' => $term->name ];
+            }
+        }
+        if ( ! empty( $cart_item['age_category_term'] ) ) {
+            $term = get_term( $cart_item['age_category_term'], 'age_category' );
+            if ( $term ) {
+                $data[] = [ 'name' => 'رده سنی', 'value' => $term->name ];
+            }
+        }
+        return $data;
+    }
+
+    public function add_order_line_item_meta( $item, $cart_item ) {
+        if ( ! empty( $cart_item['weight_class_term'] ) ) {
+            $term = get_term( $cart_item['weight_class_term'], 'weight_class' );
+            if ( $term ) {
+                $item->add_meta_data( 'کلاس وزنی', $term->name, true );
+            }
+        }
+        if ( ! empty( $cart_item['age_category_term'] ) ) {
+            $term = get_term( $cart_item['age_category_term'], 'age_category' );
+            if ( $term ) {
+                $item->add_meta_data( 'رده سنی', $term->name, true );
+            }
+        }
     }
 
     public function competitions_list_shortcode(): string {
@@ -54,7 +412,13 @@ class Competitions {
             return '<p>مسابقه‌ای موجود نیست.</p>';
         }
 
-        $tax_cols = [ 'weight_class' => 'کلاس وزنی' ];
+        $tax_cols = [
+            'weight_class'  => 'کلاس وزنی',
+            'gender'        => 'جنسیت',
+            'board'         => 'هیئت',
+            'age_category'  => 'رده سنی',
+            'level'         => 'سطح',
+        ];
         ob_start();
         echo '<div class="sd-container">';
         echo '<div class="sd-header">لیست مسابقات</div>';
@@ -89,6 +453,7 @@ class Competitions {
         }
 
         $weights = wp_get_post_terms( $cid, 'weight_class' );
+        $ages    = wp_get_post_terms( $cid, 'age_category' );
         $price   = get_post_meta( $cid, 'price', true );
         $prod_id = (int) get_post_meta( $cid, self::META_LINKED_PRODUCT, true );
         if ( ! $prod_id ) {
@@ -103,7 +468,7 @@ class Competitions {
                 <h3><?php echo esc_html( get_the_title( $cid ) ); ?></h3>
                 <table class="striped">
                     <tbody>
-                        <tr><th>کد</th><td><?php echo esc_html( get_post_meta( $cid, 'course_code', true ) ); ?></td></tr>
+                        <tr><th>کد</th><td><?php echo esc_html( get_post_meta( $cid, 'competition_code', true ) ); ?></td></tr>
                         <tr><th>قیمت</th><td><?php echo wc_price( $price ); ?></td></tr>
                         <?php if ( $conditions = get_post_meta( $cid, 'special_conditions', true ) ) : ?>
                             <tr><th>شرایط خاص</th><td><?php echo nl2br( esc_html( $conditions ) ); ?></td></tr>
@@ -112,6 +477,14 @@ class Competitions {
                             <select name="weight_class_term" required>
                                 <option value="">— انتخاب کنید —</option>
                                 <?php foreach ( $weights as $t ) : ?>
+                                    <option value="<?php echo $t->term_id; ?>"><?php echo esc_html( $t->name ); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </td></tr>
+                        <tr><th>رده سنی</th><td>
+                            <select name="age_category_term" required>
+                                <option value="">— انتخاب کنید —</option>
+                                <?php foreach ( $ages as $t ) : ?>
                                     <option value="<?php echo $t->term_id; ?>"><?php echo esc_html( $t->name ); ?></option>
                                 <?php endforeach; ?>
                             </select>
@@ -157,6 +530,7 @@ class Competitions {
                     'amount'         => $item->get_total(),
                     'status'         => wc_get_order_status_name( $order->get_status() ),
                     'weight_class'   => $item->get_meta( 'کلاس وزنی', true ),
+                    'age_category'   => $item->get_meta( 'رده سنی', true ),
                 ];
             }
         }
@@ -176,6 +550,7 @@ class Competitions {
                         <th>نام مسابقه</th>
                         <th>کد مسابقه</th>
                         <th>کلاس وزنی</th>
+                        <th>رده سنی</th>
                         <th>شماره سفارش</th>
                         <th>تاریخ سفارش</th>
                         <th>مبلغ پرداختی</th>
@@ -188,8 +563,9 @@ class Competitions {
                         <tr>
                             <td><?php echo $i++; ?></td>
                             <td><?php echo esc_html( get_the_title( $cid ) ); ?></td>
-                            <td><?php echo esc_html( get_post_meta( $cid, 'course_code', true ) ); ?></td>
+                            <td><?php echo esc_html( get_post_meta( $cid, 'competition_code', true ) ); ?></td>
                             <td><?php echo esc_html( $r['weight_class'] ?: '—' ); ?></td>
+                            <td><?php echo esc_html( $r['age_category'] ?: '—' ); ?></td>
                             <td>#<?php echo $r['order_id']; ?></td>
                             <td><?php echo esc_html( $r['order_date'] ); ?></td>
                             <td><?php echo wc_price( $r['amount'] ); ?></td>
