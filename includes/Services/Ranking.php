@@ -305,8 +305,7 @@ class Ranking {
         ?>
         <div class="sd-container crm-my-rank">
             <div class="sd-header">امتیازات من</div>
-            <h3>جایگاه کلی من</h3>
-            <p><strong>امتیاز کل:</strong> <?php echo $overall_pts; ?> ‖ <strong>رتبه:</strong> <?php echo $overall_rank; ?></p>
+            <p style="margin-bottom: 20px"><strong>امتیاز کل:</strong> <?php echo $overall_pts; ?> ‖ <strong>رتبه:</strong> <?php echo $overall_rank; ?></p>
             <h3>جزئیات امتیازات</h3>
             <table class="shop_table shop_table_responsive">
                 <thead><tr><th>#</th><th>مسابقه</th><th>کلاس وزنی</th><th>امتیاز</th></tr></thead><tbody>
