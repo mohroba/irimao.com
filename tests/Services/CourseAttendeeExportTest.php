@@ -19,20 +19,27 @@ if (!function_exists('esc_html')) { function esc_html($v){ return $v; } }
 
 use PHPUnit\Framework\TestCase;
 use IMAOCustom\Services\Courses;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 if (!class_exists('WP_User')) { class WP_User { public $ID; public $display_name; public $user_email; } }
 
 class CoursesExportStub extends Courses {
-    public function csv(array $users): string { return $this->build_csv($users); }
+    public function xlsx(array $users): string { return $this->build_xlsx($users); }
 }
 
 class CourseAttendeeExportTest extends TestCase {
-    public function test_csv_contains_meta_values(): void {
+    public function test_xlsx_contains_meta_values(): void {
         if (!class_exists(Courses::class)) { $this->markTestSkipped('Plugin not loaded.'); }
         $u = new WP_User();
         $u->ID = 1; $u->display_name = 'User1'; $u->user_email = 'u1@example.com';
-        $csv = (new CoursesExportStub())->csv([$u]);
-        $this->assertStringContainsString('billing_phone_1', $csv);
-        $this->assertStringContainsString('User1', $csv);
+        $xlsx = (new CoursesExportStub())->xlsx([$u]);
+        $tmp = tmpfile();
+        fwrite($tmp, $xlsx);
+        fflush($tmp);
+        $meta = stream_get_meta_data($tmp);
+        $sheet = IOFactory::load($meta['uri'])->getActiveSheet();
+        $this->assertSame('billing_phone_1', $sheet->getCell('D2')->getValue());
+        $this->assertSame('User1', $sheet->getCell('B2')->getValue());
+        fclose($tmp);
     }
 }
