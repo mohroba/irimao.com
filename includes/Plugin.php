@@ -40,7 +40,6 @@ class Plugin {
     /** @var array<int,string> */
     private array $service_classes = [
         Assets::class,
-        SecurityHeaders::class,
         Registration::class,
         SelfDeclarations::class,
         ClubApplications::class,
