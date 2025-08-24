@@ -51,6 +51,28 @@ class CityMap {
         return $map[ $province_code ] ?? [];
     }
 
+    /**
+     * Return list of Iranian provinces indexed by standard codes.
+     * The output titles are always in Persian regardless of WooCommerce locale.
+     */
+    public static function get_provinces(): array {
+        $states   = class_exists( '\\WC_Countries' )
+            ? ( new \WC_Countries() )->get_states( 'IR' )
+            : [];
+        $defaults = self::default_states();
+
+        if ( $states ) {
+            foreach ( $states as $code => $name ) {
+                if ( isset( $defaults[ $code ] ) ) {
+                    $states[ $code ] = $defaults[ $code ];
+                }
+            }
+            return $states;
+        }
+
+        return $defaults;
+    }
+
     private static function default_states(): array {
         return [
             'IR-01' => 'آذربایجان شرقی',

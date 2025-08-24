@@ -49,7 +49,7 @@ class ClubRegisterForm extends BaseForm {
         if ( $msg = Validation::postal_code( $data['club_postal'] ) ) {
             $this->errors[] = $msg;
         }
-        $provinces = class_exists( '\\WC_Countries' ) ? ( new \WC_Countries() )->get_states( 'IR' ) : [];
+        $provinces = CityMap::get_provinces();
         if ( $data['club_province'] && ! array_key_exists( $data['club_province'], $provinces ) ) {
             $this->errors[] = 'استان انتخاب شده نامعتبر است.';
         }
@@ -107,7 +107,7 @@ class ClubRegisterForm extends BaseForm {
             return '<p style="text-align:center;color:#c00;">فقط مربیان می‌توانند درخواست ثبت باشگاه ارسال کنند.</p>';
         }
         $f         = $this->fields();
-        $provinces = class_exists( '\\WC_Countries' ) ? ( new \WC_Countries() )->get_states( 'IR' ) : [];
+        $provinces = CityMap::get_provinces();
         $cities    = CityMap::get_cities( (string) $f['club_province'] );
         ob_start();
         ?>
@@ -185,11 +185,13 @@ class ClubRegisterForm extends BaseForm {
                 $label  = $status === 'publish' ? '<span style="color:green">تأیید شده</span>' : ( $status === 'pending' ? '<span style="color:orange">در حال بررسی</span>' : '<span style="color:red">رد شده</span>' );
                 $reason = esc_html( get_post_meta( $pid, 'rejection_reason', true ) );
                 $image  = esc_url( get_post_meta( $pid, 'license_image', true ) );
+                $pcode  = get_post_meta( $pid, 'club_province', true );
+                $prov   = CityMap::get_provinces()[ $pcode ] ?? $pcode;
                 echo '<tr>'
                     .'<td>'. ( $i++ ) .'</td>'
                     .'<td>'. esc_html( get_the_title() ) .'</td>'
                     .'<td>'. esc_html( get_post_meta( $pid, 'owner_name', true ) ) .'</td>'
-                    .'<td>'. esc_html( get_post_meta( $pid, 'club_province', true ) ) .'</td>'
+                    .'<td>'. esc_html( $prov ) .'</td>'
                     .'<td>'. esc_html( get_post_meta( $pid, 'club_city', true ) ) .'</td>'
                     .'<td>'. $label .'</td>'
                     .'<td>'. ( $reason ?: '—' ) .'</td>'

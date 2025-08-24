@@ -1,6 +1,8 @@
 <?php
 namespace IMAOCustom\Services;
 
+use IMAOCustom\Helpers\CityMap;
+
 class ClubApplications {
     public function register(): void {
         add_action( 'init', [ $this, 'register_cpt' ] );
@@ -55,7 +57,8 @@ class ClubApplications {
             $pid      = get_the_ID();
             $uid      = (int) get_post_field( 'post_author', $pid );
             $status   = get_post_status( $pid );
-            $province = get_post_meta( $pid, 'club_province', true );
+            $pcode    = get_post_meta( $pid, 'club_province', true );
+            $province = CityMap::get_provinces()[ $pcode ] ?? $pcode;
             $city     = get_post_meta( $pid, 'club_city', true );
             $status_label = $status === 'publish' ? 'تأیید' : ( $status === 'draft' ? 'رد' : 'در انتظار' );
             echo '<tr data-id="'. esc_attr( $pid ) .'" data-user="'. esc_attr( $uid ) .'">';
@@ -82,10 +85,11 @@ class ClubApplications {
         if ( ! $pid ) {
             wp_send_json_error();
         }
-        $data = [
+        $pcode = get_post_meta( $pid, 'club_province', true );
+        $data  = [
             'title'    => get_the_title( $pid ),
             'owner'    => get_post_meta( $pid, 'owner_name', true ),
-            'province' => get_post_meta( $pid, 'club_province', true ),
+            'province' => CityMap::get_provinces()[ $pcode ] ?? $pcode,
             'city'     => get_post_meta( $pid, 'club_city', true ),
             'postal'   => get_post_meta( $pid, 'club_postal', true ),
             'address'  => nl2br( esc_html( get_post_meta( $pid, 'club_address', true ) ) ),

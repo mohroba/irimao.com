@@ -12,4 +12,9 @@ class CityMapTest extends TestCase {
         $cities = CityMap::get_cities( 'IR-08' );
         $this->assertContains( 'تهران', $cities );
     }
+
+    public function test_provinces_are_persian(): void {
+        $provinces = CityMap::get_provinces();
+        $this->assertSame( 'تهران', $provinces['IR-08'] );
+    }
 }
