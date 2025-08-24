@@ -57,11 +57,28 @@ class ClubRegisterForm extends BaseForm {
             'club_city'     => sanitize_text_field( $_POST['club_city'] ?? '' ),
             'club_address'  => sanitize_textarea_field( $_POST['club_address'] ?? '' ),
         ];
-        $required = [ 'club_name','club_owner','club_province','club_city','club_address' ];
-        foreach ( $required as $k ) {
-            if ( $data[ $k ] === '' ) {
-                $this->errors[] = "فیلد {$k} اجباری است.";
+        $required = [
+            'club_name'     => 'نام باشگاه',
+            'club_owner'    => 'صاحب امتیاز',
+            'club_province' => 'استان',
+            'club_city'     => 'شهر',
+            'club_address'  => 'آدرس باشگاه',
+        ];
+        foreach ( $required as $k => $label ) {
+            if ( $msg = Validation::required( $data[ $k ], $label ) ) {
+                $this->errors[] = $msg;
             }
+        }
+        if ( $msg = Validation::postal_code( $data['club_postal'] ) ) {
+            $this->errors[] = $msg;
+        }
+        $provinces = class_exists( '\\WC_Countries' ) ? ( new \WC_Countries() )->get_states( 'IR' ) : [];
+        if ( $data['club_province'] && ! array_key_exists( $data['club_province'], $provinces ) ) {
+            $this->errors[] = 'استان انتخاب شده نامعتبر است.';
+        }
+        $cities = CityMap::get_cities( $data['club_province'] );
+        if ( $data['club_city'] && ! in_array( $data['club_city'], $cities, true ) ) {
+            $this->errors[] = 'شهر انتخاب شده نامعتبر است.';
         }
         $image_url = '';
         if ( empty( $_FILES['club_license_image']['name'] ) ) {
@@ -122,6 +139,7 @@ class ClubRegisterForm extends BaseForm {
         }
         ?>
         <div class="club-form-container">
+            <?= $this->error_list(); ?>
             <form method="post" enctype="multipart/form-data" id="club-form">
                 <?php wp_nonce_field( $this->nonce_action, $this->nonce_name ); ?>
                 <div class="cf-grid">
