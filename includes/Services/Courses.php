@@ -105,7 +105,7 @@ class Courses {
     public function add_meta_boxes(): void {
         add_meta_box( 'crm_details', 'جزئیات', [ $this, 'render_details_box' ], 'course', 'normal', 'high' );
         add_meta_box( 'crm_payouts', 'ذی‌نفعان', [ $this, 'render_payouts_box' ], 'course', 'normal', 'default' );
-        add_meta_box( 'crm_manual',  'حضور دستی', [ $this, 'render_manual_box' ],  'course', 'side',   'default' );
+        add_meta_box( 'crm_manual',  'افزودن شرکت کننده به صورت دستی', [ $this, 'render_manual_box' ],  'course', 'side',   'default' );
         add_meta_box( 'crm_attendees', 'شرکت‌کنندگان', [ $this, 'render_attendees_box' ], 'course', 'side', 'default' );
     }
 

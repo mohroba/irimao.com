@@ -54,7 +54,7 @@ class CourseList {
             ],
         ]);
         if ( ! $q->have_posts() ) {
-            return '<p>دوره‌ای موجود نیست.</p>';
+            return '<p>دوره‌ در حال ثبت نامی موجود نیست.</p>';
         }
         $cols = CourseData::columns();
         ob_start();
