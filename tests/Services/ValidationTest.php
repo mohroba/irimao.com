@@ -17,4 +17,12 @@ class ValidationTest extends TestCase {
         $file = [ 'type' => 'image/jpeg', 'size' => 2048 ];
         $this->assertSame( 'حجم فایل باید حداکثر ۱ کیلوبایت باشد.', Validation::file( $file, [ 'image/jpeg' ], 1024, '۱ کیلوبایت' ) );
     }
+
+    public function test_valid_postal_code_passes(): void {
+        $this->assertNull( Validation::postal_code( '1234567890' ) );
+    }
+
+    public function test_invalid_postal_code_fails(): void {
+        $this->assertSame( 'کد پستی باید ۱۰ رقم باشد.', Validation::postal_code( 'abc' ) );
+    }
 }

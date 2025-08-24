@@ -16,6 +16,16 @@ class Validation {
         return null;
     }
 
+    public static function postal_code( string $code ): ?string {
+        if ( $code === '' ) {
+            return null;
+        }
+        if ( ! preg_match( '/^\d{10}$/', $code ) ) {
+            return 'کد پستی باید ۱۰ رقم باشد.';
+        }
+        return null;
+    }
+
     public static function file( array $file, array $allowed_mimes, int $max_size, string $size_label ): ?string {
         $mime = $file['type'] ?? '';
         $size = (int) ( $file['size'] ?? 0 );
