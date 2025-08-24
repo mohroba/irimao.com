@@ -166,7 +166,7 @@ class BasicInfoForm extends BaseForm {
         $clubs     = $this->club_options();
 
         $html  = '<div class="sd-container">';
-        $html  = '<div class="sd-header" style="margin-bottom: 15px">اطلاعات پایه</div>';
+        $html  .= '<div class="sd-header" style="margin-bottom: 15px">اطلاعات پایه</div>';
         $html .= '<form method="post" id="id-form" class="needs-swal">';
         $html .= wp_nonce_field( $this->nonce_action, $this->nonce_name, true, false );
         $html .= $this->error_list();
