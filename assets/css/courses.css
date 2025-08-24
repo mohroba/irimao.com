@@ -1,9 +1,9 @@
 .crm-course-wrap{background:#fff;border:1px solid #e0e0e0;padding:20px;margin:30px auto;overflow-x:auto;direction:rtl;font-family:'vaziri'}
 .crm-course-title{background:#060097;color:#fff;padding:10px 15px;font-size:18px;font-weight:600;border-radius:5px}
-.crm-course-table{width:100%;border-collapse:collapse;margin-top:20px}
-.crm-course-table th,.crm-course-table td{border:1px solid #dcdcdc;padding:6px 10px;text-align:center;font-size:13px}
-.crm-course-table thead{background:#ff92008f;color:#000}
-.crm-course-table tbody tr:nth-child(even){background-color:#f5f5f5}
+.crm-course-table,.crm-competition-table{width:100%;border-collapse:collapse;margin-top:20px}
+.crm-course-table th,.crm-course-table td,.crm-competition-table th,.crm-competition-table td{border:1px solid #dcdcdc;padding:6px 10px;text-align:center;font-size:13px}
+.crm-course-table thead,.crm-competition-table thead{background:#ff92008f;color:#000}
+.crm-course-table tbody tr:nth-child(even),.crm-competition-table tbody tr:nth-child(even){background-color:#f5f5f5}
 .crm-single-course{max-width:650px;margin:40px auto;background:#fff;border:1px solid #e0e0e0;padding:25px;direction:rtl;font-family:'vaziri'}
 .crm-single-course h3{margin-top:0;text-align:center}
 .crm-single-course table{width:100%;border-collapse:collapse;margin:20px 0}
