@@ -1,6 +1,8 @@
 <?php
 if (!function_exists('get_user_meta')) {
     function get_user_meta($id, $key, $single = true) {
+        if ($key === 'club_name') { return 'ClubName'.$id; }
+        if ($key === 'coach_id' || $key === 'club_id') { return 100 + $id; }
         return $key.'_'.$id;
     }
 }
@@ -37,6 +39,8 @@ class CompetitionAttendeeExportTest extends TestCase {
         $meta = stream_get_meta_data($tmp);
         $sheet = IOFactory::load($meta['uri'])->getActiveSheet();
         $this->assertSame('billing_phone_1', $sheet->getCell('D2')->getValue());
+        $this->assertSame('national_id_1', $sheet->getCell('E2')->getValue());
+        $this->assertSame('User101', $sheet->getCell('X2')->getValue());
         $this->assertSame('User1', $sheet->getCell('B2')->getValue());
         fclose($tmp);
     }
