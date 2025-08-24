@@ -1,8 +1,6 @@
 <?php
 namespace IMAOCustom\Services;
 
-use IMAOCustom\Helpers\Bootstrap;
-
 class ClubApplications {
     public function register(): void {
         add_action( 'init', [ $this, 'register_cpt' ] );
@@ -28,8 +26,9 @@ class ClubApplications {
     public function enqueue_admin_assets( $hook ): void {
         if ( isset( $_GET['page'] ) && $_GET['page'] === 'crm-clubs' ) {
             $url = plugin_dir_url( dirname( __DIR__ ) );
-            Bootstrap::enqueue();
-            wp_enqueue_script( 'imao-club-admin', $url . 'assets/js/club-admin.js', [ 'jquery', 'bootstrap-js' ], '1.0.0', true );
+            add_thickbox();
+            wp_enqueue_style( 'imao-club-admin', $url . 'assets/css/club-admin.css' );
+            wp_enqueue_script( 'imao-club-admin', $url . 'assets/js/club-admin.js', [ 'jquery', 'thickbox' ], '1.0.0', true );
             wp_localize_script( 'imao-club-admin', 'CLUB_ADMIN', [
                 'ajax'        => admin_url( 'admin-ajax.php' ),
                 'nonce_get'   => wp_create_nonce( 'crm_club_get' ),
@@ -66,12 +65,12 @@ class ClubApplications {
             echo '<td>'. esc_html( $province ) .'</td>';
             echo '<td>'. esc_html( $city ) .'</td>';
             echo '<td>'. esc_html( $status_label ) .'</td>';
-            echo '<td><button class="btn btn-secondary view-club" data-pid="'. esc_attr( $pid ) .'">جزئیات</button> <button class="btn btn-success approve-club">تأیید</button> <button class="btn btn-danger reject-club">رد</button></td>';
+            echo '<td><button class="button view-club" data-pid="'. esc_attr( $pid ) .'">جزئیات</button> <button class="button approve-club">تأیید</button> <button class="button reject-club">رد</button></td>';
             echo '</tr>';
         }
         \wp_reset_postdata();
         echo '</tbody></table></div>';
-        echo '<div class="modal fade" id="club-modal" tabindex="-1" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">جزئیات باشگاه</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"></div></div></div></div>';
+        echo '<div id="club-modal" style="display:none;"><div class="modal-inner"></div></div>';
     }
 
     public function ajax_get(): void {

@@ -2,7 +2,6 @@
 
 namespace IMAOCustom\Services;
 
-use IMAOCustom\Helpers\Bootstrap;
 use IMAOCustom\Helpers\SelfDeclarationData;
 
 class SelfDeclarations {
@@ -29,12 +28,11 @@ class SelfDeclarations {
     public function enqueue_admin_assets( $hook ): void {
         if ( isset( $_GET['page'] ) && $_GET['page'] === 'crm-self-declarations' ) {
             $url = plugin_dir_url( dirname( __DIR__ ) );
-            Bootstrap::enqueue();
             wp_enqueue_style( 'datatables', $url . 'assets/css/jquery.dataTables.min.css' );
             wp_enqueue_script( 'datatables', $url . 'assets/js/jquery.dataTables.min.js', [ 'jquery' ], null, true );
             wp_enqueue_style( 'select2', $url . 'assets/css/select2.min.css' );
             wp_enqueue_script( 'select2', $url . 'assets/js/select2.min.js', [ 'jquery' ], null, true );
-            wp_enqueue_script( 'crm-selfdec-admin', $url . 'assets/js/crm-selfdec-admin.js', [ 'jquery','datatables','select2','bootstrap-js' ], null, true );
+            wp_enqueue_script( 'crm-selfdec-admin', $url . 'assets/js/crm-selfdec-admin.js', [ 'jquery','datatables','select2' ], null, true );
             wp_localize_script( 'crm-selfdec-admin', 'CRM_SELFDEC', [
                 'ajax_url' => admin_url( 'admin-ajax.php' ),
                 'nonce'    => wp_create_nonce( 'crm_selfdec_nonce' ),
@@ -85,7 +83,7 @@ class SelfDeclarations {
             echo '<td>'. esc_html( $board_label ) .'</td>';
             echo '<td>'. ( $image_url ? '<a href="'.$image_url.'" target="_blank">مشاهده</a>' : '—' ) .'</td>';
             echo '<td>'. $status_label .'</td>';
-            echo '<td><button class="btn btn-success approve-btn" data-id="'.$pid.'">تأیید</button> <button class="btn btn-danger disapprove-btn" data-id="'.$pid.'">رد</button></td>';
+            echo '<td><button class="button approve-btn" data-id="'.$pid.'">تأیید</button> <button class="button disapprove-btn" data-id="'.$pid.'">رد</button></td>';
             echo '</tr>';
         }
         \wp_reset_postdata();

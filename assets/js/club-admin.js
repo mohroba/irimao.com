@@ -1,10 +1,8 @@
 jQuery(function($){
   $('body').on('click','.view-club',function(){
-    var pid=$(this).data('pid');
-    var modalEl=document.getElementById('club-modal');
-    var modal=new bootstrap.Modal(modalEl);
-    $('#club-modal .modal-body').html('در حال بارگیری ...');
-    modal.show();
+    var pid = $(this).data('pid');
+    tb_show('جزئیات باشگاه','#TB_inline?inlineId=club-modal');
+    $('#TB_ajaxContent .modal-inner').html('در حال بارگیری ...');
     $.post(CLUB_ADMIN.ajax,{action:'crm_club_get',nonce:CLUB_ADMIN.nonce_get,post:pid},function(r){
       if(r.success){
         var d=r.data,html='<h2>'+d.title+'</h2>'+
@@ -13,10 +11,10 @@ jQuery(function($){
           '<p><strong>کد پستی:</strong> '+d.postal+'</p>'+
           '<p><strong>آدرس:</strong><br>'+d.address+'</p>'+
           '<p><strong>تصویر مجوز:</strong><br><a href="'+d.lic+'" target="_blank"><img src="'+d.lic+'" style="max-width:200px;border:1px solid #ccc"></a></p>'+
-          (d.reason ? '<p class="text-danger"><strong>دلیل رد:</strong> '+d.reason+'</p>' : '');
-        $('#club-modal .modal-body').html(html);
+          (d.reason ? '<p style="color:#d00;"><strong>دلیل رد:</strong> '+d.reason+'</p>' : '');
+        $('#TB_ajaxContent .modal-inner').html(html);
       }else{
-        $('#club-modal .modal-body').html('<p class="text-danger">خطا در دریافت اطلاعات.</p>');
+        $('#TB_ajaxContent .modal-inner').html('<p style="color:red;">خطا در دریافت اطلاعات.</p>');
       }
     });
   });

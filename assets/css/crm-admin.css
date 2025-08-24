@@ -1,0 +1,3 @@
+/* --- assets/css/crm-admin.css --- */
+.cbif-spinner .spin{animation:rotate 1s linear infinite}
+@keyframes rotate{100%{transform:rotate(360deg)}}
