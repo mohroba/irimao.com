@@ -31,11 +31,27 @@ class CourseList {
     }
 
     private function render(): string {
-        $q = new WP_Query([
+        $today = function_exists( 'current_time' ) ? current_time( 'Y-m-d' ) : date( 'Y-m-d' );
+        $q     = new WP_Query([
             'post_type'      => 'course',
             'posts_per_page' => -1,
             'orderby'        => 'date',
             'order'          => 'DESC',
+            'meta_query'     => [
+                'relation' => 'AND',
+                [
+                    'key'     => 'registration_start',
+                    'value'   => $today,
+                    'compare' => '<=',
+                    'type'    => 'DATE',
+                ],
+                [
+                    'key'     => 'registration_end',
+                    'value'   => $today,
+                    'compare' => '>=',
+                    'type'    => 'DATE',
+                ],
+            ],
         ]);
         if ( ! $q->have_posts() ) {
             return '<p>دوره‌ای موجود نیست.</p>';
@@ -61,7 +77,14 @@ class CourseList {
                         <tr>
                             <td><?php echo $i++; ?></td>
                             <td><?php the_title(); ?></td>
-                            <?php foreach ( $cols as $key => $label ) : $val = get_post_meta( $cid, $key, true ); ?>
+                            <?php foreach ( $cols as $key => $label ) :
+                                if ( function_exists( 'taxonomy_exists' ) && taxonomy_exists( $key ) ) {
+                                    $terms = get_the_terms( $cid, $key );
+                                    $val   = $terms && ! is_wp_error( $terms ) ? join( ', ', wp_list_pluck( $terms, 'name' ) ) : '';
+                                } else {
+                                    $val = get_post_meta( $cid, $key, true );
+                                }
+                            ?>
                                 <td><?php echo $val ? esc_html( $val ) : '—'; ?></td>
                             <?php endforeach; ?>
                             <td><a href="<?php echo esc_url( '/my-account/course-details/?course_id=' . $cid ); ?>">جزئیات / ثبت‌نام</a></td>
