@@ -263,9 +263,9 @@ class Courses {
             return [];
         }
         $orders = wc_get_orders( [
-            'limit'      => -1,
-            'status'     => [ 'processing', 'completed' ],
-            'product_id' => $prod_id,
+            'limit'   => -1,
+            'status'  => [ 'processing', 'completed' ],
+            'product' => $prod_id,
         ] );
         $users = [];
         foreach ( $orders as $order ) {

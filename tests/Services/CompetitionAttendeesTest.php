@@ -1,13 +1,22 @@
 <?php
 if (!function_exists('get_post_meta')) {
+    $GLOBALS['test_meta'] = ['_linked_product_id' => 99];
     function get_post_meta($id, $key, $single = true) {
-        if ($key === '_linked_product_id') { return 99; }
-        return [];
+        return $GLOBALS['test_meta'][$key] ?? [];
     }
 }
 if (!function_exists('wc_get_orders')) {
+    class TestOrder {
+        private int $id;
+        public function __construct(int $id) { $this->id = $id; }
+        public function get_user_id() { return $this->id; }
+    }
+    $GLOBALS['captured_orders_args'] = null;
+    $GLOBALS['wc_get_orders_called'] = false;
     function wc_get_orders($args) {
-        return [ new class { public function get_user_id(){ return 10; } }, new class { public function get_user_id(){ return 20; } } ];
+        $GLOBALS['wc_get_orders_called'] = true;
+        $GLOBALS['captured_orders_args'] = $args;
+        return [ new TestOrder(10), new TestOrder(20) ];
     }
 }
 if (!function_exists('get_user_by')) {
@@ -42,5 +51,19 @@ class CompetitionAttendeesTest extends TestCase {
         $html = ob_get_clean();
         $this->assertStringContainsString('<table id="crm-attendees-table"', $html);
         $this->assertStringContainsString('billing_phone_10', $html);
+        $this->assertSame(99, $GLOBALS['captured_orders_args']['product'] ?? null);
+    }
+
+    public function test_render_attendees_box_without_product_returns_empty(): void {
+        if (!class_exists(Competitions::class)) { $this->markTestSkipped('Plugin not loaded.'); }
+        $GLOBALS['test_meta']['_linked_product_id'] = 0;
+        $GLOBALS['wc_get_orders_called'] = false;
+        $post = new WP_Post();
+        $post->ID = 2;
+        ob_start();
+        (new Competitions())->render_attendees_box($post);
+        $html = ob_get_clean();
+        $this->assertStringContainsString('شرکت‌کننده‌ای ثبت نشده است', $html);
+        $this->assertFalse($GLOBALS['wc_get_orders_called']);
     }
 }
