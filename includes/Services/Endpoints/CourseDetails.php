@@ -70,6 +70,20 @@ class CourseDetails {
         if ( ! $cid || get_post_type( $cid ) !== 'course' ) {
             return '<p style="text-align:center;color:#c00;">دوره پیدا نشد.</p>';
         }
+        if ( ! is_user_logged_in() ) {
+            return '<p style="text-align:center;color:#c00;">برای ثبت‌نام ابتدا وارد شوید.</p>';
+        }
+        $uid    = get_current_user_id();
+        $gender = (string) get_user_meta( $uid, 'gender', true );
+        $status = (string) get_user_meta( $uid, 'identity_verified_professional', true );
+        if ( ! $gender || $status !== 'approved' ) {
+            return '<p style="text-align:center;color:#c00;">برای ثبت‌نام در دوره‌ها، ابتدا اطلاعات پایه را تکمیل و هویت خود را تأیید کنید.</p>';
+        }
+        $gterms = wp_get_post_terms( $cid, 'gender', [ 'fields' => 'slugs' ] );
+        if ( $gterms && ! in_array( $gender, $gterms, true ) ) {
+            return '<p style="text-align:center;color:#c00;">این دوره با جنسیت شما سازگار نیست.</p>';
+        }
+
         $fields     = self::fields();
         $tax_fields = [ 'course_type', 'board', 'gender', 'level' ];
         $prod_id    = (int) get_post_meta( $cid, self::META_LINKED_PRODUCT, true );
