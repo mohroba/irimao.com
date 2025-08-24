@@ -137,15 +137,21 @@ class Competitions
 
     public function render_attendees_box(WP_Post $post): void
     {
-        // Only show buyers once there is a linked product (and optionally once published)
-        $prod_id = (int)get_post_meta($post->ID, self::META_LINKED_PRODUCT, true);
-        if (!$prod_id /* || get_post_status( $post ) !== 'publish' */) {
-            echo '<p style="color:#666">پس از ذخیره/انتشار مسابقه و ساخت محصول مرتبط، شرکت‌کنندگانِ خرید-کرده اینجا نمایش داده می‌شوند.</p>';
+        // Never show attendees on new/unsaved posts
+        if ( empty($post->ID) || in_array($post->post_status, ['auto-draft','draft','pending'], true) ) {
+            echo '<p style="color:#666">پس از ذخیره/انتشار مسابقه و ساخت محصول مرتبط، شرکت‌کنندگانِ خریدار نمایش داده می‌شوند.</p>';
             return;
         }
 
-        $users = $this->get_attendees($post->ID); // only buyers
-        if (empty($users)) {
+        // Only show buyers once a linked product exists
+        $prod_id = (int) get_post_meta($post->ID, self::META_LINKED_PRODUCT, true);
+        if ( ! $prod_id ) {
+            echo '<p style="color:#666">برای نمایش شرکت‌کنندگان، ابتدا مسابقه را ذخیره/انتشار کنید تا محصول مرتبط ساخته شود.</p>';
+            return;
+        }
+
+        $users = $this->get_attendees($post->ID); // buyers only
+        if ( empty($users) ) {
             echo '<p>شرکت‌کننده‌ای ثبت نشده است.</p>';
             return;
         }
@@ -153,21 +159,18 @@ class Competitions
         $fields = $this->attendee_fields();
         echo '<div style="max-width:100%;overflow:auto">';
         echo '<table id="crm-attendees-table" class="wp-list-table widefat striped"><thead><tr>';
-        foreach ($fields as $lbl) {
-            echo '<th>' . esc_html($lbl) . '</th>';
-        }
+        foreach ($fields as $lbl) { echo '<th>' . esc_html($lbl) . '</th>'; }
         echo '</tr></thead><tbody>';
         foreach ($users as $u) {
             $row = $this->attendee_row($u);
             echo '<tr>';
             foreach ($fields as $key => $lbl) {
-                echo '<td>' . esc_html((string)($row[$key] ?? '')) . '</td>';
+                echo '<td>' . esc_html( (string) ($row[$key] ?? '') ) . '</td>';
             }
             echo '</tr>';
         }
         echo '</tbody></table></div>';
     }
-
 
     /**
      * Get users who purchased the linked product.

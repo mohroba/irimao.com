@@ -179,18 +179,23 @@ class Courses
         echo '</select></p><p style="font-size:12px">نگه‌داشتن CTRL برای چند انتخاب.</p>';
     }
 
-
     public function render_attendees_box(WP_Post $post): void
     {
-        // Only show buyers once a linked product exists
-        $prod_id = (int)get_post_meta($post->ID, self::META_LINKED_PRODUCT, true);
-        if (!$prod_id) {
+        // Never show attendees on new/unsaved posts
+        if ( empty($post->ID) || in_array($post->post_status, ['auto-draft','draft','pending'], true) ) {
             echo '<p style="color:#666">پس از ذخیره/انتشار دوره و ساخت محصول مرتبط، شرکت‌کنندگانِ خریدار نمایش داده می‌شوند.</p>';
             return;
         }
 
+        // Only show buyers once a linked product exists
+        $prod_id = (int) get_post_meta($post->ID, self::META_LINKED_PRODUCT, true);
+        if ( ! $prod_id ) {
+            echo '<p style="color:#666">برای نمایش شرکت‌کنندگان، ابتدا دوره را ذخیره/انتشار کنید تا محصول مرتبط ساخته شود.</p>';
+            return;
+        }
+
         $users = $this->get_attendees($post->ID); // buyers only
-        if (empty($users)) {
+        if ( empty($users) ) {
             echo '<p>شرکت‌کننده‌ای ثبت نشده است.</p>';
             return;
         }
@@ -198,22 +203,18 @@ class Courses
         $fields = $this->attendee_fields();
         echo '<div style="max-width:100%;overflow:auto">';
         echo '<table id="crm-attendees-table" class="wp-list-table widefat striped"><thead><tr>';
-        foreach ($fields as $lbl) {
-            echo '<th>' . esc_html($lbl) . '</th>';
-        }
+        foreach ($fields as $lbl) { echo '<th>' . esc_html($lbl) . '</th>'; }
         echo '</tr></thead><tbody>';
         foreach ($users as $u) {
             $row = $this->attendee_row($u);
             echo '<tr>';
             foreach ($fields as $key => $lbl) {
-                $val = $row[$key] ?? '';
-                echo '<td>' . esc_html((string)$val) . '</td>';
+                echo '<td>' . esc_html( (string) ($row[$key] ?? '') ) . '</td>';
             }
             echo '</tr>';
         }
         echo '</tbody></table></div>';
     }
-
 
     /**
      * Get users who purchased the linked product.
