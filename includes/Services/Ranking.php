@@ -1,6 +1,8 @@
 <?php
 namespace IMAOCustom\Services;
 
+use IMAOCustom\Helpers\Bootstrap;
+
 class Ranking {
     public function register(): void {
         register_activation_hook( IMAO_PLUGIN_FILE, [ $this, 'activate' ] );
@@ -177,8 +179,9 @@ class Ranking {
             return;
         }
         $url = plugin_dir_url( dirname( __DIR__ ) );
+        Bootstrap::enqueue();
         wp_enqueue_style( 'select2', $url . 'assets/css/select2.min.css', [], '4.0.13' );
-        wp_enqueue_script( 'select2', $url . 'assets/js/select2.min.js', [ 'jquery' ], '4.0.13', true );
+        wp_enqueue_script( 'select2', $url . 'assets/js/select2.min.js', [ 'jquery', 'bootstrap-js' ], '4.0.13', true );
         wp_add_inline_script( 'select2', 'jQuery(function($){$(".crm-select2").select2();});' );
     }
 

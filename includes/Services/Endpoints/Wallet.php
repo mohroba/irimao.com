@@ -2,6 +2,7 @@
 
 namespace IMAOCustom\Services\Endpoints;
 
+use IMAOCustom\Helpers\Bootstrap;
 use IMAOCustom\Helpers\Wallet as WalletHelper;
 use WC_Order;
 use WC_Order_Item_Fee;
@@ -188,8 +189,9 @@ class Wallet {
             return;
         }
         $url = plugin_dir_url( dirname( __DIR__, 2 ) );
+        Bootstrap::enqueue();
         wp_enqueue_style( 'dt-css', $url . 'assets/css/jquery.dataTables.min.css' );
-        wp_enqueue_script( 'dt-js', $url . 'assets/js/jquery.dataTables.min.js', [ 'jquery' ], null, true );
+        wp_enqueue_script( 'dt-js', $url . 'assets/js/jquery.dataTables.min.js', [ 'jquery', 'bootstrap-js' ], null, true );
         wp_add_inline_script( 'dt-js', 'jQuery(function($){$("#crm-wallet-table").DataTable({language:{url:"https://cdn.datatables.net/plug-ins/1.13.8/i18n/fa.json"},pageLength:50,order:[[1,"desc"]]});});' );
     }
 
@@ -226,9 +228,9 @@ class Wallet {
                 . '<td><input type="text" name="memo" style="width:100%"></td>'
                 . '<td>'
                 . '<input type="hidden" name="user" value="' . $u->ID . '">' 
-                . '<button class="button" name="action" value="add">افزایش</button> '
-                . '<button class="button" name="action" value="sub">کاهش</button> '
-                . '<button class="button" name="action" value="set">تنظیم موجودی</button>'
+                . '<button class="btn btn-success" name="action" value="add">افزایش</button> '
+                . '<button class="btn btn-danger" name="action" value="sub">کاهش</button> '
+                . '<button class="btn btn-secondary" name="action" value="set">تنظیم موجودی</button>'
                 . '<input type="hidden" name="crm_wallet_adj" value="1">'
                 . '</td></form></tr>';
         }
