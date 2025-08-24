@@ -246,17 +246,18 @@ class Wallet {
             echo '<div class="updated"><p>تغییر ذخیره شد.</p></div>';
         }
         echo '<div class="wrap"><h1>مدیریت کیف پول کاربران</h1>';
-        wp_nonce_field( 'crm_wallet_adj_nonce' );
         echo '<table id="crm-wallet-table" class="widefat striped nowrap" style="width:100%"><thead><tr><th>کاربر</th><th>موجودی</th><th>مبلغ</th><th>پرداخت بابت</th><th>عملیات</th></tr></thead><tbody>';
         foreach ( $users as $u ) {
-            $bal = self::get_balance( $u->ID );
+            $bal         = self::get_balance( $u->ID );
+            $nonce_field = wp_nonce_field( 'crm_wallet_adj_nonce', '_wpnonce', true, false );
             echo '<tr><form method="post">'
+                . $nonce_field
                 . '<td>' . esc_html( $u->display_name ) . ' (' . esc_html( $u->user_email ) . ')</td>'
                 . '<td>' . wc_price( $bal ) . '</td>'
                 . '<td><input type="number" step="0.01" name="amount" required style="width:100px"></td>'
                 . '<td><input type="text" name="memo" style="width:100%"></td>'
                 . '<td>'
-                . '<input type="hidden" name="user" value="' . $u->ID . '">' 
+                . '<input type="hidden" name="user" value="' . $u->ID . '">'
                 . '<button class="button" name="action" value="add">افزایش</button> '
                 . '<button class="button" name="action" value="sub">کاهش</button> '
                 . '<button class="button" name="action" value="set">تنظیم موجودی</button>'
