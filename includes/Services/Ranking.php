@@ -174,10 +174,7 @@ class Ranking {
     }
 
     private function enqueue_admin_assets( string $hook ): void {
-        if ( $hook !== 'users_page_crm-points-manager' ) {
-            return;
-        }
-        $url = plugin_dir_url( IMAO_PLUGIN_FILE );
+        $url = plugin_dir_url( dirname( __DIR__ ) );
         wp_enqueue_style( 'imao-select2', $url . 'assets/css/select2.min.css', [], '4.0.13' );
         wp_enqueue_script( 'imao-select2', $url . 'assets/js/select2.min.js', [ 'jquery' ], '4.0.13', true );
         wp_add_inline_script(
