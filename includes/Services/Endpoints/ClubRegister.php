@@ -16,7 +16,10 @@ class ClubRegister {
     }
 
     public function menu_item( array $items ): array {
-        $items['club-register'] = 'ثبت باشگاه';
+        $user = wp_get_current_user();
+        if ( is_user_logged_in() && in_array( 'coach', $user->roles, true ) && count( $user->roles ) === 1 ) {
+            $items['club-register'] = 'ثبت باشگاه';
+        }
         return $items;
     }
 

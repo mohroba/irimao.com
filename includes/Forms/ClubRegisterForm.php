@@ -6,47 +6,24 @@ use IMAOCustom\Services\Validation;
 
 class ClubRegisterForm extends BaseForm {
     protected string $nonce_action = 'imao_club_register';
-    private ?\WP_Post $app = null;
 
     protected function fields(): array {
-        if ( ! is_user_logged_in() ) {
-            return [];
-        }
-        $user_id = get_current_user_id();
-        $apps = get_posts([
-            'post_type'   => 'club_application',
-            'author'      => $user_id,
-            'numberposts' => 1,
-            'post_status' => [ 'pending','publish','draft' ],
-        ]);
-        $this->app = $apps ? $apps[0] : null;
         return [
-            'club_name'     => $this->app ? $this->app->post_title : '',
-            'club_owner'    => $this->meta('owner_name'),
-            'club_postal'   => $this->meta('club_postal'),
-            'club_province' => $this->meta('club_province'),
-            'club_city'     => $this->meta('club_city'),
-            'club_address'  => $this->meta('club_address'),
-            'license_image' => $this->meta('license_image'),
-            'status'        => $this->app ? get_post_status( $this->app ) : '',
+            'club_name'     => '',
+            'club_owner'    => '',
+            'club_postal'   => '',
+            'club_province' => '',
+            'club_city'     => '',
+            'club_address'  => '',
         ];
-    }
-
-    private function meta( string $key ): string {
-        return $this->app ? (string) get_post_meta( $this->app->ID, $key, true ) : '';
     }
 
     protected function submit(): void {
         if ( ! is_user_logged_in() ) {
             return;
         }
-        $locked = get_posts([
-            'post_type'   => 'club_application',
-            'author'      => get_current_user_id(),
-            'numberposts' => 1,
-            'post_status' => [ 'pending','publish' ],
-        ]);
-        if ( $locked ) {
+        $user = wp_get_current_user();
+        if ( ! in_array( 'coach', $user->roles, true ) || count( $user->roles ) !== 1 ) {
             return;
         }
         $data = [
@@ -125,18 +102,14 @@ class ClubRegisterForm extends BaseForm {
         if ( ! is_user_logged_in() ) {
             return '<p style="text-align:center;color:#c00;">لطفاً ابتدا وارد شوید.</p>';
         }
-        $f       = $this->fields();
-        $status  = $f['status'] ?? '';
-        $locked  = in_array( $status, [ 'pending','publish' ], true );
+        $user = wp_get_current_user();
+        if ( ! in_array( 'coach', $user->roles, true ) || count( $user->roles ) !== 1 ) {
+            return '<p style="text-align:center;color:#c00;">فقط مربیان می‌توانند درخواست ثبت باشگاه ارسال کنند.</p>';
+        }
+        $f         = $this->fields();
         $provinces = class_exists( '\\WC_Countries' ) ? ( new \WC_Countries() )->get_states( 'IR' ) : [];
         $cities    = CityMap::get_cities( (string) $f['club_province'] );
         ob_start();
-        if ( $locked ) {
-            echo $status === 'pending' ? '<div class="notice-warning">درخواست شما در حال بررسی است.</div>' : '<div class="notice-success">درخواست شما تأیید شده است.</div>';
-        } elseif ( $status === 'draft' ) {
-            $reason = esc_html( get_post_meta( $this->app->ID ?? 0, 'rejection_reason', true ) );
-            echo '<div class="notice-error">درخواست شما رد شد. دلیل: ' . $reason . '</div>';
-        }
         ?>
         <div class="club-form-container">
             <?= $this->error_list(); ?>
@@ -145,19 +118,19 @@ class ClubRegisterForm extends BaseForm {
                 <div class="cf-grid">
                     <div class="cf-field">
                         <label>نام باشگاه <span style="color:#d00">*</span></label>
-                        <input type="text" name="club_name" value="<?= esc_attr( $f['club_name'] ); ?>" <?= $locked ? 'disabled' : '' ?> required>
+                        <input type="text" name="club_name" value="<?= esc_attr( $f['club_name'] ); ?>" required>
                     </div>
                     <div class="cf-field">
                         <label>صاحب امتیاز <span style="color:#d00">*</span></label>
-                        <input type="text" name="club_owner" value="<?= esc_attr( $f['club_owner'] ); ?>" <?= $locked ? 'disabled' : '' ?> required>
+                        <input type="text" name="club_owner" value="<?= esc_attr( $f['club_owner'] ); ?>" required>
                     </div>
                     <div class="cf-field">
                         <label>کد پستی</label>
-                        <input type="text" name="club_postal" pattern="[0-9]{10}" value="<?= esc_attr( $f['club_postal'] ); ?>" <?= $locked ? 'disabled' : '' ?> >
+                        <input type="text" name="club_postal" pattern="[0-9]{10}" value="<?= esc_attr( $f['club_postal'] ); ?>" >
                     </div>
                     <div class="cf-field">
                         <label>استان <span style="color:#d00">*</span></label>
-                        <select name="club_province" id="club_province" class="crm-select2" <?= $locked ? 'disabled' : '' ?> required>
+                        <select name="club_province" id="club_province" class="crm-select2" required>
                             <option value="">— انتخاب کنید —</option>
                             <?php foreach ( $provinces as $code => $name ): ?>
                                 <option value="<?= esc_attr( $code ); ?>" <?= selected( $f['club_province'], $code, false ); ?>><?= esc_html( $name ); ?></option>
@@ -166,9 +139,9 @@ class ClubRegisterForm extends BaseForm {
                     </div>
                     <div class="cf-field">
                         <label>شهر <span style="color:#d00">*</span></label>
-                        <select name="club_city" id="club_city" class="crm-select2" <?= $locked ? 'disabled' : '' ?> required>
-                            <?php if ( $locked || ! empty( $f['club_city'] ) ): ?>
-                                <option><?= esc_html( $f['club_city'] ?: '— انتخاب کنید —' ); ?></option>
+                        <select name="club_city" id="club_city" class="crm-select2" required>
+                            <?php if ( ! empty( $f['club_city'] ) ): ?>
+                                <option><?= esc_html( $f['club_city'] ); ?></option>
                             <?php else: ?>
                                 <option value="">— ابتدا استان را انتخاب کنید —</option>
                             <?php endif; ?>
@@ -179,28 +152,52 @@ class ClubRegisterForm extends BaseForm {
                     </div>
                     <div class="cf-field cf-wide">
                         <label>آدرس باشگاه <span style="color:#d00">*</span></label>
-                        <textarea name="club_address" rows="3" <?= $locked ? 'disabled' : '' ?> required><?= esc_textarea( $f['club_address'] ); ?></textarea>
+                        <textarea name="club_address" rows="3" required><?= esc_textarea( $f['club_address'] ); ?></textarea>
                     </div>
                     <div class="cf-field cf-wide">
                         <label>تصویر مجوز <span style="color:#d00">*</span></label>
-                        <?php if ( $locked && $f['license_image'] ): ?>
-                            <img src="<?= esc_url( $f['license_image'] ); ?>" class="thumb-lic" alt="">
-                        <?php else: ?>
-                            <input type="file" name="club_license_image" <?= $locked ? 'disabled' : '' ?> accept="image/*" required>
-                            <?php if ( $f['license_image'] ): ?>
-                                <img src="<?= esc_url( $f['license_image'] ); ?>" class="thumb-lic" alt="">
-                            <?php endif; ?>
-                        <?php endif; ?>
+                        <input type="file" name="club_license_image" accept="image/*" required>
                     </div>
-                    <?php if ( ! $locked ): ?>
                     <div class="cf-submit">
                         <button type="submit" name="club_apply">ارسال برای بررسی</button>
                     </div>
-                    <?php endif; ?>
                 </div>
             </form>
         </div>
         <?php
+        $q = new \WP_Query([
+            'post_type'      => 'club_application',
+            'author'         => get_current_user_id(),
+            'posts_per_page' => -1,
+            'orderby'        => 'date',
+            'order'          => 'DESC',
+            'post_status'    => 'any',
+        ]);
+        if ( $q->have_posts() ) {
+            echo '<div class="club-form-container" style="margin-top:20px"><table class="shop_table" style="text-align:center"><thead><tr>'
+                .'<th>#</th><th>نام باشگاه</th><th>صاحب امتیاز</th><th>استان</th><th>شهر</th><th>وضعیت</th><th>دلیل رد</th><th>مجوز</th>'
+                .'</tr></thead><tbody>';
+            $i = 1;
+            while ( $q->have_posts() ) { $q->the_post();
+                $pid    = get_the_ID();
+                $status = get_post_status( $pid );
+                $label  = $status === 'publish' ? '<span style="color:green">تأیید شده</span>' : ( $status === 'pending' ? '<span style="color:orange">در حال بررسی</span>' : '<span style="color:red">رد شده</span>' );
+                $reason = esc_html( get_post_meta( $pid, 'rejection_reason', true ) );
+                $image  = esc_url( get_post_meta( $pid, 'license_image', true ) );
+                echo '<tr>'
+                    .'<td>'. ( $i++ ) .'</td>'
+                    .'<td>'. esc_html( get_the_title() ) .'</td>'
+                    .'<td>'. esc_html( get_post_meta( $pid, 'owner_name', true ) ) .'</td>'
+                    .'<td>'. esc_html( get_post_meta( $pid, 'club_province', true ) ) .'</td>'
+                    .'<td>'. esc_html( get_post_meta( $pid, 'club_city', true ) ) .'</td>'
+                    .'<td>'. $label .'</td>'
+                    .'<td>'. ( $reason ?: '—' ) .'</td>'
+                    .'<td>'. ( $image ? '<a href="'.$image.'" target="_blank">🔍</a>' : '—' ) .'</td>'
+                    .'</tr>';
+            }
+            \wp_reset_postdata();
+            echo '</tbody></table></div>';
+        }
         return ob_get_clean();
     }
 }
