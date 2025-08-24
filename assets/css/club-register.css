@@ -6,6 +6,7 @@
 .notice-error{background:#ff00008f;}
 .notice-warning{background:#ff92008f;}
 
+.sc-header{background:#060097;color:#fff;padding:10px;font-size:18px;font-weight:600;}
 .club-form-container{background:#fff;border:1px solid #e0e0e0;padding:20px;margin:30px auto;direction:rtl;font-family:"vaziri",sans-serif;max-width:95%}
 .club-form-container .cf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .club-form-container .cf-field{display:flex;flex-direction:column}
