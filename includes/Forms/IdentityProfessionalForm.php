@@ -114,6 +114,7 @@ class IdentityProfessionalForm extends BaseForm {
         $fields = $this->fields();
         $status = $fields['status'];
         $reject = $fields['rejection'];
+        $locked = ! in_array( $status, [ 'pending', 'disapproved' ], true );
 
         ob_start();
         echo '<div class="crm-identity-verification-form">';
@@ -136,8 +137,8 @@ class IdentityProfessionalForm extends BaseForm {
             echo '<div class="upload-input">';
             echo '<label for="' . esc_attr( $key ) . '">' . esc_html( $label ) . '</label>';
             echo '<div class="custom-file-wrapper" data-nofile="فایلی انتخاب نشده">';
-            echo '<button type="button" class="custom-file-btn">انتخاب فایل</button>';
-            echo '<input type="file" name="' . esc_attr( $key ) . '" id="' . esc_attr( $key ) . '" accept=".jpg,.jpeg,.png,.pdf">';
+            echo '<button type="button" class="custom-file-btn"' . ( $locked ? ' disabled' : '' ) . '>انتخاب فایل</button>';
+            echo '<input type="file" name="' . esc_attr( $key ) . '" id="' . esc_attr( $key ) . '" accept=".jpg,.jpeg,.png,.pdf"' . ( $locked ? ' disabled' : '' ) . '>';
             echo '</div>';
             echo '<span class="file-name">فایلی انتخاب نشده</span>';
             if ( $key === 'personal_photo' ) {
@@ -158,7 +159,7 @@ class IdentityProfessionalForm extends BaseForm {
                 echo '<img src="' . esc_url( $placeholder ) . '" alt="">';
             }
             echo '<div style="margin-top:10px;">';
-            echo '<button type="submit" class="button-submit" name="submit_field" value="' . esc_attr( $key ) . '">ثبت اطلاعات</button>';
+            echo '<button type="submit" class="button-submit" name="submit_field" value="' . esc_attr( $key ) . '"' . ( $locked ? ' disabled' : '' ) . '>ثبت اطلاعات</button>';
             echo '</div>';
             echo '</div>';
             echo '</div>';

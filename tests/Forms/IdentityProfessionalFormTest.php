@@ -27,6 +27,22 @@ class IdentityProfessionalFormTest extends TestCase {
         $this->assertStringContainsString( 'data-status="', $output );
     }
 
+    public function test_disables_submission_when_approved(): void {
+        if ( ! function_exists( 'wp_set_current_user' ) ) {
+            $this->markTestSkipped( 'WordPress functions not available.' );
+        }
+        wp_set_current_user( 1 );
+        $required = [ 'national_id','first_name_fa','last_name_fa','gender','father_name','birth_date','birth_province','birth_city','marital_status','education_status','residence_province','residence_city','residence_address','billing_phone','billing_email' ];
+        foreach ( $required as $k ) {
+            update_user_meta( 1, $k, 'x' );
+        }
+        update_user_meta( 1, 'identity_verified_professional', 'approved' );
+        $form   = new IdentityProfessionalForm();
+        $output = $form->render();
+        $this->assertMatchesRegularExpression( '/<button[^>]*disabled/', $output );
+        $this->assertMatchesRegularExpression( '/input[^>]*type="file"[^>]*disabled/', $output );
+    }
+
     public function test_handles_file_upload_via_wp(): void {
         $content = file_get_contents( __DIR__ . '/../../includes/Forms/IdentityProfessionalForm.php' );
         $this->assertStringContainsString('\\wp_handle_upload', $content);

@@ -15,6 +15,8 @@ document.addEventListener('DOMContentLoaded', function () {
         var status = form.dataset.status;
         if (status && status !== 'pending' && status !== 'disapproved') {
             form.querySelectorAll('input[type="file"]').forEach(function(inp){ inp.disabled = true; });
+            form.querySelectorAll('button[type="submit"]').forEach(function(btn){ btn.disabled = true; });
+            form.querySelectorAll('.custom-file-btn').forEach(function(btn){ btn.disabled = true; });
             form.addEventListener('submit', function (e) {
                 e.preventDefault();
                 Swal.fire({
