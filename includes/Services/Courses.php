@@ -3,6 +3,7 @@
 namespace IMAOCustom\Services;
 
 use WP_Post;
+use IMAOCustom\Helpers\Bootstrap;
 
 class Courses {
     private const META_LINKED_PRODUCT = '_linked_product_id';
@@ -133,7 +134,7 @@ class Courses {
                 echo $rowTpl( $r['user_id'] ?? '', $r['type'] ?? 'percent', $r['value'] ?? '' );
             }
         }
-        echo '</tbody></table><button type="button" class="button" id="crm-add-payout">افزودن</button>';
+        echo '</tbody></table><button type="button" class="btn btn-secondary" id="crm-add-payout">افزودن</button>';
         ?>
         <script>jQuery(function($){
             $('#crm-add-payout').on('click',function(){ $('#crm-payout-body').append(`<?php echo addslashes( $rowTpl() ); ?>`); });
@@ -221,10 +222,11 @@ class Courses {
             return;
         }
         $url = plugin_dir_url( dirname( __DIR__ ) );
+        Bootstrap::enqueue();
         wp_enqueue_style( 'imao-jdp', $url . 'assets/css/jalalidatepicker.min.css', [], '1.0.0' );
         wp_enqueue_style( 'imao-select2', $url . 'assets/css/select2.min.css', [], '1.0.0' );
-        wp_enqueue_script( 'imao-jdp', $url . 'assets/js/jalalidatepicker.min.js', [ 'jquery' ], '1.0.0', true );
-        wp_enqueue_script( 'imao-select2', $url . 'assets/js/select2.min.js', [ 'jquery' ], '1.0.0', true );
+        wp_enqueue_script( 'imao-jdp', $url . 'assets/js/jalalidatepicker.min.js', [ 'jquery', 'bootstrap-js' ], '1.0.0', true );
+        wp_enqueue_script( 'imao-select2', $url . 'assets/js/select2.min.js', [ 'jquery', 'bootstrap-js' ], '1.0.0', true );
         wp_add_inline_script( 'imao-jdp', 'jQuery(function($){$(".crm-select2").select2({dir:"rtl",width:"resolve"});});' );
     }
 }

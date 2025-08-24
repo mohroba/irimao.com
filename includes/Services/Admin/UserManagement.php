@@ -2,6 +2,8 @@
 
 namespace IMAOCustom\Services\Admin;
 
+use IMAOCustom\Helpers\Bootstrap;
+
 class UserManagement {
     public function register(): void {
         add_action( 'admin_menu', [ $this, 'add_menu' ] );
@@ -21,12 +23,12 @@ class UserManagement {
             return;
         }
         $base = plugin_dir_url( dirname( __DIR__, 2 ) ) . 'assets/';
+        Bootstrap::enqueue();
         wp_enqueue_style( 'imao-datatables', $base . 'css/jquery.dataTables.min.css' );
         wp_enqueue_script( 'imao-datatables', $base . 'js/jquery.dataTables.min.js', [ 'jquery' ], null, true );
         wp_enqueue_style( 'imao-select2', $base . 'css/select2.min.css' );
         wp_enqueue_script( 'imao-select2', $base . 'js/select2.min.js', [ 'jquery' ], null, true );
-        wp_enqueue_style( 'imao-admin', $base . 'css/crm-admin.css' );
-        wp_enqueue_script( 'imao-admin', $base . 'js/crm-admin.js', [ 'jquery', 'imao-datatables', 'imao-select2' ], null, true );
+        wp_enqueue_script( 'imao-admin', $base . 'js/crm-admin.js', [ 'jquery', 'imao-datatables', 'imao-select2', 'bootstrap-js' ], null, true );
         wp_localize_script( 'imao-admin', 'CRM_ADMIN', [
             'ajax'  => admin_url( 'admin-ajax.php' ),
             'nonce' => wp_create_nonce( 'crm_admin_nonce' ),
@@ -98,7 +100,7 @@ class UserManagement {
                 echo '<td>' . esc_html( $val ) . '</td>';
             }
             $link = admin_url( 'users.php?page=imao-basic-info&edit_user=' . $u->ID );
-            echo '<td><a class="button" href="' . esc_url( $link ) . '">ویرایش</a></td></tr>';
+            echo '<td><a class="btn btn-secondary" href="' . esc_url( $link ) . '">ویرایش</a></td></tr>';
         }
         echo '</tbody></table></div>';
     }
@@ -121,8 +123,8 @@ class UserManagement {
             $val = esc_attr( get_user_meta( $user_id, $k, true ) );
             echo '<tr><th>' . esc_html( $lbl ) . '</th><td><input type="text" name="' . esc_attr( $k ) . '" value="' . $val . '" class="regular-text"/></td></tr>';
         }
-        echo '</table><p><input type="submit" name="imao_save_basic_admin" class="button-primary" value="ذخیره"></p>';
-        echo '</form><p><a href="' . esc_url( admin_url( 'users.php?page=imao-basic-info' ) ) . '">← بازگشت به لیست</a></p></div>';
+        echo '</table><p><input type="submit" name="imao_save_basic_admin" class="btn btn-primary" value="ذخیره"></p>';
+        echo '</form><p><a class="btn btn-link" href="' . esc_url( admin_url( 'users.php?page=imao-basic-info' ) ) . '">← بازگشت به لیست</a></p></div>';
     }
 
     public function prof_identity_page(): void {
@@ -164,12 +166,12 @@ class UserManagement {
                 echo '<option value="' . esc_attr( $rk ) . '" ' . $sel . '>' . esc_html( $rd['name'] ) . '</option>';
             }
             echo '</select></td>';
-            echo '<td><form method="post" class="identity-action-form" style="display:inline;">';
+            echo '<td><form method="post" class="identity-action-form d-inline">';
             echo '<input type="hidden" name="user_id" value="' . $u->ID . '">';
             echo wp_nonce_field( 'crm_admin_nonce', '_wpnonce', true, false );
-            echo '<button class="button" name="crm_user_action" value="approve">تایید</button>';
-            echo '<button class="button disapprove-btn" data-user="' . $u->ID . '">رد</button>';
-            echo '<button class="button" name="crm_user_action" value="pending">در انتظار</button>';
+            echo '<button class="btn btn-success" name="crm_user_action" value="approve">تایید</button>';
+            echo '<button class="btn btn-danger disapprove-btn" data-user="' . $u->ID . '">رد</button>';
+            echo '<button class="btn btn-secondary" name="crm_user_action" value="pending">در انتظار</button>';
             echo '</form></td>';
             echo '</tr>';
         }
