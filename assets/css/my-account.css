@@ -45,3 +45,14 @@ jdp-container{
 .cbif-wide{grid-column:span 3}
 .cbif-submit{grid-column:3/4;text-align:left;margin-top:10px}
 .cbif-submit button{background:#20a8d8;color:#fff;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;font-size:15px}
+
+@media (max-width:992px){
+    .cbif-grid{grid-template-columns:repeat(2,1fr)}
+    .cbif-wide{grid-column:span 2}
+    .cbif-submit{grid-column:1/-1;text-align:center}
+}
+
+@media (max-width:600px){
+    .cbif-grid{grid-template-columns:1fr}
+    .cbif-wide{grid-column:1}
+}
