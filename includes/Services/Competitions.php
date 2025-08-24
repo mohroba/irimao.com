@@ -15,23 +15,17 @@ class Competitions {
      */
     public static function detail_fields(): array {
         return [
-            'course_code'       => 'کد',
-            'start_date'        => 'تاریخ شروع',
-            'end_date'          => 'تاریخ پایان',
-            'exam_date'         => 'تاریخ آزمون',
+            'competition_code' => 'کد',
+            'start_date'       => 'تاریخ شروع',
+            'end_date'         => 'تاریخ پایان',
             'registration_start'=> 'شروع ثبت‌نام',
-            'registration_end'  => 'پایان ثبت‌نام',
-            'attendance'        => 'نوع حضور',
-            'course_time'       => 'ساعت برگزاری دوره',
-            'organizer'         => 'مسئول برگزاری',
-            'organizer_tel'     => 'شماره همراه مسئول برگزاری',
-            'instructor'        => 'مدرس دوره',
-            'examiner'          => 'ممتحن',
-            'supervisor'        => 'ناظر',
-            'address'           => 'آدرس محل برگزاری',
-            'min_degree'        => 'حداقل درجه فنی',
-            'points'            => 'امتیاز دوره',
-            'price'             => 'شهریه دوره (تومان)',
+            'registration_end' => 'پایان ثبت‌نام',
+            'organizer'        => 'مسئول برگزاری',
+            'organizer_tel'    => 'شماره همراه مسئول برگزاری',
+            'supervisor'       => 'ناظر',
+            'address'          => 'آدرس محل برگزاری',
+            'min_degree'       => 'حداقل درجه فنی',
+            'price'            => 'هزینه ثبت نام مسابقه (تومان)',
         ];
     }
 
@@ -75,12 +69,12 @@ class Competitions {
             }
         };
 
-        $tax( 'gender',       'جنسیت',       'جنسیت' );
-        $tax( 'board',        'هیئت',        'هیئت‌ها', true );
-        $tax( 'course_type',  'نوع دوره',   'انواع دوره' );
-        $tax( 'age_category', 'رده سنی',    'رده‌های سنی', true );
-        $tax( 'level',        'سطح',         'سطوح', true );
-        $tax( 'weight_class', 'کلاس وزنی',   'کلاس‌های وزنی' );
+        $tax( 'gender',           'جنسیت',       'جنسیت' );
+        $tax( 'board',            'هیئت',        'هیئت‌ها', true );
+        $tax( 'competition_type', 'نوع مسابقه',  'انواع مسابقه' );
+        $tax( 'age_category',     'رده سنی',    'رده‌های سنی', true );
+        $tax( 'level',            'سطح',         'سطوح', true );
+        $tax( 'weight_class',     'کلاس وزنی',   'کلاس‌های وزنی' );
     }
 
     /**
@@ -119,7 +113,7 @@ class Competitions {
             'has_archive'  => true,
             'rewrite'      => [ 'slug' => 'competitions' ],
             'supports'     => [ 'title', 'thumbnail' ],
-            'taxonomies'   => [ 'gender','board','course_type','age_category','weight_class','level' ],
+            'taxonomies'   => [ 'gender','board','competition_type','age_category','weight_class','level' ],
             'show_in_rest' => true,
         ] );
     }
@@ -132,9 +126,9 @@ class Competitions {
         wp_nonce_field( 'crm_save_details', 'crm_details_nonce' );
         $val          = static fn( string $k ) => esc_attr( get_post_meta( $post->ID, $k, true ) );
         $fields       = self::detail_fields();
-        $number_field = [ 'points', 'min_degree' ];
+        $number_field = [ 'min_degree' ];
         $tel_fields   = [ 'organizer_tel' ];
-        $date_fields  = [ 'start_date', 'end_date', 'exam_date', 'registration_start', 'registration_end' ];
+        $date_fields  = [ 'start_date', 'end_date', 'registration_start', 'registration_end' ];
         echo '<table class="form-table striped"><tbody>';
         foreach ( $fields as $k => $label ) {
             $type  = 'text';
@@ -314,7 +308,7 @@ class Competitions {
                 <h3><?php echo esc_html( get_the_title( $cid ) ); ?></h3>
                 <table class="striped">
                     <tbody>
-                        <tr><th>کد</th><td><?php echo esc_html( get_post_meta( $cid, 'course_code', true ) ); ?></td></tr>
+                        <tr><th>کد</th><td><?php echo esc_html( get_post_meta( $cid, 'competition_code', true ) ); ?></td></tr>
                         <tr><th>قیمت</th><td><?php echo wc_price( $price ); ?></td></tr>
                         <?php if ( $conditions = get_post_meta( $cid, 'special_conditions', true ) ) : ?>
                             <tr><th>شرایط خاص</th><td><?php echo nl2br( esc_html( $conditions ) ); ?></td></tr>
@@ -409,7 +403,7 @@ class Competitions {
                         <tr>
                             <td><?php echo $i++; ?></td>
                             <td><?php echo esc_html( get_the_title( $cid ) ); ?></td>
-                            <td><?php echo esc_html( get_post_meta( $cid, 'course_code', true ) ); ?></td>
+                            <td><?php echo esc_html( get_post_meta( $cid, 'competition_code', true ) ); ?></td>
                             <td><?php echo esc_html( $r['weight_class'] ?: '—' ); ?></td>
                             <td><?php echo esc_html( $r['age_category'] ?: '—' ); ?></td>
                             <td>#<?php echo $r['order_id']; ?></td>

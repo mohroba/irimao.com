@@ -27,5 +27,6 @@ class CompetitionsTest extends TestCase {
         $this->assertArrayHasKey( 'crm_user_competitions', $GLOBALS['shortcodes'] );
         $this->assertArrayHasKey( 'weight_class', $GLOBALS['registered_taxonomies'] );
         $this->assertArrayHasKey( 'age_category', $GLOBALS['registered_taxonomies'] );
+        $this->assertArrayHasKey( 'competition_type', $GLOBALS['registered_taxonomies'] );
     }
 }
