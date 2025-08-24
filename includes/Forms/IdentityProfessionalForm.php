@@ -73,7 +73,7 @@ class IdentityProfessionalForm extends BaseForm {
             return $dirs;
         } );
 
-        $up = wp_handle_upload( $file, [ 'test_form' => false ] );
+        $up = \wp_handle_upload( $file, [ 'test_form' => false ] );
         remove_all_filters( 'upload_dir' );
 
         if ( isset( $up['url'] ) && empty( $up['error'] ) ) {

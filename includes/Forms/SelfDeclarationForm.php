@@ -45,7 +45,8 @@ class SelfDeclarationForm extends BaseForm {
             if ( $file_error ) {
                 $this->errors[] = $file_error;
             } else {
-                $upload = wp_handle_upload( $_FILES['course_imageurl'], [ 'test_form' => false ] );
+                require_once ABSPATH . 'wp-admin/includes/file.php';
+                $upload = \wp_handle_upload( $_FILES['course_imageurl'], [ 'test_form' => false ] );
                 if ( empty( $upload['error'] ) && ! empty( $upload['url'] ) ) {
                     $image_url = esc_url_raw( $upload['url'] );
                 } else {

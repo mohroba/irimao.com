@@ -17,7 +17,14 @@ class ClubRegisterFormTest extends TestCase {
             $this->markTestSkipped( 'WordPress environment defines is_user_logged_in.' );
         }
         function is_user_logged_in() { return false; }
+        $_SERVER['REQUEST_METHOD'] = 'GET';
         $form = new ClubRegisterForm();
         $this->assertStringContainsString( 'لطفاً ابتدا وارد شوید', $form->render() );
+    }
+
+    public function test_handles_file_upload_via_wp(): void {
+        $content = file_get_contents( __DIR__ . '/../../includes/Forms/ClubRegisterForm.php' );
+        $this->assertStringContainsString("require_once ABSPATH . 'wp-admin/includes/file.php'", $content);
+        $this->assertStringContainsString('\\wp_handle_upload', $content);
     }
 }

@@ -7,6 +7,7 @@ class IdentityProfessionalFormTest extends TestCase {
         if ( ! function_exists( 'is_user_logged_in' ) ) {
             $this->markTestSkipped( 'WordPress functions not available.' );
         }
+        $_SERVER['REQUEST_METHOD'] = 'GET';
         $form = new IdentityProfessionalForm();
         $this->assertStringContainsString( 'لطفاً وارد شوید', $form->render() );
     }
@@ -24,5 +25,10 @@ class IdentityProfessionalFormTest extends TestCase {
         $output = $form->render();
         $this->assertStringContainsString( 'تصویر پرسنلی', $output );
         $this->assertStringContainsString( 'data-status="', $output );
+    }
+
+    public function test_handles_file_upload_via_wp(): void {
+        $content = file_get_contents( __DIR__ . '/../../includes/Forms/IdentityProfessionalForm.php' );
+        $this->assertStringContainsString('\\wp_handle_upload', $content);
     }
 }

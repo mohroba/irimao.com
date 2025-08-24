@@ -65,7 +65,8 @@ class ClubRegisterForm extends BaseForm {
             if ( $file_error ) {
                 $this->errors[] = $file_error;
             } else {
-                $up = wp_handle_upload( $_FILES['club_license_image'], [ 'test_form' => false ] );
+                require_once ABSPATH . 'wp-admin/includes/file.php';
+                $up = \wp_handle_upload( $_FILES['club_license_image'], [ 'test_form' => false ] );
                 if ( empty( $up['error'] ) && ! empty( $up['url'] ) ) {
                     $image_url = esc_url_raw( $up['url'] );
                 } else {
