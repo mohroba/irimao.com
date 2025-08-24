@@ -24,4 +24,48 @@ class CompetitionShortcodesTest extends TestCase {
         $this->assertStringContainsString( 'class="crm-single-course"', $output );
         $this->assertStringContainsString( 'class="striped"', $output );
     }
+
+    /** @runInSeparateProcess */
+    public function test_competition_details_shows_all_fields(): void {
+        require_once __DIR__ . '/stubs.php';
+        if ( ! function_exists( 'shortcode_atts' ) ) {
+            function shortcode_atts( $pairs, $atts, $shortcode = '' ) { return array_merge( $pairs, $atts ); }
+        }
+        if ( ! function_exists( 'get_user_meta' ) ) {
+            function get_user_meta( $id, $key, $single = true ) { return $key === 'identity_verified_professional' ? 'approved' : 'male'; }
+        }
+        if ( ! function_exists( 'wp_get_post_terms' ) ) {
+            function wp_get_post_terms( $id, $tax, $args = [] ) { return []; }
+        }
+        if ( ! function_exists( 'wc_get_cart_url' ) ) {
+            function wc_get_cart_url() { return '/cart'; }
+        }
+        if ( ! function_exists( 'get_the_terms' ) ) {
+            function get_the_terms( $id, $tax ) { return []; }
+        }
+        if ( ! function_exists( 'wp_list_pluck' ) ) {
+            function wp_list_pluck( $list, $field ) {
+                $out = [];
+                foreach ( $list as $item ) {
+                    if ( is_array( $item ) && isset( $item[ $field ] ) ) {
+                        $out[] = $item[ $field ];
+                    } elseif ( is_object( $item ) && isset( $item->$field ) ) {
+                        $out[] = $item->$field;
+                    }
+                }
+                return $out;
+            }
+        }
+        if ( ! function_exists( 'is_wp_error' ) ) {
+            function is_wp_error( $thing ) { return false; }
+        }
+        $svc  = new Competitions();
+        $html = $svc->competition_details_shortcode( [ 'id' => 20 ] );
+        foreach ( Competitions::detail_fields() as $label ) {
+            $this->assertStringContainsString( $label, $html );
+        }
+        foreach ( [ 'نوع مسابقه', 'هیئت', 'جنسیت', 'سطح' ] as $label ) {
+            $this->assertStringContainsString( $label, $html );
+        }
+    }
 }

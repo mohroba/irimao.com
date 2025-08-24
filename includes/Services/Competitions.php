@@ -533,12 +533,19 @@ class Competitions
         }
 
         $weights = wp_get_post_terms($cid, 'weight_class');
-        $ages = wp_get_post_terms($cid, 'age_category');
-        $price = get_post_meta($cid, 'price', true);
-        $prod_id = (int)get_post_meta($cid, self::META_LINKED_PRODUCT, true);
-        if (!$prod_id) {
+        $ages    = wp_get_post_terms($cid, 'age_category');
+        $prod_id = (int) get_post_meta($cid, self::META_LINKED_PRODUCT, true);
+        if (! $prod_id) {
             $prod_id = $this->sync_product($cid);
         }
+
+        $fields     = self::detail_fields() + [
+            'competition_type' => 'نوع مسابقه',
+            'board'            => 'هیئت',
+            'gender'           => 'جنسیت',
+            'level'            => 'سطح',
+        ];
+        $tax_fields = ['competition_type', 'board', 'gender', 'level'];
 
         ob_start();
         ?>
@@ -548,14 +555,22 @@ class Competitions
                 <h3><?php echo esc_html(get_the_title($cid)); ?></h3>
                 <table class="striped">
                     <tbody>
-                    <tr>
-                        <th>کد</th>
-                        <td><?php echo esc_html(get_post_meta($cid, 'competition_code', true)); ?></td>
-                    </tr>
-                    <tr>
-                        <th>قیمت</th>
-                        <td><?php echo wc_price($price); ?></td>
-                    </tr>
+                    <?php foreach ($fields as $key => $label) :
+                        if (in_array($key, $tax_fields, true)) {
+                            $terms = get_the_terms($cid, $key);
+                            $val   = $terms && ! is_wp_error($terms) ? join(', ', wp_list_pluck($terms, 'name')) : '';
+                        } else {
+                            $val = get_post_meta($cid, $key, true);
+                            if ($key === 'price') {
+                                $val = wc_price((float) $val);
+                            }
+                        }
+                    ?>
+                        <tr>
+                            <th><?php echo esc_html($label); ?></th>
+                            <td><?php echo $val ? $val : '—'; ?></td>
+                        </tr>
+                    <?php endforeach; ?>
                     <?php if ($conditions = get_post_meta($cid, 'special_conditions', true)) : ?>
                         <tr>
                             <th>شرایط خاص</th>
