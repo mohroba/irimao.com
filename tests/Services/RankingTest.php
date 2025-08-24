@@ -68,6 +68,9 @@ class RankingTest extends TestCase {
         $service = new Ranking();
         $html    = $service->my_rankings_shortcode();
         $this->assertStringContainsString( 'crm-my-rank', $html );
+        $this->assertStringContainsString( 'sd-container', $html );
+        $this->assertStringContainsString( 'sd-header', $html );
+        $this->assertStringContainsString( 'shop_table', $html );
     }
 
     public function test_activate_registers_endpoint_and_flushes_rules(): void {
