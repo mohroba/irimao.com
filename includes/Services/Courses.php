@@ -3,6 +3,8 @@
 namespace IMAOCustom\Services;
 
 use WP_Post;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class Courses {
     private const META_LINKED_PRODUCT = '_linked_product_id';
@@ -355,16 +357,21 @@ class Courses {
     }
 
     /**
-     * Generate CSV content for attendees.
+     * Generate XLSX content for attendees.
      */
-    protected function build_csv( array $users ): string {
-        $fh = fopen( 'php://temp', 'r+' );
-        fputcsv( $fh, array_values( $this->attendee_fields() ), ',', '"', '\\' );
+    protected function build_xlsx( array $users ): string {
+        $sheet = new Spreadsheet();
+        $active = $sheet->getActiveSheet();
+        $active->fromArray( [ array_values( $this->attendee_fields() ) ] );
+        $row = 2;
         foreach ( $users as $u ) {
-            fputcsv( $fh, array_values( $this->attendee_row( $u ) ), ',', '"', '\\' );
+            $active->fromArray( [ array_values( $this->attendee_row( $u ) ) ], null, 'A' . $row );
+            $row++;
         }
-        rewind( $fh );
-        return (string) stream_get_contents( $fh );
+        $writer = new Xlsx( $sheet );
+        ob_start();
+        $writer->save( 'php://output' );
+        return (string) ob_get_clean();
     }
 
     public function add_export_column( array $cols ): array {
@@ -387,9 +394,9 @@ class Courses {
         }
         check_admin_referer( 'export_course_attendees_' . $course_id );
         $users = $this->get_attendees( $course_id );
-        header( 'Content-Type: text/csv; charset=utf-8' );
-        header( 'Content-Disposition: attachment; filename="course-' . $course_id . '-attendees.csv"' );
-        echo $this->build_csv( $users );
+        header( 'Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' );
+        header( 'Content-Disposition: attachment; filename="course-' . $course_id . '-attendees.xlsx"' );
+        echo $this->build_xlsx( $users );
         exit;
     }
 
