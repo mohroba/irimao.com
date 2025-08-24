@@ -1,5 +1,5 @@
 .sd-container{background:#fff;border:1px solid #e0e0e0;padding:20px;margin:30px auto;font-family:Vazir,droid;font-size:14px;direction:rtl;}
-.sd-header{border-radius:5px;background:#060097;color:#fff;padding:10px;font-size:18px;font-weight:600;}
+.sd-header{border-radius:5px;background:#060097;color:#fff;padding:10px;font-size:18px;font-weight:600;margin-bottom: 15px}
 .sd-header-warning{border-radius:5px;background:red;color:#fff;padding:10px;font-size:18px;font-weight:600;}
 .sd-instruction{margin:15px 0;color:#444;line-height:1.6;margin-bottom:20px!important;}
 .sd-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px;}
