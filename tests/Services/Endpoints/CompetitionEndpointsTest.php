@@ -2,7 +2,7 @@
 use PHPUnit\Framework\TestCase;
 use IMAOCustom\Services\Endpoints\CompetitionsList;
 use IMAOCustom\Services\Endpoints\CompetitionDetails;
-use IMAOCustom\Services\Endpoints\UserCompetitionsList;
+use IMAOCustom\Services\Endpoints\UserCompetitionList;
 
 class CompetitionEndpointsTest extends TestCase {
     protected function setUp(): void {
@@ -43,15 +43,15 @@ class CompetitionEndpointsTest extends TestCase {
         $this->assertStringContainsString( '[crm_competition_details]', $out );
     }
 
-    public function test_user_competitions_list_endpoint(): void {
-        $endpoint = new UserCompetitionsList();
+    public function test_user_competition_list_endpoint(): void {
+        $endpoint = new UserCompetitionList();
         $endpoint->register();
         do_action( 'init' );
-        $this->assertContains( 'user-competitions-list', $GLOBALS['endpoints'] );
+        $this->assertContains( 'user-competition-list', $GLOBALS['endpoints'] );
         $items = apply_filters( 'woocommerce_account_menu_items', [] );
-        $this->assertArrayHasKey( 'user-competitions-list', $items );
+        $this->assertArrayHasKey( 'user-competition-list', $items );
         ob_start();
-        do_action( 'woocommerce_account_user-competitions-list_endpoint' );
+        do_action( 'woocommerce_account_user-competition-list_endpoint' );
         $out = ob_get_clean();
         $this->assertStringContainsString( '[crm_user_competitions]', $out );
     }

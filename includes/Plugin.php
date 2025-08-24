@@ -20,7 +20,7 @@ use IMAOCustom\Services\Competitions;
 use IMAOCustom\Services\Ranking;
 use IMAOCustom\Services\Endpoints\CompetitionsList;
 use IMAOCustom\Services\Endpoints\CompetitionDetails;
-use IMAOCustom\Services\Endpoints\UserCompetitionsList;
+use IMAOCustom\Services\Endpoints\UserCompetitionList;
 use IMAOCustom\Services\Endpoints\CourseList;
 use IMAOCustom\Services\Endpoints\UserCourseList;
 use IMAOCustom\Services\Endpoints\CourseDetails;
@@ -56,7 +56,7 @@ class Plugin {
         Competitions::class,
         CompetitionsList::class,
         CompetitionDetails::class,
-        UserCompetitionsList::class,
+        UserCompetitionList::class,
         Ranking::class,
         CourseList::class,
         UserCourseList::class,

@@ -43,7 +43,9 @@ class UserCourseList {
         foreach ( $orders as $order ) {
             foreach ( $order->get_items() as $it ) {
                 $course_id = (int) get_post_meta( $it->get_product_id(), '_linked_post_id', true );
-                if ( ! $course_id ) { continue; }
+                if ( ! $course_id || get_post_type( $course_id ) !== 'course' ) {
+                    continue;
+                }
                 $rows[] = [
                     'course_id'  => $course_id,
                     'order_id'   => $order->get_id(),

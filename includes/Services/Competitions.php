@@ -133,13 +133,15 @@ class Competitions {
         $user_id = get_current_user_id();
         $rows    = [];
 
-        $orders = wc_get_orders( [
-            'customer_id' => $user_id,
-            'limit'       => -1,
-            'orderby'     => 'date',
-            'order'       => 'DESC',
-            'status'      => [ 'completed', 'processing', 'pending', 'on-hold' ],
-        ] );
+        $orders = wc_get_orders(
+            [
+                'customer_id' => $user_id,
+                'limit'       => -1,
+                'orderby'     => 'date',
+                'order'       => 'DESC',
+                'status'      => [ 'completed', 'processing', 'pending', 'on-hold' ],
+            ]
+        );
 
         foreach ( $orders as $order ) {
             foreach ( $order->get_items() as $item ) {
@@ -150,6 +152,7 @@ class Competitions {
 
                 $rows[] = [
                     'competition_id' => $comp_id,
+                    'order_id'       => $order->get_id(),
                     'order_date'     => $order->get_date_created()->date_i18n( 'Y/m/d' ),
                     'amount'         => $item->get_total(),
                     'status'         => wc_get_order_status_name( $order->get_status() ),
@@ -163,19 +166,41 @@ class Competitions {
         }
 
         ob_start();
-        echo '<table class="shop_table shop_table_responsive striped"><thead><tr><th>#</th><th>مسابقه</th><th>کلاس وزنی</th><th>تاریخ</th><th>مبلغ</th><th>وضعیت</th></tr></thead><tbody>';
-        $i = 1;
-        foreach ( $rows as $r ) {
-            echo '<tr>';
-            echo '<td>' . ( $i++ ) . '</td>';
-            echo '<td><a href="' . esc_url( get_permalink( $r['competition_id'] ) ) . '">' . esc_html( get_the_title( $r['competition_id'] ) ) . '</a></td>';
-            echo '<td>' . esc_html( $r['weight_class'] ?: '—' ) . '</td>';
-            echo '<td>' . esc_html( $r['order_date'] ) . '</td>';
-            echo '<td>' . wc_price( $r['amount'] ) . '</td>';
-            echo '<td>' . esc_html( $r['status'] ) . '</td>';
-            echo '</tr>';
-        }
-        echo '</tbody></table>';
+        ?>
+        <div class="crm-course-wrap">
+            <div class="crm-course-title">لیست مسابقات شما</div>
+            <table class="crm-competition-table striped">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>نام مسابقه</th>
+                        <th>کد مسابقه</th>
+                        <th>کلاس وزنی</th>
+                        <th>شماره سفارش</th>
+                        <th>تاریخ سفارش</th>
+                        <th>مبلغ پرداختی</th>
+                        <th>وضعیت سفارش</th>
+                        <th>اقدام</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php $i = 1; foreach ( $rows as $r ) : $cid = $r['competition_id']; ?>
+                        <tr>
+                            <td><?php echo $i++; ?></td>
+                            <td><?php echo esc_html( get_the_title( $cid ) ); ?></td>
+                            <td><?php echo esc_html( get_post_meta( $cid, 'course_code', true ) ); ?></td>
+                            <td><?php echo esc_html( $r['weight_class'] ?: '—' ); ?></td>
+                            <td>#<?php echo $r['order_id']; ?></td>
+                            <td><?php echo esc_html( $r['order_date'] ); ?></td>
+                            <td><?php echo wc_price( $r['amount'] ); ?></td>
+                            <td><?php echo esc_html( $r['status'] ); ?></td>
+                            <td><a href="<?php echo esc_url( '/my-account/competition-details/?competition_id=' . $cid ); ?>">جزئیات</a></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php
         return ob_get_clean();
     }
 
