@@ -165,40 +165,40 @@ class BasicInfoForm extends BaseForm {
         $coaches   = $this->coach_options();
         $clubs     = $this->club_options();
 
-        $html  = '<div class="sd-container container">';
+        $html  = '<div class="sd-container">';
         $html .= '<form method="post" id="id-form" class="needs-swal">';
         $html .= wp_nonce_field( $this->nonce_action, $this->nonce_name, true, false );
         $html .= $this->error_list();
-        $html .= '<div class="row g-3">';
+        $html .= '<div class="cbif-grid">';
 
         // national id & gender
-        $html .= '<div class="cbif-field col-md-6"><label for="national_id_display" class="form-label">کد ملی<span class="required text-danger">*</span></label>';
-        $html .= '<input type="text" id="national_id_display" class="form-control" value="' . esc_attr( $f['national_id'] ) . '" disabled>';
+        $html .= '<div class="cbif-field"><label for="national_id_display">کد ملی<span class="required">*</span></label>';
+        $html .= '<input type="text" id="national_id_display" value="' . esc_attr( $f['national_id'] ) . '" disabled>';
         $html .= '<input type="hidden" id="national_id" name="national_id" value="' . esc_attr( $f['national_id'] ) . '"></div>';
-        $html .= '<div class="cbif-field col-md-6"><label for="gender" class="form-label">جنسیت<span class="required text-danger">*</span></label><select id="gender" name="gender" class="crm-select2 form-select"><option value="">— انتخاب کنید —</option><option value="male"' . $this->sel( $f['gender'], 'male' ) . '>مرد</option><option value="female"' . $this->sel( $f['gender'], 'female' ) . '>زن</option></select></div>';
+        $html .= '<div class="cbif-field"><label for="gender">جنسیت<span class="required">*</span></label><select id="gender" name="gender" class="crm-select2"><option value="">— انتخاب کنید —</option><option value="male"' . $this->sel( $f['gender'], 'male' ) . '>مرد</option><option value="female"' . $this->sel( $f['gender'], 'female' ) . '>زن</option></select></div>';
 
         // names
-        $html .= '<div class="cbif-field col-md-6"><label for="first_name_fa" class="form-label">نام (فارسی)<span class="required text-danger">*</span></label><input type="text" id="first_name_fa" name="first_name_fa" class="form-control" value="' . esc_attr( $f['first_name_fa'] ) . '"></div>';
-        $html .= '<div class="cbif-field col-md-6"><label for="last_name_fa" class="form-label">نام خانوادگی (فارسی)<span class="required text-danger">*</span></label><input type="text" id="last_name_fa" name="last_name_fa" class="form-control" value="' . esc_attr( $f['last_name_fa'] ) . '"></div>';
-        $html .= '<div class="cbif-field col-md-6"><label for="first_name_en" class="form-label">نام (En)</label><input type="text" id="first_name_en" name="first_name_en" class="form-control" value="' . esc_attr( $f['first_name_en'] ) . '"></div>';
-        $html .= '<div class="cbif-field col-md-6"><label for="last_name_en" class="form-label">نام‌خانوادگی (En)</label><input type="text" id="last_name_en" name="last_name_en" class="form-control" value="' . esc_attr( $f['last_name_en'] ) . '"></div>';
+        $html .= '<div class="cbif-field"><label for="first_name_fa">نام (فارسی)<span class="required">*</span></label><input type="text" id="first_name_fa" name="first_name_fa" value="' . esc_attr( $f['first_name_fa'] ) . '"></div>';
+        $html .= '<div class="cbif-field"><label for="last_name_fa">نام خانوادگی (فارسی)<span class="required">*</span></label><input type="text" id="last_name_fa" name="last_name_fa" value="' . esc_attr( $f['last_name_fa'] ) . '"></div>';
+        $html .= '<div class="cbif-field"><label for="first_name_en">نام (En)</label><input type="text" id="first_name_en" name="first_name_en" value="' . esc_attr( $f['first_name_en'] ) . '"></div>';
+        $html .= '<div class="cbif-field"><label for="last_name_en">نام‌خانوادگی (En)</label><input type="text" id="last_name_en" name="last_name_en" value="' . esc_attr( $f['last_name_en'] ) . '"></div>';
 
         // father, birth
-        $html .= '<div class="cbif-field col-md-6"><label for="father_name" class="form-label">نام پدر<span class="required text-danger">*</span></label><input type="text" id="father_name" name="father_name" class="form-control" value="' . esc_attr( $f['father_name'] ) . '"></div>';
-        $html .= '<div class="cbif-field col-md-6"><label for="birth_date" class="form-label">تاریخ تولد<span class="required text-danger">*</span></label><input type="text" id="birth_date" name="birth_date" class="form-control persian-date" data-jdp data-jdp-only-date value="' . esc_attr( $f['birth_date'] ) . '"></div>';
-        $html .= '<div class="cbif-field col-md-6"><label class="form-label">استان/شهر تولد<span class="required text-danger">*</span></label><select id="birth_province" name="birth_province" class="crm-select2 form-select"><option value="">— انتخاب کنید —</option>';
+        $html .= '<div class="cbif-field"><label for="father_name">نام پدر<span class="required">*</span></label><input type="text" id="father_name" name="father_name" value="' . esc_attr( $f['father_name'] ) . '"></div>';
+        $html .= '<div class="cbif-field"><label for="birth_date">تاریخ تولد<span class="required">*</span></label><input type="text" id="birth_date" name="birth_date" class="persian-date" data-jdp data-jdp-only-date value="' . esc_attr( $f['birth_date'] ) . '"></div>';
+        $html .= '<div class="cbif-field"><label>استان/شهر تولد<span class="required">*</span></label><select id="birth_province" name="birth_province" class="crm-select2"><option value="">— انتخاب کنید —</option>';
         foreach ( $provinces as $code => $name ) {
             $html .= '<option value="' . esc_attr( $code ) . '"' . $this->sel( $f['birth_province'], $code ) . '>' . esc_html( $name ) . '</option>';
         }
         $html .= '</select>';
-        $html .= '<select id="birth_city" name="birth_city" class="crm-select2 form-select mt-2"' . ( empty( $birth ) ? ' disabled' : '' ) . '><option value="">' . ( empty( $birth ) ? '— ابتدا استان را انتخاب کنید —' : '— انتخاب کنید —' ) . '</option>';
+        $html .= '<select id="birth_city" name="birth_city" class="crm-select2" style="margin-top:8px;"' . ( empty( $birth ) ? ' disabled' : '' ) . '><option value="">' . ( empty( $birth ) ? '— ابتدا استان را انتخاب کنید —' : '— انتخاب کنید —' ) . '</option>';
         foreach ( $birth as $city ) {
             $html .= '<option value="' . esc_attr( $city ) . '"' . $this->sel( $f['birth_city'], $city ) . '>' . esc_html( $city ) . '</option>';
         }
         $html .= '</select></div>';
 
         // marital, education, military
-        $html .= '<div class="cbif-field col-md-6"><label for="marital_status" class="form-label">وضعیت تأهل<span class="required text-danger">*</span></label><select id="marital_status" name="marital_status" class="crm-select2 form-select"><option value="">— انتخاب کنید —</option><option value="single"' . $this->sel( $f['marital_status'], 'single' ) . '>مجرد</option><option value="married"' . $this->sel( $f['marital_status'], 'married' ) . '>متأهل</option></select></div>';
+        $html .= '<div class="cbif-field"><label for="marital_status">وضعیت تأهل<span class="required">*</span></label><select id="marital_status" name="marital_status" class="crm-select2"><option value="">— انتخاب کنید —</option><option value="single"' . $this->sel( $f['marital_status'], 'single' ) . '>مجرد</option><option value="married"' . $this->sel( $f['marital_status'], 'married' ) . '>متأهل</option></select></div>';
         $edu = [
             '' => '— انتخاب کنید —',
             'student_primary'    => 'محصل - ابتدایی',
@@ -208,7 +208,7 @@ class BasicInfoForm extends BaseForm {
             'master'             => 'کارشناسی ارشد',
             'phd'                => 'دکتری و بالاتر',
         ];
-        $html .= '<div class="cbif-field col-md-6"><label for="education_status" class="form-label">وضعیت تحصیلی<span class="required text-danger">*</span></label><select id="education_status" name="education_status" class="crm-select2 form-select">';
+        $html .= '<div class="cbif-field"><label for="education_status">وضعیت تحصیلی<span class="required">*</span></label><select id="education_status" name="education_status" class="crm-select2">';
         foreach ( $edu as $v => $t ) {
             $html .= '<option value="' . esc_attr( $v ) . '"' . $this->sel( $f['education_status'], $v ) . '>' . esc_html( $t ) . '</option>';
         }
@@ -224,48 +224,48 @@ class BasicInfoForm extends BaseForm {
             'studying'          => 'اشتغال به تحصیل',
             'seminarian'        => 'اشتغال به خدمت – طلبه',
         ];
-        $html .= '<div class="cbif-field col-md-6"><label for="military_status" class="form-label">وضعیت خدمت<span class="required text-danger">*</span></label><select id="military_status" name="military_status" class="crm-select2 form-select">';
+        $html .= '<div class="cbif-field"><label for="military_status">وضعیت خدمت<span class="required">*</span></label><select id="military_status" name="military_status" class="crm-select2">';
         foreach ( $mil as $v => $t ) {
             $html .= '<option value="' . esc_attr( $v ) . '"' . $this->sel( $f['military_status'], $v ) . '>' . esc_html( $t ) . '</option>';
         }
         $html .= '</select></div>';
 
         // residence
-        $html .= '<div class="cbif-field col-md-6"><label class="form-label">استان/شهر اقامت<span class="required text-danger">*</span></label><select id="residence_province" name="residence_province" class="crm-select2 form-select"><option value="">— انتخاب کنید —</option>';
+        $html .= '<div class="cbif-field"><label>استان/شهر اقامت<span class="required">*</span></label><select id="residence_province" name="residence_province" class="crm-select2"><option value="">— انتخاب کنید —</option>';
         foreach ( $provinces as $code => $name ) {
             $html .= '<option value="' . esc_attr( $code ) . '"' . $this->sel( $f['residence_province'], $code ) . '>' . esc_html( $name ) . '</option>';
         }
         $html .= '</select>';
-        $html .= '<select id="residence_city" name="residence_city" class="crm-select2 form-select mt-2"' . ( empty( $res ) ? ' disabled' : '' ) . '><option value="">' . ( empty( $res ) ? '— ابتدا استان را انتخاب کنید —' : '— انتخاب کنید —' ) . '</option>';
+        $html .= '<select id="residence_city" name="residence_city" class="crm-select2" style="margin-top:8px;"' . ( empty( $res ) ? ' disabled' : '' ) . '><option value="">' . ( empty( $res ) ? '— ابتدا استان را انتخاب کنید —' : '— انتخاب کنید —' ) . '</option>';
         foreach ( $res as $city ) {
             $html .= '<option value="' . esc_attr( $city ) . '"' . $this->sel( $f['residence_city'], $city ) . '>' . esc_html( $city ) . '</option>';
         }
         $html .= '</select></div>';
-        $html .= '<div class="cbif-field col-md-6"><label for="postal_code" class="form-label">کدپستی</label><input type="text" id="postal_code" name="postal_code" class="form-control" value="' . esc_attr( $f['postal_code'] ) . '"></div>';
+        $html .= '<div class="cbif-field"><label for="postal_code">کدپستی</label><input type="text" id="postal_code" name="postal_code" value="' . esc_attr( $f['postal_code'] ) . '"></div>';
 
         // address
-        $html .= '<div class="cbif-field cbif-wide col-12"><label for="residence_address" class="form-label">آدرس محل سکونت<span class="required text-danger">*</span></label><textarea id="residence_address" name="residence_address" class="form-control">' . esc_textarea( $f['residence_address'] ) . '</textarea></div>';
+        $html .= '<div class="cbif-field cbif-wide"><label for="residence_address">آدرس محل سکونت<span class="required">*</span></label><textarea id="residence_address" name="residence_address">' . esc_textarea( $f['residence_address'] ) . '</textarea></div>';
 
         // contact
-        $html .= '<div class="cbif-field col-md-6"><label for="billing_phone" class="form-label">موبایل<span class="required text-danger">*</span></label><input type="tel" id="billing_phone" name="billing_phone" class="form-control" value="' . esc_attr( $f['billing_phone'] ) . '" pattern="9[0-9]{9}"></div>';
-        $html .= '<div class="cbif-field col-md-6"><label for="billing_email" class="form-label">ایمیل</label><input type="email" id="billing_email" name="billing_email" class="form-control" value="' . esc_attr( $f['billing_email'] ) . '"></div>';
+        $html .= '<div class="cbif-field"><label for="billing_phone">موبایل<span class="required">*</span></label><input type="tel" id="billing_phone" name="billing_phone" value="' . esc_attr( $f['billing_phone'] ) . '" pattern="9[0-9]{9}"></div>';
+        $html .= '<div class="cbif-field"><label for="billing_email">ایمیل</label><input type="email" id="billing_email" name="billing_email" value="' . esc_attr( $f['billing_email'] ) . '"></div>';
 
         // bank and relations
-        $html .= '<div class="cbif-field col-md-6"><label for="iban" class="form-label">شماره شبا (بدون IR)</label><input type="text" id="iban" name="iban" class="form-control" value="' . esc_attr( $f['iban'] ) . '"></div>';
-        $html .= '<div class="cbif-field col-md-6"><label for="card_number" class="form-label">شماره کارت</label><input type="text" id="card_number" name="card_number" class="form-control" value="' . esc_attr( $f['card_number'] ) . '"></div>';
-        $html .= '<div class="cbif-field col-md-6"><label for="coach_id" class="form-label">انتخاب مربی</label><select id="coach_id" name="coach_id" class="crm-select2 form-select">';
+        $html .= '<div class="cbif-field"><label for="iban">شماره شبا (بدون IR)</label><input type="text" id="iban" name="iban" value="' . esc_attr( $f['iban'] ) . '"></div>';
+        $html .= '<div class="cbif-field"><label for="card_number">شماره کارت</label><input type="text" id="card_number" name="card_number" value="' . esc_attr( $f['card_number'] ) . '"></div>';
+        $html .= '<div class="cbif-field"><label for="coach_id">انتخاب مربی</label><select id="coach_id" name="coach_id" class="crm-select2">';
         foreach ( $coaches as $id => $name ) {
             $html .= '<option value="' . esc_attr( $id ) . '"' . $this->sel( $f['coach_id'], (string) $id ) . '>' . esc_html( $name ) . '</option>';
         }
         $html .= '</select></div>';
-        $html .= '<div class="cbif-field col-md-6"><label for="club_id" class="form-label">انتخاب باشگاه</label><select id="club_id" name="club_id" class="crm-select2 form-select">';
+        $html .= '<div class="cbif-field"><label for="club_id">انتخاب باشگاه</label><select id="club_id" name="club_id" class="crm-select2">';
         foreach ( $clubs as $id => $name ) {
             $html .= '<option value="' . esc_attr( $id ) . '"' . $this->sel( $f['club_id'], (string) $id ) . '>' . esc_html( $name ) . '</option>';
         }
         $html .= '</select></div>';
 
-        $html .= '</div>'; // row
-        $html .= '<p class="cbif-submit"><button type="submit" name="save_basic_info" class="btn btn-primary">ذخیره اطلاعات</button></p>';
+        $html .= '</div>'; // grid
+        $html .= '<p class="cbif-submit"><button type="submit" name="save_basic_info">ذخیره اطلاعات</button></p>';
         $html .= '</form>';
         $html .= '</div>';
         return $html;
