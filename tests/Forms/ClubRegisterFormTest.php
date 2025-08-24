@@ -11,4 +11,13 @@ class ClubRegisterFormTest extends TestCase {
         $output = $form->render();
         $this->assertStringContainsString( 'نام باشگاه', $output );
     }
+
+    public function test_render_requires_login(): void {
+        if ( function_exists( 'is_user_logged_in' ) ) {
+            $this->markTestSkipped( 'WordPress environment defines is_user_logged_in.' );
+        }
+        function is_user_logged_in() { return false; }
+        $form = new ClubRegisterForm();
+        $this->assertStringContainsString( 'لطفاً ابتدا وارد شوید', $form->render() );
+    }
 }
