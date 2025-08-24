@@ -5,6 +5,7 @@ namespace IMAOCustom\Services;
 use WP_Post;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use IMAOCustom\Helpers\FieldLabel;
 
 class Courses {
     private const META_LINKED_PRODUCT = '_linked_product_id';
@@ -350,7 +351,8 @@ class Courses {
                     $row[ $key ] = $target ? $target->display_name : $id;
                     break;
                 default:
-                    $row[ $key ] = get_user_meta( $u->ID, $key, true );
+                    $meta = get_user_meta( $u->ID, $key, true );
+                    $row[ $key ] = FieldLabel::get( $key, $meta );
             }
         }
         return $row;

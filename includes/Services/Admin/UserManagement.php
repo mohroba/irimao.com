@@ -2,6 +2,8 @@
 
 namespace IMAOCustom\Services\Admin;
 
+use IMAOCustom\Helpers\FieldLabel;
+
 class UserManagement {
     public function register(): void {
         add_action( 'admin_menu', [ $this, 'add_menu' ] );
@@ -69,7 +71,7 @@ class UserManagement {
             $u = get_userdata( (int) $value );
             return $u ? $u->display_name : '';
         }
-        return (string) $value;
+        return FieldLabel::get( $key, $value );
     }
 
     public function basic_info_page(): void {
