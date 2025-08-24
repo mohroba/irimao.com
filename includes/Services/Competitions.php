@@ -186,7 +186,19 @@ class Competitions
         if (!$prod_id) {
             return [];
         }
-        $orders = wc_get_orders(['limit' => -1, 'status' => ['processing', 'completed'], 'product_id' => $prod_id,]);
+        global $wpdb;
+        $order_ids = $wpdb->get_col(
+            $wpdb->prepare(
+                "SELECT DISTINCT order_id FROM {$wpdb->prefix}woocommerce_order_items oi
+                 JOIN {$wpdb->prefix}woocommerce_order_itemmeta oim ON oi.order_item_id = oim.order_item_id
+                 WHERE oi.order_item_type = 'line_item' AND oim.meta_key = '_product_id' AND oim.meta_value = %d",
+                $prod_id
+            )
+        );
+        if (!$order_ids) {
+            return [];
+        }
+        $orders = wc_get_orders(['limit' => -1, 'status' => ['processing', 'completed'], 'include' => $order_ids]);
         $users = [];
         foreach ($orders as $order) {
             $uid = (int)$order->get_user_id();
