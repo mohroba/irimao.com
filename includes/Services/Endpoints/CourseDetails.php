@@ -81,7 +81,7 @@ class CourseDetails {
         ?>
         <div class="crm-single-course">
             <h3><?php echo esc_html( get_the_title( $cid ) ); ?></h3>
-            <table>
+            <table class="striped">
                 <tbody>
                     <?php foreach ( $fields as $key => $label ) :
                         if ( $key === 'course_name' ) {

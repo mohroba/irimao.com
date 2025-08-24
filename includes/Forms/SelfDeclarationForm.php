@@ -169,7 +169,7 @@ class SelfDeclarationForm extends BaseForm {
         ]);
         if ( $q->have_posts() ) {
             $out .= '<div class="sd-container"><div class="sd-header" style="margin-bottom:20px">در خواست های خود اظهاری من</div>';
-            $out .= '<div class="sd-table-responsive"><table class="shop_table" style="text-align:center"><thead><tr>'
+            $out .= '<div class="sd-table-responsive"><table class="shop_table striped" style="text-align:center"><thead><tr>'
                 .'<th>#</th><th>نوع</th><th>درجه</th><th>شماره</th>'
                 .'<th>تاریخ اخذ</th><th>تاریخ آزمون</th><th>هیئت</th><th>وضعیت</th><th>اقدام</th>'
                 .'</tr></thead><tbody>';

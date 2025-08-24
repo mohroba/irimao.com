@@ -61,7 +61,7 @@ class CourseList {
         ?>
         <div class="crm-course-wrap">
             <div class="crm-course-title">لیست دوره‌ها</div>
-            <table class="crm-course-table">
+            <table class="crm-course-table striped">
                 <thead>
                     <tr>
                         <th>#</th>
