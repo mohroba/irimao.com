@@ -20,3 +20,7 @@
 .club-form-container .cf-submit{grid-column:3/4;text-align:left;margin-top:10px}
 .club-form-container .cf-submit button{background:#1890ff;color:#fff;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;font-size:15px}
 .thumb-lic{margin-top:6px;max-width:180px;border:1px solid #ccc;border-radius:6px}
+
+.club-form-container .cf-field input,
+.club-form-container .cf-field textarea,
+.club-form-container .cf-field select{padding:8px !Important;border:1px solid #ccc !Important;border-radius:4px !Important;font-size:14px !Important; background-color: #F9FAFB !important;width:100%}
