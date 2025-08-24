@@ -47,6 +47,14 @@ class SelfDeclarationData {
         ];
     }
 
+    public static function degree_label( int $type, string $value ): string {
+        if ( $value === '' ) {
+            return '—';
+        }
+        $options = self::degree_options();
+        return $options[ $type ][ $value ] ?? $value;
+    }
+
     public static function list_degrees(): array {
         return [
             'yellow' => 'زرد',

@@ -64,6 +64,7 @@ class SelfDeclarations {
             $status_label = $status === 'publish' ? 'تأیید شده' : ( $status === 'pending' ? 'در حال بررسی' : 'رد شده' );
             $type_id      = (int) get_post_meta( $pid, 'coursetype', true );
             $degree_raw   = (string) get_post_meta( $pid, 'degree', true );
+            $degree_label = SelfDeclarationData::degree_label( $type_id, $degree_raw );
             $hokm_number  = get_post_meta( $pid, 'hokm_number', true );
             $getdate      = get_post_meta( $pid, 'getdate', true );
             $exam_date    = get_post_meta( $pid, 'exam_date', true );
@@ -75,7 +76,7 @@ class SelfDeclarations {
             echo '<td>'. ($i++) .'</td>';
             echo '<td>'. esc_html( $author ) .'</td>';
             echo '<td>'. esc_html( $coursetypes[ $type_id ] ?? '—' ) .'</td>';
-            echo '<td>'. esc_html( $degree_raw ?: '—' ) .'</td>';
+            echo '<td>'. esc_html( $degree_label ) .'</td>';
             echo '<td>'. esc_html( $hokm_number ?: '—' ) .'</td>';
             echo '<td>'. esc_html( $getdate ?: '—' ) .'</td>';
             echo '<td>'. esc_html( $exam_date ?: '—' ) .'</td>';
