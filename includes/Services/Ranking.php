@@ -303,11 +303,12 @@ class Ranking {
         }
         ob_start();
         ?>
-        <div class="crm-my-rank">
+        <div class="sd-container crm-my-rank">
+            <div class="sd-header">امتیازات من</div>
             <h3>جایگاه کلی من</h3>
             <p><strong>امتیاز کل:</strong> <?php echo $overall_pts; ?> ‖ <strong>رتبه:</strong> <?php echo $overall_rank; ?></p>
             <h3>جزئیات امتیازات</h3>
-            <table>
+            <table class="shop_table shop_table_responsive">
                 <thead><tr><th>#</th><th>مسابقه</th><th>کلاس وزنی</th><th>امتیاز</th></tr></thead><tbody>
                 <?php $i = 1; foreach ( $my as $row ) :
                     $title = get_the_title( $row->competition_id );
