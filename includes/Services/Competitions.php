@@ -55,7 +55,7 @@ class Competitions {
         ob_start();
         echo '<div class="sd-container">';
         echo '<div class="sd-header">لیست مسابقات</div>';
-        echo '<table class="shop_table shop_table_responsive"><thead><tr><th>#</th><th>عنوان</th>';
+        echo '<table class="shop_table shop_table_responsive crm-competition-table"><thead><tr><th>#</th><th>عنوان</th>';
         foreach ( $tax_cols as $label ) {
             echo "<th>{$label}</th>";
         }

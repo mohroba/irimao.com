@@ -11,6 +11,7 @@ class CompetitionShortcodesTest extends TestCase {
         $output = $svc->competitions_list_shortcode();
         $this->assertStringContainsString( 'class="sd-container"', $output );
         $this->assertStringContainsString( 'class="sd-header"', $output );
+        $this->assertStringContainsString( 'crm-competition-table', $output );
     }
 
     public function test_competition_details_uses_course_design(): void {
