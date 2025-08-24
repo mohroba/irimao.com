@@ -28,5 +28,7 @@ class CompetitionsTest extends TestCase {
         $this->assertArrayHasKey( 'weight_class', $GLOBALS['registered_taxonomies'] );
         $this->assertArrayHasKey( 'age_category', $GLOBALS['registered_taxonomies'] );
         $this->assertArrayHasKey( 'competition_type', $GLOBALS['registered_taxonomies'] );
+        $this->assertArrayHasKey( 'manage_competition_posts_columns', $GLOBALS['filters'] );
+        $this->assertArrayHasKey( 'admin_post_export_competition_attendees', $GLOBALS['actions'] );
     }
 }

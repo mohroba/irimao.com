@@ -7,6 +7,7 @@ use WP_Query;
 class Competitions {
     private const META_LINKED_PRODUCT     = '_linked_product_id';
     private const META_LINKED_COMPETITION = '_linked_post_id';
+    private const META_MANUAL             = '_manual_attendees';
 
     /**
      * Fields for competition details meta box.
@@ -36,6 +37,9 @@ class Competitions {
         add_action( 'add_meta_boxes', [ $this, 'add_meta_boxes' ] );
         add_action( 'save_post', [ $this, 'save_meta' ], 10, 3 );
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
+        add_filter( 'manage_competition_posts_columns', [ $this, 'add_export_column' ] );
+        add_action( 'manage_competition_posts_custom_column', [ $this, 'render_export_column' ], 10, 2 );
+        add_action( 'admin_post_export_competition_attendees', [ $this, 'export_attendees' ] );
         add_shortcode( 'crm_competitions_list', [ $this, 'competitions_list_shortcode' ] );
         add_shortcode( 'crm_competition_details', [ $this, 'competition_details_shortcode' ] );
         add_shortcode( 'crm_user_competitions', [ $this, 'user_competitions_shortcode' ] );
@@ -120,6 +124,8 @@ class Competitions {
 
     public function add_meta_boxes(): void {
         add_meta_box( 'crm_details', 'جزئیات', [ $this, 'render_details_box' ], 'competition', 'normal', 'high' );
+        add_meta_box( 'crm_manual',  'افزودن شرکت کننده به صورت دستی', [ $this, 'render_manual_box' ],  'competition', 'side',   'default' );
+        add_meta_box( 'crm_attendees', 'شرکت‌کنندگان', [ $this, 'render_attendees_box' ], 'competition', 'side', 'default' );
     }
 
     public function render_details_box( WP_Post $post ): void {
@@ -155,6 +161,155 @@ class Competitions {
         echo '</tbody></table>';
     }
 
+    public function render_manual_box( WP_Post $post ): void {
+        wp_nonce_field( 'crm_save_manual', 'crm_manual_nonce' );
+        $att = (array) get_post_meta( $post->ID, self::META_MANUAL, true );
+        echo '<p><select multiple name="manual_attendees[]" class="crm-select2" style="width:100%">';
+        foreach ( get_users( [ 'fields' => [ 'ID', 'display_name' ] ] ) as $u ) {
+            printf( '<option value="%d"%s>%s</option>', $u->ID, selected( in_array( $u->ID, $att, true ), true, false ), esc_html( $u->display_name ) );
+        }
+        echo '</select></p><p style="font-size:12px">نگه‌داشتن CTRL برای چند انتخاب.</p>';
+    }
+
+    public function render_attendees_box( WP_Post $post ): void {
+        $users = $this->get_attendees( $post->ID );
+        if ( empty( $users ) ) {
+            echo '<p>شرکت‌کننده‌ای ثبت نشده است.</p>';
+            return;
+        }
+        $fields = $this->attendee_fields();
+        echo '<div style="max-width:100%;overflow:auto">';
+        echo '<table id="crm-attendees-table" class="wp-list-table widefat striped"><thead><tr>';
+        foreach ( $fields as $lbl ) {
+            echo '<th>' . esc_html( $lbl ) . '</th>';
+        }
+        echo '</tr></thead><tbody>';
+        foreach ( $users as $u ) {
+            $row = $this->attendee_row( $u );
+            echo '<tr>';
+            foreach ( $fields as $key => $lbl ) {
+                $val = $row[ $key ] ?? '';
+                echo '<td>' . esc_html( (string) $val ) . '</td>';
+            }
+            echo '</tr>';
+        }
+        echo '</tbody></table></div>';
+    }
+
+    /**
+     * Get users who purchased the linked product.
+     *
+     * @return \WP_User[]
+     */
+    private function get_attendees( int $competition_id ): array {
+        if ( ! function_exists( 'wc_get_orders' ) ) {
+            return [];
+        }
+        $prod_id = (int) get_post_meta( $competition_id, self::META_LINKED_PRODUCT, true );
+        if ( ! $prod_id ) {
+            return [];
+        }
+        $orders = wc_get_orders( [
+            'limit'      => -1,
+            'status'     => [ 'processing', 'completed' ],
+            'product_id' => $prod_id,
+        ] );
+        $users = [];
+        foreach ( $orders as $order ) {
+            $uid = (int) $order->get_user_id();
+            if ( ! $uid || isset( $users[ $uid ] ) ) {
+                continue;
+            }
+            if ( $user = get_user_by( 'id', $uid ) ) {
+                $users[ $uid ] = $user;
+            }
+        }
+        return array_values( $users );
+    }
+
+    /**
+     * Field map for attendee data.
+     *
+     * @return array<string,string>
+     */
+    private function attendee_fields(): array {
+        return [
+            'ID'            => 'ID',
+            'display_name'  => 'نام',
+            'billing_email' => 'ایمیل',
+            'billing_phone' => 'شماره موبایل',
+        ];
+    }
+
+    /**
+     * Build a row of attendee data.
+     *
+     * @return array<string,string|int>
+     */
+    private function attendee_row( \WP_User $u ): array {
+        $row = [];
+        foreach ( $this->attendee_fields() as $key => $lbl ) {
+            switch ( $key ) {
+                case 'ID':
+                    $row[ $key ] = $u->ID;
+                    break;
+                case 'display_name':
+                    $row[ $key ] = $u->display_name;
+                    break;
+                case 'billing_email':
+                    $row[ $key ] = get_user_meta( $u->ID, 'billing_email', true ) ?: $u->user_email;
+                    break;
+                default:
+                    $row[ $key ] = get_user_meta( $u->ID, $key, true );
+            }
+        }
+        return $row;
+    }
+
+    /**
+     * Generate XLSX content for attendees.
+     */
+    protected function build_xlsx( array $users ): string {
+        $sheet  = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $active = $sheet->getActiveSheet();
+        $active->fromArray( [ array_values( $this->attendee_fields() ) ] );
+        $row = 2;
+        foreach ( $users as $u ) {
+            $active->fromArray( [ array_values( $this->attendee_row( $u ) ) ], null, 'A' . $row );
+            $row++;
+        }
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx( $sheet );
+        ob_start();
+        $writer->save( 'php://output' );
+        return (string) ob_get_clean();
+    }
+
+    public function add_export_column( array $cols ): array {
+        $cols['crm_export'] = 'شرکت‌کنندگان';
+        return $cols;
+    }
+
+    public function render_export_column( string $col, int $post_id ): void {
+        if ( $col !== 'crm_export' ) {
+            return;
+        }
+        $url = wp_nonce_url( admin_url( 'admin-post.php?action=export_competition_attendees&competition=' . $post_id ), 'export_competition_attendees_' . $post_id );
+        echo '<a class="button" href="' . esc_url( $url ) . '">خروجی اکسل</a>';
+    }
+
+    public function export_attendees(): void {
+        $competition_id = (int) ( $_GET['competition'] ?? 0 );
+        if ( ! $competition_id ) {
+            wp_die( 'Competition not specified.' );
+        }
+        check_admin_referer( 'export_competition_attendees_' . $competition_id );
+        $users = $this->get_attendees( $competition_id );
+        header( 'Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' );
+        header( 'Content-Disposition: attachment; filename="competition-' . $competition_id . '-attendees.xlsx"' );
+        echo $this->build_xlsx( $users );
+        exit;
+    }
+
     public function save_meta( int $post_id, WP_Post $post, bool $update ): void {
         if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
             return;
@@ -174,6 +329,11 @@ class Competitions {
                 }
                 update_post_meta( $post_id, $k, $val );
             }
+        }
+
+        if ( isset( $_POST['crm_manual_nonce'] ) ) {
+            $att = array_map( 'intval', $_POST['manual_attendees'] ?? [] );
+            update_post_meta( $post_id, self::META_MANUAL, $att );
         }
         $this->sync_product( $post_id );
     }
