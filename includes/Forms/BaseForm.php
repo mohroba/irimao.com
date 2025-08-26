@@ -33,7 +33,7 @@ abstract class BaseForm {
         if ( empty( $this->errors ) ) {
             return '';
         }
-        $out = '<ul class="imao-errors">';
+        $out = '<ul class="notice-warning imao-errors">';
         foreach ( $this->errors as $e ) {
             $out .= '<li>' . esc_html( $e ) . '</li>';
         }
@@ -45,7 +45,8 @@ abstract class BaseForm {
         if ( ! $this->saved ) {
             return '';
         }
-        return '<div class="imao-success">اطلاعات شما با موفقیت ذخیره شد.</div>';
+
+        return '<div class="notice-success imao-success">اطلاعات شما با موفقیت ذخیره شد.</div>';
     }
 }
 
