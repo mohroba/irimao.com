@@ -31,7 +31,7 @@ namespace IMAOCustom\Forms {
     function esc_html($text) { return $text; }
     function esc_url($text) { return $text; }
     function esc_textarea($text) { return $text; }
-    function get_users($args = []) { return []; }
+    function get_users($args = []) { return $GLOBALS['get_users_return'] ?? []; }
 }
 
 namespace IMAOCustom\Helpers {
@@ -52,6 +52,7 @@ class BasicInfoFormSubmissionTest extends TestCase {
         $GLOBALS['current_user_email'] = 'old@example.com';
         $_POST                      = [];
         $_SERVER['REQUEST_METHOD']  = 'GET';
+        unset($GLOBALS['get_users_return']);
     }
 
     private function validPostData(): array {
@@ -124,6 +125,17 @@ class BasicInfoFormSubmissionTest extends TestCase {
         $form = new BasicInfoForm();
         $html = $form->render();
         $this->assertStringContainsString('اطلاعات پایه شما تأیید شده است', $html);
+    }
+
+    public function test_coach_select_excludes_current_user(): void {
+        $GLOBALS['get_users_return'] = [
+            (object) ['ID' => 1, 'display_name' => 'خودم'],
+            (object) ['ID' => 2, 'display_name' => 'مربی دیگر'],
+        ];
+        $form = new BasicInfoForm();
+        $html = $form->render();
+        $this->assertStringNotContainsString('value="1"', $html);
+        $this->assertStringContainsString('value="2"', $html);
     }
 }
 

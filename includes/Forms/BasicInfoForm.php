@@ -146,7 +146,8 @@ class BasicInfoForm extends BaseForm {
      * Coaches approved for selection.
      */
     private function coach_options(): array {
-        $users = get_users( [
+        $current = get_current_user_id();
+        $users   = get_users( [
             'role'       => 'coach',
             'meta_key'   => 'identity_verified_professional',
             'meta_value' => 'approved',
@@ -154,6 +155,9 @@ class BasicInfoForm extends BaseForm {
         ] );
         $out = [ '' => '— انتخاب مربی —' ];
         foreach ( $users as $u ) {
+            if ( (int) $u->ID === $current ) {
+                continue;
+            }
             $out[ $u->ID ] = $u->display_name;
         }
         return $out;
