@@ -8,6 +8,7 @@ namespace IMAOCustom\Services\Admin {
     function esc_url( $text ) { return $text; }
     function check_ajax_referer() { return true; }
     function wp_send_json_success() { return true; }
+    function wp_send_json_error() { return false; }
     function update_user_meta( $uid, $key, $val ) { $GLOBALS['user_meta'][$uid][$key] = $val; }
     function delete_user_meta( $uid, $key ) { unset( $GLOBALS['user_meta'][$uid][$key] ); }
     function get_user_meta( $uid, $key, $single = true ) { return $GLOBALS['user_meta'][$uid][$key] ?? ''; }
@@ -44,6 +45,16 @@ class UserManagementTest extends TestCase {
         $GLOBALS['last_role_set'] = '';
         $um->change_status();
         $this->assertSame( 'editor', $GLOBALS['last_role_set'] );
+    }
+
+    public function test_toggle_ban_sets_meta(): void {
+        $um = new UserManagement();
+        $_POST = [ 'user' => 1, 'ban_action' => 'ban' ];
+        $um->toggle_ban();
+        $this->assertSame( 1, $GLOBALS['user_meta'][1]['imao_banned'] );
+        $_POST = [ 'user' => 1, 'ban_action' => 'unban' ];
+        $um->toggle_ban();
+        $this->assertArrayNotHasKey( 'imao_banned', $GLOBALS['user_meta'][1] );
     }
 }
 }

@@ -60,7 +60,7 @@ $(document).on('click', '.disapprove-btn', function (e){
 
 /* approve / pending buttons (within form) */
 $(document).on('click', '.identity-action-form button[name="crm_user_action"]', function (e){
-	e.preventDefault();
+        e.preventDefault();
         const $btn = $(this);
         const $row = $btn.closest('tr');
         const uid  = $row.find('input[name="user_id"]').val();
@@ -73,6 +73,18 @@ $(document).on('click', '.identity-action-form button[name="crm_user_action"]', 
                 action_type: act,
                 role : role
         }, ()=> location.reload() );
+});
+
+/* ban / unban */
+$(document).on('click', '.ban-user-btn', function (e){
+        e.preventDefault();
+        const $btn = $(this);
+        $.post(CRM_ADMIN.ajax, {
+                action: 'crm_admin_toggle_ban',
+                nonce : CRM_ADMIN.nonce,
+                user  : $btn.data('user'),
+                ban_action: $btn.data('action')
+        }, ()=> location.reload());
 });
 
 });
