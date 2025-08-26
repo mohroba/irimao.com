@@ -147,7 +147,7 @@ class IdentityProfessionalForm extends BaseForm {
                 echo '<div class="upload-notice"><p>حداکثر حجم فایل 1 مگابایت است.</p><p>فرمت‌های مجاز: jpg، jpeg، png، pdf.</p></div>';
             }
             if ( isset( $this->messages[ $key ] ) ) {
-                $type = isset( $this->messages[ $key ]['error'] ) ? 'upload-error' : 'upload-success';
+                $type = isset( $this->messages[ $key ]['error'] ) ? 'notice-warning upload-error' : 'notice-success upload-success';
                 $text = reset( $this->messages[ $key ] );
                 echo '<p class="' . $type . '">' . esc_html( $text ) . '</p>';
             }
