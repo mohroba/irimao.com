@@ -23,7 +23,6 @@ namespace IMAOCustom\Forms {
 namespace IMAOCustom\Helpers {
     $GLOBALS['user_meta'] = [];
     function get_user_meta($uid, $key, $single = true) {
-        if ($key === 'identity_verified_professional') { return 'pending'; }
         return $GLOBALS['user_meta'][$key] ?? '';
     }
     function update_user_meta($uid, $key, $value) { $GLOBALS['user_meta'][$key] = $value; }
@@ -81,6 +80,23 @@ class BasicInfoFormSubmissionTest extends TestCase {
         $this->assertStringContainsString('نام الزامی است.', $html);
         $this->assertStringContainsString('name="last_name_fa" value="خانوادگی"', $html);
         $this->assertArrayNotHasKey('last_name_fa', $GLOBALS['user_meta']);
+    }
+
+    public function test_locked_submission_shows_message_and_saves_relations(): void {
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+        $data = $this->validPostData();
+        $data['first_name_fa'] = 'جدید';
+        $data['coach_id']      = '2';
+        $data['club_id']       = '3';
+        $_POST = $data;
+        $GLOBALS['user_meta']['identity_verified_professional'] = 'approved';
+        $form = new BasicInfoForm();
+        $html = $form->render();
+        $this->assertStringContainsString('ویرایش سایر اطلاعات پس از تأیید امکان‌پذیر نیست.', $html);
+        $this->assertStringContainsString('اطلاعات شما با موفقیت ذخیره شد', $html);
+        $this->assertSame('2', $GLOBALS['user_meta']['coach_id']);
+        $this->assertSame('3', $GLOBALS['user_meta']['club_id']);
+        $this->assertArrayNotHasKey('first_name_fa', $GLOBALS['user_meta']);
     }
 }
 

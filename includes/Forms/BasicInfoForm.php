@@ -44,9 +44,9 @@ class BasicInfoForm extends BaseForm {
         if ( ! is_user_logged_in() ) {
             return;
         }
-        $uid     = get_current_user_id();
-        $status  = get_user_meta( $uid, 'identity_verified_professional', true );
-        $locked  = ! in_array( $status, [ 'pending', 'rejected' ], true );
+        $uid    = get_current_user_id();
+        $status = get_user_meta( $uid, 'identity_verified_professional', true );
+        $locked = $status === 'approved';
 
         $data     = [];
         $all_keys = array_merge( $this->meta_keys(), [ 'billing_email' ] );
@@ -66,6 +66,8 @@ class BasicInfoForm extends BaseForm {
             foreach ( [ 'coach_id', 'club_id' ] as $k ) {
                 update_user_meta( $uid, $k, $data[ $k ] ?? '' );
             }
+            $this->saved  = true;
+            $this->errors[] = 'ویرایش سایر اطلاعات پس از تأیید امکان‌پذیر نیست.';
             return;
         }
 
