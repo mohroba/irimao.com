@@ -27,10 +27,10 @@ class BasicInfoForm extends BaseForm {
      * Fetch form field values for current user.
      */
     public function fields(): array {
-        $uid   = get_current_user_id();
-        $user  = wp_get_current_user();
+        $uid    = get_current_user_id();
+        $user   = get_userdata( $uid );
         $fields = UserMeta::get_many( $uid, $this->meta_keys() );
-        $fields['billing_email'] = $user->user_email;
+        $fields['billing_email'] = $user ? $user->user_email : '';
         if ( ! empty( $this->posted ) ) {
             $fields = array_merge( $fields, $this->posted );
         }
