@@ -231,6 +231,13 @@ class UserManagement {
             update_user_meta( $user_id, $meta, 'disapproved' );
             update_user_meta( $user_id, 'identity_rejection_reason_professional', sanitize_text_field( $_POST['reason'] ?? '' ) );
         }
+        $role = sanitize_text_field( $_POST['role'] ?? '' );
+        if ( $role && isset( wp_roles()->roles[ $role ] ) ) {
+            $u = get_userdata( $user_id );
+            if ( $u ) {
+                $u->set_role( $role );
+            }
+        }
         wp_send_json_success();
     }
 }
