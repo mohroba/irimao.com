@@ -478,9 +478,37 @@ class Competitions
             return '<p>برای مشاهدهٔ لیست مسابقات ابتدا جنسیت خود را در بخش اطلاعات پایه ثبت کنید.</p>';
         }
 
-        $q = new WP_Query(['post_type' => 'competition', 'posts_per_page' => -1, 'orderby' => 'date', 'order' => 'DESC', 'tax_query' => [['taxonomy' => 'gender', 'field' => 'slug', 'terms' => $gender,],],]);
+        $today = function_exists('current_time') ? current_time('Y-m-d') : date('Y-m-d');
+        $q = new WP_Query([
+            'post_type'      => 'competition',
+            'posts_per_page' => -1,
+            'orderby'        => 'date',
+            'order'          => 'DESC',
+            'meta_query'     => [
+                'relation' => 'AND',
+                [
+                    'key'     => 'registration_start',
+                    'value'   => $today,
+                    'compare' => '<=',
+                    'type'    => 'DATE',
+                ],
+                [
+                    'key'     => 'registration_end',
+                    'value'   => $today,
+                    'compare' => '>=',
+                    'type'    => 'DATE',
+                ],
+            ],
+            'tax_query'      => [
+                [
+                    'taxonomy' => 'gender',
+                    'field'    => 'slug',
+                    'terms'    => $gender,
+                ],
+            ],
+        ]);
         if (!$q->have_posts()) {
-            return '<p>مسابقه‌ای موجود نیست.</p>';
+            return '<p>مسابقه‌ در حال ثبت نامی موجود نیست.</p>';
         }
 
         $tax_cols = ['weight_class' => 'کلاس وزنی', 'gender' => 'جنسیت', 'board' => 'هیئت', 'age_category' => 'رده سنی', 'level' => 'سطح',];
