@@ -1,8 +1,9 @@
 <?php
 namespace IMAOCustom\Forms {
     function is_user_logged_in() { return true; }
+    $GLOBALS['current_user_email'] = 'old@example.com';
     function get_current_user_id() { return 1; }
-    function wp_get_current_user() { return (object) ['user_email' => 'old@example.com']; }
+    function get_userdata( $uid ) { return (object) [ 'user_email' => $GLOBALS['current_user_email'] ]; }
     function get_user_meta($uid, $key, $single = true) { return \IMAOCustom\Helpers\get_user_meta($uid, $key, $single); }
     function update_user_meta($uid, $key, $value) { \IMAOCustom\Helpers\update_user_meta($uid, $key, $value); }
     class WP_Error {
@@ -10,11 +11,12 @@ namespace IMAOCustom\Forms {
         public function __construct( $code, $message ) { $this->message = $message; }
         public function get_error_message() { return $this->message; }
     }
-    function wp_update_user($args) {
+    function wp_update_user( $args ) {
         if ( isset( $GLOBALS['wp_update_user_error'] ) ) {
             return new WP_Error( 'error', $GLOBALS['wp_update_user_error'] );
         }
-        \IMAOCustom\Helpers\update_user_meta(0, 'billing_email', $args['user_email']);
+        $GLOBALS['current_user_email'] = $args['user_email'];
+        \IMAOCustom\Helpers\update_user_meta( 0, 'billing_email', $args['user_email'] );
         return 1;
     }
     function is_wp_error( $thing ) { return $thing instanceof WP_Error; }
@@ -46,9 +48,10 @@ use IMAOCustom\Forms\BasicInfoForm;
 
 class BasicInfoFormSubmissionTest extends TestCase {
     protected function tearDown(): void {
-        $GLOBALS['user_meta'] = [];
-        $_POST = [];
-        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $GLOBALS['user_meta']        = [];
+        $GLOBALS['current_user_email'] = 'old@example.com';
+        $_POST                      = [];
+        $_SERVER['REQUEST_METHOD']  = 'GET';
     }
 
     private function validPostData(): array {
@@ -79,6 +82,7 @@ class BasicInfoFormSubmissionTest extends TestCase {
         $form = new BasicInfoForm();
         $html = $form->render();
         $this->assertStringContainsString('اطلاعات شما با موفقیت ذخیره شد', $html);
+        $this->assertStringContainsString('name="billing_email" value="new@example.com"', $html);
         $this->assertSame('نام', $GLOBALS['user_meta']['first_name_fa']);
         $this->assertSame('new@example.com', $GLOBALS['user_meta']['billing_email']);
     }
