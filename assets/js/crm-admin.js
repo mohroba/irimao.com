@@ -61,15 +61,18 @@ $(document).on('click', '.disapprove-btn', function (e){
 /* approve / pending buttons (within form) */
 $(document).on('click', '.identity-action-form button[name="crm_user_action"]', function (e){
 	e.preventDefault();
-	const $btn = $(this);
-	const uid  = $btn.closest('form').find('input[name="user_id"]').val();
-	const act  = $btn.val();
-	$.post(CRM_ADMIN.ajax, {
-		action:'crm_admin_id_status',
-		nonce : CRM_ADMIN.nonce,
-		user  : uid,
-		action_type: act
-	}, ()=> location.reload() );
+        const $btn = $(this);
+        const $row = $btn.closest('tr');
+        const uid  = $row.find('input[name="user_id"]').val();
+        const act  = $btn.val();
+        const role = $row.find('.role-select').val();
+        $.post(CRM_ADMIN.ajax, {
+                action:'crm_admin_id_status',
+                nonce : CRM_ADMIN.nonce,
+                user  : uid,
+                action_type: act,
+                role : role
+        }, ()=> location.reload() );
 });
 
 });
