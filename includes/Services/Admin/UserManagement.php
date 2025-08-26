@@ -38,6 +38,7 @@ class UserManagement {
     public static function basic_fields(): array {
         return [
             'billing_phone'      => 'شماره موبایل',
+            'billing_email'      => 'ایمیل',
             'national_id'        => 'کد ملی',
             'first_name_fa'      => 'نام (فا)',
             'last_name_fa'       => 'نام‌خانوادگی (فا)',
@@ -96,6 +97,9 @@ class UserManagement {
             echo '<td>' . esc_html( $u->ID ) . '</td><td>' . esc_html( $u->display_name ) . '</td>';
             foreach ( $fields as $k => $lbl ) {
                 $raw = get_user_meta( $u->ID, $k, true );
+                if ( $k === 'billing_email' && ! $raw ) {
+                    $raw = $u->user_email;
+                }
                 $val = $this->display_value( $k, $raw );
                 echo '<td>' . esc_html( $val ) . '</td>';
             }
@@ -108,7 +112,15 @@ class UserManagement {
     private function basic_info_edit_form( int $user_id ): void {
         $fields = self::basic_fields();
         if ( isset( $_POST['imao_save_basic_admin'] ) && check_admin_referer( 'imao_basic_admin', 'imao_nonce' ) ) {
+            $email = sanitize_email( $_POST['billing_email'] ?? '' );
+            if ( $email ) {
+                wp_update_user( [ 'ID' => $user_id, 'user_email' => $email ] );
+                update_user_meta( $user_id, 'billing_email', $email );
+            }
             foreach ( $fields as $meta_key => $label ) {
+                if ( $meta_key === 'billing_email' ) {
+                    continue;
+                }
                 if ( isset( $_POST[ $meta_key ] ) ) {
                     update_user_meta( $user_id, $meta_key, sanitize_text_field( $_POST[ $meta_key ] ) );
                 }
@@ -119,7 +131,12 @@ class UserManagement {
         echo '<form method="post">';
         wp_nonce_field( 'imao_basic_admin', 'imao_nonce' );
         echo '<table class="form-table striped">';
+        $email_val = esc_attr( get_user_meta( $user_id, 'billing_email', true ) ?: get_userdata( $user_id )->user_email );
+        echo '<tr><th>ایمیل</th><td><input type="email" name="billing_email" value="' . $email_val . '" class="regular-text"/></td></tr>';
         foreach ( $fields as $k => $lbl ) {
+            if ( $k === 'billing_email' ) {
+                continue;
+            }
             $val = esc_attr( get_user_meta( $user_id, $k, true ) );
             echo '<tr><th>' . esc_html( $lbl ) . '</th><td><input type="text" name="' . esc_attr( $k ) . '" value="' . $val . '" class="regular-text"/></td></tr>';
         }

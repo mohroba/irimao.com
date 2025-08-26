@@ -5,7 +5,19 @@ namespace IMAOCustom\Forms {
     function wp_get_current_user() { return (object) ['user_email' => 'old@example.com']; }
     function get_user_meta($uid, $key, $single = true) { return \IMAOCustom\Helpers\get_user_meta($uid, $key, $single); }
     function update_user_meta($uid, $key, $value) { \IMAOCustom\Helpers\update_user_meta($uid, $key, $value); }
-    function wp_update_user($args) { \IMAOCustom\Helpers\update_user_meta(0, 'billing_email', $args['user_email']); }
+    class WP_Error {
+        private string $message;
+        public function __construct( $code, $message ) { $this->message = $message; }
+        public function get_error_message() { return $this->message; }
+    }
+    function wp_update_user($args) {
+        if ( isset( $GLOBALS['wp_update_user_error'] ) ) {
+            return new WP_Error( 'error', $GLOBALS['wp_update_user_error'] );
+        }
+        \IMAOCustom\Helpers\update_user_meta(0, 'billing_email', $args['user_email']);
+        return 1;
+    }
+    function is_wp_error( $thing ) { return $thing instanceof WP_Error; }
     function wp_verify_nonce($nonce, $action) { return true; }
     function sanitize_text_field($str) { return $str; }
     function sanitize_textarea_field($str) { return $str; }
@@ -57,6 +69,7 @@ class BasicInfoFormSubmissionTest extends TestCase {
             'residence_province'=> 'IR-01',
             'residence_city'    => 'شهر',
             'residence_address' => 'آدرس',
+            'billing_email'     => 'new@example.com',
         ];
     }
 
@@ -67,6 +80,7 @@ class BasicInfoFormSubmissionTest extends TestCase {
         $html = $form->render();
         $this->assertStringContainsString('اطلاعات شما با موفقیت ذخیره شد', $html);
         $this->assertSame('نام', $GLOBALS['user_meta']['first_name_fa']);
+        $this->assertSame('new@example.com', $GLOBALS['user_meta']['billing_email']);
     }
 
     public function test_validation_error_and_repopulate(): void {
@@ -97,6 +111,13 @@ class BasicInfoFormSubmissionTest extends TestCase {
         $this->assertSame('2', $GLOBALS['user_meta']['coach_id']);
         $this->assertSame('3', $GLOBALS['user_meta']['club_id']);
         $this->assertArrayNotHasKey('first_name_fa', $GLOBALS['user_meta']);
+    }
+
+    public function test_locked_form_shows_notice_on_get(): void {
+        $GLOBALS['user_meta']['identity_verified_professional'] = 'approved';
+        $form = new BasicInfoForm();
+        $html = $form->render();
+        $this->assertStringContainsString('اطلاعات پایه شما تأیید شده است', $html);
     }
 }
 

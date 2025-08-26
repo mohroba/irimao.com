@@ -120,7 +120,11 @@ class BasicInfoForm extends BaseForm {
         }
 
         if ( $data['billing_email'] !== '' ) {
-            wp_update_user( [ 'ID' => $uid, 'user_email' => $data['billing_email'] ] );
+            $result = wp_update_user( [ 'ID' => $uid, 'user_email' => $data['billing_email'] ] );
+            if ( is_wp_error( $result ) ) {
+                $this->errors[] = $result->get_error_message();
+                return;
+            }
             update_user_meta( $uid, 'billing_email', $data['billing_email'] );
         }
         unset( $data['billing_email'] );
@@ -186,7 +190,13 @@ class BasicInfoForm extends BaseForm {
         $coaches   = $this->coach_options();
         $clubs     = $this->club_options();
 
-        $html = '<div style="background:#ffe8e8;border:1px solid #f5c6cb;color:#721c24;padding:15px;border-radius:4px;margin-bottom:20px;">'
+        $html = '';
+        if ( $status === 'approved' ) {
+            $html .= '<div style="background:#d1ecf1;border:1px solid #bee5eb;color:#0c5460;padding:15px;border-radius:4px;margin-bottom:20px;">'
+                . __( 'اطلاعات پایه شما تأیید شده است و امکان ویرایش سایر فیلدها وجود ندارد؛ تنها انتخاب مربی و باشگاه قابل تغییر است.', 'imao-custom-plugin' )
+                . '</div>';
+        }
+        $html .= '<div style="background:#ffe8e8;border:1px solid #f5c6cb;color:#721c24;padding:15px;border-radius:4px;margin-bottom:20px;">'
             . __( 'شما فقط یکبار اجازه ورود و بروزرسانی اطلاعات پایه را دارید، پس در تکمیل اطلاعات پایه، دقت کافی را داشته باشید. پس از ثبت اطلاعات، تغییر یا بروزرسانی اطلاعات فقط با هماهنگی کمیته آموزش سبک امکان‌پذیر خواهد بود.', 'imao-custom-plugin' )
             . '</div>';
         $html .= '<div style="background:#ffe8e8;border:1px solid #f5c6cb;color:#721c24;padding:15px;border-radius:4px;margin-bottom:20px;">'
