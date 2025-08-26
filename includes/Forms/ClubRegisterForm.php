@@ -115,7 +115,7 @@ class ClubRegisterForm extends BaseForm {
         <div class="club-form-container">
             <div class="sd-header" style="margin-bottom: 15px">درخواست ثبت باشگاه</div>
             <?= $this->error_list(); ?>
-            <form method="post" enctype="multipart/form-data" id="club-form">
+            <form method="post" enctype="multipart/form-data" id="club-form" class="needs-swal">
                 <?php wp_nonce_field( $this->nonce_action, $this->nonce_name ); ?>
                 <div class="cf-grid">
                     <div class="cf-field">
