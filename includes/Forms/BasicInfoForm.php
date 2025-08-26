@@ -60,8 +60,6 @@ class BasicInfoForm extends BaseForm {
             }
         }
 
-        $this->posted = $data;
-
         if ( $locked ) {
             foreach ( [ 'coach_id', 'club_id' ] as $k ) {
                 update_user_meta( $uid, $k, $data[ $k ] ?? '' );
@@ -70,6 +68,8 @@ class BasicInfoForm extends BaseForm {
             $this->errors[] = 'ویرایش سایر اطلاعات پس از تأیید امکان‌پذیر نیست.';
             return;
         }
+
+        $this->posted = $data;
 
         $gender   = $data['gender'] ?? '';
         $required = [

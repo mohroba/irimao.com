@@ -103,6 +103,7 @@ class BasicInfoFormSubmissionTest extends TestCase {
     public function test_locked_submission_shows_message_and_saves_relations(): void {
         $_SERVER['REQUEST_METHOD'] = 'POST';
         $data = $this->validPostData();
+        $GLOBALS['user_meta']['first_name_fa'] = 'قبلی';
         $data['first_name_fa'] = 'جدید';
         $data['coach_id']      = '2';
         $data['club_id']       = '3';
@@ -114,7 +115,8 @@ class BasicInfoFormSubmissionTest extends TestCase {
         $this->assertStringContainsString('اطلاعات شما با موفقیت ذخیره شد', $html);
         $this->assertSame('2', $GLOBALS['user_meta']['coach_id']);
         $this->assertSame('3', $GLOBALS['user_meta']['club_id']);
-        $this->assertArrayNotHasKey('first_name_fa', $GLOBALS['user_meta']);
+        $this->assertSame('قبلی', $GLOBALS['user_meta']['first_name_fa']);
+        $this->assertStringContainsString('name="first_name_fa" value="قبلی"', $html);
     }
 
     public function test_locked_form_shows_notice_on_get(): void {
