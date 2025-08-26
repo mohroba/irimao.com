@@ -43,7 +43,7 @@ class IdentityProfessionalForm extends BaseForm {
         $user_id = get_current_user_id();
 
         $status = get_user_meta( $user_id, 'identity_verified_professional', true );
-        $locked = ! in_array( $status, [ 'pending', 'disapproved' ], true );
+        $locked = $status === 'approved';
         if ( $locked ) {
             $this->messages[ $field ] = [ 'error' => 'مدارک شما تایید شده و قابل ویرایش نیست.' ];
             return;
@@ -114,7 +114,7 @@ class IdentityProfessionalForm extends BaseForm {
         $fields = $this->fields();
         $status = $fields['status'];
         $reject = $fields['rejection'];
-        $locked = ! in_array( $status, [ 'pending', 'disapproved' ], true );
+        $locked = $status === 'approved';
 
         ob_start();
         echo '<div class="crm-identity-verification-form">';
