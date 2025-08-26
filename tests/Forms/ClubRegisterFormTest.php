@@ -27,4 +27,14 @@ class ClubRegisterFormTest extends TestCase {
         $this->assertStringContainsString("require_once ABSPATH . 'wp-admin/includes/file.php'", $content);
         $this->assertStringContainsString('\\wp_handle_upload', $content);
     }
+
+    public function test_render_includes_needs_swal_class(): void {
+        if ( ! function_exists( 'get_current_user_id' ) ) {
+            $this->markTestSkipped( 'WordPress functions not available.' );
+        }
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $form   = new ClubRegisterForm();
+        $output = $form->render();
+        $this->assertStringContainsString( 'class="needs-swal"', $output );
+    }
 }
