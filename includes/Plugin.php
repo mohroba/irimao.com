@@ -29,6 +29,7 @@ use IMAOCustom\Services\Endpoints\StyleCommittee;
 use IMAOCustom\Services\Avatar;
 use IMAOCustom\Services\SecurityHeaders;
 use IMAOCustom\Services\Eligibility;
+use IMAOCustom\Services\Ban;
 use IMAOCustom\ServiceManager;
 
 
@@ -67,6 +68,7 @@ class Plugin {
         StyleCommittee::class,
         Avatar::class,
         Eligibility::class,
+        Ban::class,
     ];
 
     private function __construct() {

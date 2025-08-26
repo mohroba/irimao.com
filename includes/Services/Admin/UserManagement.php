@@ -10,6 +10,7 @@ class UserManagement {
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue' ] );
         add_action( 'wp_ajax_crm_admin_update_role', [ $this, 'update_role' ] );
         add_action( 'wp_ajax_crm_admin_id_status', [ $this, 'change_status' ] );
+        add_action( 'wp_ajax_crm_admin_toggle_ban', [ $this, 'toggle_ban' ] );
     }
 
     public function add_menu(): void {
@@ -189,7 +190,12 @@ class UserManagement {
             echo '<button class="button" name="crm_user_action" value="approve">تایید</button>';
             echo '<button class="button disapprove-btn" data-user="' . $u->ID . '">رد</button>';
             echo '<button class="button" name="crm_user_action" value="pending">در انتظار</button>';
-            echo '</form></td>';
+            echo '</form>';
+            $banned  = get_user_meta( $u->ID, 'imao_banned', true );
+            $ban_lbl = $banned ? 'رفع مسدودی' : 'مسدود کردن';
+            $ban_act = $banned ? 'unban' : 'ban';
+            echo '<button class="button ban-user-btn" data-user="' . $u->ID . '" data-action="' . $ban_act . '">' . $ban_lbl . '</button>';
+            echo '</td>';
             echo '</tr>';
         }
         echo '</tbody></table></div>';
@@ -237,6 +243,24 @@ class UserManagement {
             if ( $u ) {
                 $u->set_role( $role );
             }
+        }
+        wp_send_json_success();
+    }
+
+    public function toggle_ban(): void {
+        check_ajax_referer( 'crm_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error();
+        }
+        $user_id = (int) ( $_POST['user'] ?? 0 );
+        $act     = sanitize_text_field( $_POST['ban_action'] ?? '' );
+        if ( ! $user_id || ! in_array( $act, [ 'ban', 'unban' ], true ) ) {
+            wp_send_json_error();
+        }
+        if ( $act === 'ban' ) {
+            update_user_meta( $user_id, 'imao_banned', 1 );
+        } else {
+            delete_user_meta( $user_id, 'imao_banned' );
         }
         wp_send_json_success();
     }
