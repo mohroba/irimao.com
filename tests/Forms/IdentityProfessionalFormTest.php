@@ -63,4 +63,20 @@ class IdentityProfessionalFormTest extends TestCase {
         $content = file_get_contents( __DIR__ . '/../../includes/Forms/IdentityProfessionalForm.php' );
         $this->assertStringContainsString('\\wp_handle_upload', $content);
     }
+
+    public function test_pdf_extension_not_allowed(): void {
+        if ( ! function_exists( 'wp_set_current_user' ) ) {
+            $this->markTestSkipped( 'WordPress functions not available.' );
+        }
+        wp_set_current_user( 1 );
+        $required = [ 'national_id','first_name_fa','last_name_fa','gender','father_name','birth_date','birth_province','birth_city','marital_status','education_status','residence_province','residence_city','residence_address','billing_phone','billing_email' ];
+        foreach ( $required as $k ) {
+            update_user_meta( 1, $k, 'x' );
+        }
+        $form   = new IdentityProfessionalForm();
+        $output = $form->render();
+        $this->assertStringNotContainsString('.pdf', $output);
+        $content = file_get_contents( __DIR__ . '/../../includes/Forms/IdentityProfessionalForm.php' );
+        $this->assertStringNotContainsString('application/pdf', $content);
+    }
 }

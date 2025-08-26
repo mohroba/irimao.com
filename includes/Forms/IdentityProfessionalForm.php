@@ -55,7 +55,7 @@ class IdentityProfessionalForm extends BaseForm {
         }
 
         $file = $_FILES[ $field ];
-        $file_error = Validation::file( $file, [ 'image/jpeg', 'image/png', 'application/pdf' ], 1024 * 1024, '۱ مگابایت' );
+        $file_error = Validation::file( $file, [ 'image/jpeg', 'image/png' ], 1024 * 1024, '۱ مگابایت' );
         if ( $file_error ) {
             $this->messages[ $field ] = [ 'error' => $file_error ];
             return;
@@ -138,13 +138,13 @@ class IdentityProfessionalForm extends BaseForm {
             echo '<label for="' . esc_attr( $key ) . '">' . esc_html( $label ) . '</label>';
             echo '<div class="custom-file-wrapper" data-nofile="فایلی انتخاب نشده">';
             echo '<button type="button" class="custom-file-btn"' . ( $locked ? ' disabled' : '' ) . '>انتخاب فایل</button>';
-            echo '<input type="file" name="' . esc_attr( $key ) . '" id="' . esc_attr( $key ) . '" accept=".jpg,.jpeg,.png,.pdf"' . ( $locked ? ' disabled' : '' ) . '>';
+            echo '<input type="file" name="' . esc_attr( $key ) . '" id="' . esc_attr( $key ) . '" accept=".jpg,.jpeg,.png"' . ( $locked ? ' disabled' : '' ) . '>';
             echo '</div>';
             echo '<span class="file-name">فایلی انتخاب نشده</span>';
             if ( $key === 'personal_photo' ) {
-                echo '<div class="upload-notice"><p>تصویر حتما باید با پس زمینه سفید گرفته شده باشد.</p><p>عکس پرسنلی حتما بصورت تمام رخ باشد.</p><p>رعایت شئونات و عرف اسلام و جامعه در عکس‌ها الزامی می‌باشد.</p><p>لطفا از گرفتن عکس از روی تصویر فیزیکی خودداری کنید.</p><p>حداکثر حجم فایل‌ها، یک مگابایت می‌باشد.</p><p>فایل‌هایی با پسوندهای jpg، jpeg و pdf مجاز می‌باشد.</p></div>';
+                echo '<div class="upload-notice"><p>تصویر حتما باید با پس زمینه سفید گرفته شده باشد.</p><p>عکس پرسنلی حتما بصورت تمام رخ باشد.</p><p>رعایت شئونات و عرف اسلام و جامعه در عکس‌ها الزامی می‌باشد.</p><p>لطفا از گرفتن عکس از روی تصویر فیزیکی خودداری کنید.</p><p>حداکثر حجم فایل‌ها، یک مگابایت می‌باشد.</p><p>فایل‌هایی با پسوندهای jpg و jpeg مجاز می‌باشد.</p></div>';
             } else {
-                echo '<div class="upload-notice"><p>حداکثر حجم فایل 1 مگابایت است.</p><p>فرمت‌های مجاز: jpg، jpeg، png، pdf.</p></div>';
+                echo '<div class="upload-notice"><p>حداکثر حجم فایل 1 مگابایت است.</p><p>فرمت‌های مجاز: jpg، jpeg، png.</p></div>';
             }
             if ( isset( $this->messages[ $key ] ) ) {
                 $type = isset( $this->messages[ $key ]['error'] ) ? 'notice-warning upload-error' : 'notice-success upload-success';
