@@ -6,6 +6,8 @@ use IMAOCustom\Services\Validation;
 
 abstract class BaseForm {
     protected array $errors = [];
+    protected array $posted = [];
+    protected bool $saved    = false;
     protected string $nonce_action = '';
     protected string $nonce_name   = 'imao_nonce';
 
@@ -37,6 +39,13 @@ abstract class BaseForm {
         }
         $out .= '</ul>';
         return $out;
+    }
+
+    public function success_message(): string {
+        if ( ! $this->saved ) {
+            return '';
+        }
+        return '<div class="imao-success">اطلاعات شما با موفقیت ذخیره شد.</div>';
     }
 }
 

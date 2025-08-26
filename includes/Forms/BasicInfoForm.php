@@ -31,6 +31,9 @@ class BasicInfoForm extends BaseForm {
         $user  = wp_get_current_user();
         $fields = UserMeta::get_many( $uid, $this->meta_keys() );
         $fields['billing_email'] = $user->user_email;
+        if ( ! empty( $this->posted ) ) {
+            $fields = array_merge( $fields, $this->posted );
+        }
         return $fields;
     }
 
@@ -56,6 +59,8 @@ class BasicInfoForm extends BaseForm {
                 $data[ $key ] = sanitize_text_field( $_POST[ $key ] ?? '' );
             }
         }
+
+        $this->posted = $data;
 
         if ( $locked ) {
             foreach ( [ 'coach_id', 'club_id' ] as $k ) {
@@ -120,6 +125,8 @@ class BasicInfoForm extends BaseForm {
         foreach ( $this->meta_keys() as $k ) {
             update_user_meta( $uid, $k, $data[ $k ] ?? '' );
         }
+        $this->saved  = true;
+        $this->posted = [];
     }
 
     /**
@@ -187,6 +194,7 @@ class BasicInfoForm extends BaseForm {
         $html .= '<div class="sd-header" style="margin-bottom: 15px">اطلاعات پایه</div>';
         $html .= '<form method="post" id="id-form" class="needs-swal" data-status="' . esc_attr( $status ) . '">';
         $html .= wp_nonce_field( $this->nonce_action, $this->nonce_name, true, false );
+        $html .= $this->success_message();
         $html .= $this->error_list();
         $html .= '<div class="cbif-grid">';
 
