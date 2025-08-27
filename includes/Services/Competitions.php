@@ -2,6 +2,7 @@
 
 namespace IMAOCustom\Services;
 
+use IMAOCustom\Helpers\Date;
 use IMAOCustom\Helpers\FieldLabel;
 use IMAOCustom\Helpers\UserMeta;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -485,27 +486,11 @@ class Competitions
             return '<p>برای مشاهدهٔ لیست مسابقات ابتدا جنسیت خود را در بخش اطلاعات پایه ثبت کنید.</p>';
         }
 
-        $today = function_exists('current_time') ? current_time('Y-m-d') : date('Y-m-d');
         $q = new WP_Query([
             'post_type'      => 'competition',
             'posts_per_page' => -1,
             'orderby'        => 'date',
             'order'          => 'DESC',
-            'meta_query'     => [
-                'relation' => 'AND',
-                [
-                    'key'     => 'registration_start',
-                    'value'   => $today,
-                    'compare' => '<=',
-                    'type'    => 'DATE',
-                ],
-                [
-                    'key'     => 'registration_end',
-                    'value'   => $today,
-                    'compare' => '>=',
-                    'type'    => 'DATE',
-                ],
-            ],
             'tax_query'      => [
                 [
                     'taxonomy' => 'gender',
@@ -514,33 +499,42 @@ class Competitions
                 ],
             ],
         ]);
-        if (!$q->have_posts()) {
+        $posts = [];
+        while ( $q->have_posts() ) {
+            $q->the_post();
+            $pid   = get_the_ID();
+            $start = get_post_meta( $pid, 'registration_start', true );
+            $end   = get_post_meta( $pid, 'registration_end', true );
+            if ( Date::is_between( $start, $end ) ) {
+                $posts[] = get_post();
+            }
+        }
+        wp_reset_postdata();
+        if ( ! $posts ) {
             return '<p>مسابقه‌ در حال ثبت نامی موجود نیست.</p>';
         }
 
-        $tax_cols = ['weight_class' => 'کلاس وزنی', 'gender' => 'جنسیت', 'board' => 'هیئت', 'age_category' => 'رده سنی', 'level' => 'سطح',];
+        $tax_cols = [ 'weight_class' => 'کلاس وزنی', 'gender' => 'جنسیت', 'board' => 'هیئت', 'age_category' => 'رده سنی', 'level' => 'سطح', ];
         ob_start();
         echo '<div class="sd-container">';
         echo '<div class="sd-header">لیست مسابقات</div>';
         echo '<table class="shop_table shop_table_responsive crm-competition-table striped"><thead><tr><th>#</th><th>عنوان</th>';
-        foreach ($tax_cols as $label) {
+        foreach ( $tax_cols as $label ) {
             echo "<th>{$label}</th>";
         }
         echo '<th>قیمت</th><th>اقدام</th></tr></thead><tbody>';
         $i = 1;
-        while ($q->have_posts()) :
-            $q->the_post();
-            $pid = get_the_ID();
-            echo '<tr><td>' . ($i++) . '</td><td>' . get_the_title() . '</td>';
-            foreach ($tax_cols as $slug => $label) {
-                $terms = wp_get_post_terms($pid, $slug, ['fields' => 'names']);
-                echo '<td>' . ($terms ? implode(', ', $terms) : '—') . '</td>';
+        foreach ( $posts as $post ) : setup_postdata( $post );
+            $pid = $post->ID;
+            echo '<tr><td>' . ( $i++ ) . '</td><td>' . get_the_title() . '</td>';
+            foreach ( $tax_cols as $slug => $label ) {
+                $terms = wp_get_post_terms( $pid, $slug, [ 'fields' => 'names' ] );
+                echo '<td>' . ( $terms ? implode( ', ', $terms ) : '—' ) . '</td>';
             }
-            $price = get_post_meta($pid, 'price', true);
-            echo '<td>' . wc_price($price) . '</td>';
-            echo '<td><a href="' . esc_url('/my-account/competition-details/?competition_id=' . $pid) . '">جزئیات / ثبت‌نام</a></td></tr>';
-        endwhile;
-        wp_reset_postdata();
+            $price = get_post_meta( $pid, 'price', true );
+            echo '<td>' . wc_price( $price ) . '</td>';
+            echo '<td><a href="' . esc_url( '/my-account/competition-details/?competition_id=' . $pid ) . '">جزئیات / ثبت‌نام</a></td></tr>';
+        endforeach; wp_reset_postdata();
         echo '</tbody></table></div>';
         return ob_get_clean();
     }
