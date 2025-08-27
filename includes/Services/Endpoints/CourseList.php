@@ -3,6 +3,7 @@
 namespace IMAOCustom\Services\Endpoints;
 
 use IMAOCustom\Helpers\CourseData;
+use IMAOCustom\Helpers\Date;
 use IMAOCustom\Helpers\UserMeta;
 use WP_Query;
 
@@ -48,27 +49,11 @@ class CourseList {
             return '<p>برای مشاهدهٔ دوره‌ها ابتدا جنسیت خود را در بخش اطلاعات پایه ثبت کنید.</p>';
         }
 
-        $today = function_exists( 'current_time' ) ? current_time( 'Y-m-d' ) : date( 'Y-m-d' );
-        $q     = new WP_Query([
+        $q = new WP_Query([
             'post_type'      => 'course',
             'posts_per_page' => -1,
             'orderby'        => 'date',
             'order'          => 'DESC',
-            'meta_query'     => [
-                'relation' => 'AND',
-                [
-                    'key'     => 'registration_start',
-                    'value'   => $today,
-                    'compare' => '<=',
-                    'type'    => 'DATE',
-                ],
-                [
-                    'key'     => 'registration_end',
-                    'value'   => $today,
-                    'compare' => '>=',
-                    'type'    => 'DATE',
-                ],
-            ],
             'tax_query'      => [
                 [
                     'taxonomy' => 'gender',
@@ -77,9 +62,21 @@ class CourseList {
                 ],
             ],
         ]);
-        if ( ! $q->have_posts() ) {
+        $posts = [];
+        while ( $q->have_posts() ) {
+            $q->the_post();
+            $cid = get_the_ID();
+            $start = get_post_meta( $cid, 'registration_start', true );
+            $end   = get_post_meta( $cid, 'registration_end', true );
+            if ( Date::is_between( $start, $end ) ) {
+                $posts[] = get_post();
+            }
+        }
+        wp_reset_postdata();
+        if ( ! $posts ) {
             return '<p>دوره‌ در حال ثبت نامی موجود نیست.</p>';
         }
+
         $cols = CourseData::columns();
         ob_start();
         ?>
@@ -97,7 +94,7 @@ class CourseList {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php $i = 1; while ( $q->have_posts() ) : $q->the_post(); $cid = get_the_ID(); ?>
+                    <?php $i = 1; foreach ( $posts as $post ) : setup_postdata( $post ); $cid = $post->ID; ?>
                         <tr>
                             <td><?php echo $i++; ?></td>
                             <td><?php the_title(); ?></td>
@@ -113,7 +110,7 @@ class CourseList {
                             <?php endforeach; ?>
                             <td><a href="<?php echo esc_url( '/my-account/course-details/?course_id=' . $cid ); ?>">جزئیات / ثبت‌نام</a></td>
                         </tr>
-                    <?php endwhile; wp_reset_postdata(); ?>
+                    <?php endforeach; wp_reset_postdata(); ?>
                 </tbody>
             </table>
         </div>
