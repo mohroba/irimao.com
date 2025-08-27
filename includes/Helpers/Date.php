@@ -25,10 +25,20 @@ class Date {
         $startDate   = self::parse($start);
         $endDate     = self::parse($end);
         $currentDate = $current ? self::parse($current) : self::now();
+
         if (! $startDate || ! $endDate || ! $currentDate) {
             return false;
         }
-        return $currentDate->between($startDate, $endDate, true);
+
+        $startTs   = $startDate->getTimestamp();
+        $endTs     = $endDate->getTimestamp();
+        $currentTs = $currentDate->getTimestamp();
+
+        if ($startTs > $endTs) {
+            [$startTs, $endTs] = [$endTs, $startTs];
+        }
+
+        return $currentTs >= $startTs && $currentTs <= $endTs;
     }
 
     /**
