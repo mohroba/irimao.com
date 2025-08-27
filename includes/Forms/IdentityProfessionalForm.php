@@ -115,14 +115,6 @@ class IdentityProfessionalForm extends BaseForm {
             }
         }
 
-        $email = get_user_meta( $user_id, 'billing_email', true );
-        if ( $email === '' ) {
-            $user = get_userdata( $user_id );
-            if ( ! $user || $user->user_email === '' ) {
-                return false;
-            }
-        }
-
         return true;
     }
 
