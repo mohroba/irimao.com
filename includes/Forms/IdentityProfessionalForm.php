@@ -93,12 +93,36 @@ class IdentityProfessionalForm extends BaseForm {
     }
 
     private function has_basic_info( int $user_id ): bool {
-        $required = [ 'national_id','first_name_fa','last_name_fa','gender','father_name','birth_date','birth_province','birth_city','marital_status','education_status','residence_province','residence_city','residence_address','billing_phone','billing_email' ];
+        $required = [
+            'national_id',
+            'first_name_fa',
+            'last_name_fa',
+            'gender',
+            'father_name',
+            'birth_date',
+            'birth_province',
+            'birth_city',
+            'marital_status',
+            'education_status',
+            'residence_province',
+            'residence_city',
+            'residence_address',
+            'billing_phone',
+        ];
         foreach ( $required as $k ) {
             if ( get_user_meta( $user_id, $k, true ) === '' ) {
                 return false;
             }
         }
+
+        $email = get_user_meta( $user_id, 'billing_email', true );
+        if ( $email === '' ) {
+            $user = get_userdata( $user_id );
+            if ( ! $user || $user->user_email === '' ) {
+                return false;
+            }
+        }
+
         return true;
     }
 
