@@ -88,6 +88,18 @@ class BasicInfoFormSubmissionTest extends TestCase {
         $this->assertSame('new@example.com', $GLOBALS['user_meta']['billing_email']);
     }
 
+    public function test_empty_billing_email_is_stored(): void {
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+        $data = $this->validPostData();
+        $data['billing_email'] = '';
+        $_POST = $data;
+        $form = new BasicInfoForm();
+        $form->render();
+        $this->assertArrayHasKey('billing_email', $GLOBALS['user_meta']);
+        $this->assertSame('', $GLOBALS['user_meta']['billing_email']);
+        $this->assertSame('old@example.com', $GLOBALS['current_user_email']);
+    }
+
     public function test_validation_error_and_repopulate(): void {
         $_SERVER['REQUEST_METHOD'] = 'POST';
         $data = $this->validPostData();
@@ -128,14 +140,17 @@ class BasicInfoFormSubmissionTest extends TestCase {
     }
 
     public function test_coach_select_excludes_current_user(): void {
+        $_SERVER['REQUEST_METHOD'] = 'GET';
         $GLOBALS['get_users_return'] = [
             (object) ['ID' => 1, 'display_name' => 'خودم'],
             (object) ['ID' => 2, 'display_name' => 'مربی دیگر'],
         ];
         $form = new BasicInfoForm();
         $html = $form->render();
-        $this->assertStringNotContainsString('value="1"', $html);
-        $this->assertStringContainsString('value="2"', $html);
+        preg_match('/<select id="coach_id"[^>]*>(.*?)<\/select>/s', $html, $m);
+        $this->assertNotEmpty($m[1] ?? '');
+        $this->assertStringNotContainsString('value="1"', $m[1]);
+        $this->assertStringContainsString('value="2"', $m[1]);
     }
 }
 

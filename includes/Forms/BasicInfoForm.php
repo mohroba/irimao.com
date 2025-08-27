@@ -125,8 +125,8 @@ class BasicInfoForm extends BaseForm {
                 $this->errors[] = $result->get_error_message();
                 return;
             }
-            update_user_meta( $uid, 'billing_email', $data['billing_email'] );
         }
+        update_user_meta( $uid, 'billing_email', $data['billing_email'] );
         unset( $data['billing_email'] );
         foreach ( $this->meta_keys() as $k ) {
             update_user_meta( $uid, $k, $data[ $k ] ?? '' );
