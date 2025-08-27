@@ -472,7 +472,14 @@ class Competitions
         $gender = '';
         if (function_exists('get_current_user_id')) {
             $uid = get_current_user_id();
-            $gender = $uid ? UserMeta::gender_slug($uid) : '';
+            if ($uid) {
+                $gender = strtolower(trim(UserMeta::get($uid, 'gender', '')));
+                if ($gender === 'male') {
+                    $gender = 'men';
+                } elseif ($gender === 'female') {
+                    $gender = 'women';
+                }
+            }
         }
         if (!$gender) {
             return '<p>برای مشاهدهٔ لیست مسابقات ابتدا جنسیت خود را در بخش اطلاعات پایه ثبت کنید.</p>';

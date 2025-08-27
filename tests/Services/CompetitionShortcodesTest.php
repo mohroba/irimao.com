@@ -90,5 +90,6 @@ class CompetitionShortcodesTest extends TestCase {
         $this->assertSame( '<=', $args['meta_query'][0]['compare'] );
         $this->assertSame( 'registration_end', $args['meta_query'][1]['key'] );
         $this->assertSame( '>=', $args['meta_query'][1]['compare'] );
+        $this->assertSame( 'men', $args['tax_query'][0]['terms'] );
     }
 }

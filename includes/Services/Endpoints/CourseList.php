@@ -34,8 +34,15 @@ class CourseList {
     private function render(): string {
         $gender = '';
         if ( function_exists( 'get_current_user_id' ) ) {
-            $uid    = get_current_user_id();
-            $gender = $uid ? UserMeta::gender_slug( $uid ) : '';
+            $uid = get_current_user_id();
+            if ( $uid ) {
+                $gender = strtolower( trim( UserMeta::get( $uid, 'gender', '' ) ) );
+                if ( $gender === 'male' ) {
+                    $gender = 'men';
+                } elseif ( $gender === 'female' ) {
+                    $gender = 'women';
+                }
+            }
         }
         if ( ! $gender ) {
             return '<p>برای مشاهدهٔ دوره‌ها ابتدا جنسیت خود را در بخش اطلاعات پایه ثبت کنید.</p>';
