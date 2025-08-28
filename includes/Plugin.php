@@ -31,6 +31,7 @@ use IMAOCustom\Services\SecurityHeaders;
 use IMAOCustom\Services\Eligibility;
 use IMAOCustom\Services\Ban;
 use IMAOCustom\Services\LoginTracking;
+use IMAOCustom\Services\RoleCleanup;
 use IMAOCustom\ServiceManager;
 
 
@@ -71,6 +72,7 @@ class Plugin {
         Eligibility::class,
         Ban::class,
         LoginTracking::class,
+        RoleCleanup::class,
     ];
 
     private function __construct() {
