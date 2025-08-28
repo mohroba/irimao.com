@@ -32,6 +32,7 @@ namespace IMAOCustom\Forms {
     function esc_url($text) { return $text; }
     function esc_textarea($text) { return $text; }
     function get_users($args = []) { return $GLOBALS['get_users_return'] ?? []; }
+    function get_posts($args = []) { return $GLOBALS['get_posts_return'] ?? []; }
 }
 
 namespace IMAOCustom\Helpers {

@@ -113,12 +113,7 @@ class ClubApplications {
         if ( $dec === 'approve' ) {
             wp_update_post( [ 'ID' => $pid, 'post_status' => 'publish' ] );
             delete_post_meta( $pid, 'rejection_reason' );
-            $club_name = get_the_title( $pid );
-            $user      = get_userdata( $uid );
-            if ( $user && $club_name ) {
-                update_user_meta( $uid, 'club_name', $club_name );
-                $user->add_role( 'club' );
-            }
+            $this->approve_application( $pid, $uid );
         } elseif ( $dec === 'reject' ) {
             wp_update_post( [ 'ID' => $pid, 'post_status' => 'draft' ] );
             update_post_meta( $pid, 'rejection_reason', $reason );
@@ -126,6 +121,24 @@ class ClubApplications {
             wp_send_json_error();
         }
         wp_send_json_success();
+    }
+
+    /**
+     * Record an approved club against the applicant.
+     */
+    public function approve_application( int $pid, int $uid ): void {
+        $user = get_userdata( $uid );
+        if ( ! $user ) {
+            return;
+        }
+        $clubs = get_user_meta( $uid, 'clubs', true );
+        if ( ! is_array( $clubs ) ) {
+            $clubs = [];
+        }
+        if ( ! in_array( $pid, $clubs, true ) ) {
+            $clubs[] = $pid;
+            update_user_meta( $uid, 'clubs', $clubs );
+        }
     }
 
     public function ajax_delete(): void {

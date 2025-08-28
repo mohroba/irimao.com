@@ -31,6 +31,8 @@ class BasicInfoForm extends BaseForm {
         $user   = get_userdata( $uid );
         $fields = UserMeta::get_many( $uid, $this->meta_keys() );
         $fields['billing_email'] = $user ? $user->user_email : '';
+        $clubs = get_user_meta( $uid, 'clubs', true );
+        $fields['clubs'] = is_array( $clubs ) ? $clubs : [];
         if ( ! empty( $this->posted ) ) {
             $fields = array_merge( $fields, $this->posted );
         }
@@ -163,16 +165,16 @@ class BasicInfoForm extends BaseForm {
      * Clubs for selection.
      */
     private function club_options(): array {
-        $users = get_users( [
-            'role'     => 'club',
-            'meta_key' => 'club_name',
-            'orderby'  => 'meta_value',
-            'order'    => 'ASC',
-            'fields'   => [ 'ID' ],
+        $posts = get_posts( [
+            'post_type'   => 'club_application',
+            'post_status' => 'publish',
+            'numberposts' => -1,
+            'orderby'     => 'title',
+            'order'       => 'ASC',
         ] );
         $out = [ '' => '— انتخاب باشگاه —' ];
-        foreach ( $users as $u ) {
-            $out[ $u->ID ] = get_user_meta( $u->ID, 'club_name', true );
+        foreach ( $posts as $p ) {
+            $out[ $p->ID ] = $p->post_title;
         }
         return $out;
     }
