@@ -32,14 +32,17 @@ class StyleCommitteeForm extends BaseForm {
             'post_status' => 'pending',
             'post_author' => $user_id,
             'post_title'  => 'Style Committe Request ' . $user_id . '-' . time(),
-        ]);
+        ], true);
 
-        if ( $post_id ) {
-            update_post_meta( $post_id, 'full_name', $full_name );
-            update_post_meta( $post_id, 'national_id', $national );
-            update_post_meta( $post_id, 'committees', $committees );
-            $this->saved = true;
+        if ( is_wp_error( $post_id ) || ! $post_id ) {
+            $this->errors[] = 'در ذخیره اطلاعات خطایی رخ داده است.';
+            return;
         }
+
+        update_post_meta( $post_id, 'full_name', $full_name );
+        update_post_meta( $post_id, 'national_id', $national );
+        update_post_meta( $post_id, 'committees', $committees );
+        $this->saved = true;
     }
 
     public function render(): string {
