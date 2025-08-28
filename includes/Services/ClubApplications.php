@@ -53,7 +53,7 @@ class ClubApplications {
             'post_status'    => [ 'pending', 'publish', 'draft' ],
         ]);
         echo '<div class="wrap"><h1 class="wp-heading-inline">درخواست‌های ثبت باشگاه</h1><hr class="wp-header-end">';
-        echo '<table id="club-table" class="wp-list-table widefat fixed striped"><thead><tr><th>ردیف</th><th>نام باشگاه</th><th>صاحب امتیاز</th><th>استان</th><th>شهر</th><th>وضعیت</th><th>اقدام</th></tr></thead><tbody>';
+        echo '<table id="club-table" class="wp-list-table widefat fixed striped"><thead><tr><th>ردیف</th><th>نام باشگاه</th><th>صاحب امتیاز</th><th>استان</th><th>شهرستان</th><th>وضعیت</th><th>اقدام</th></tr></thead><tbody>';
         $i = 1;
         while ( $q->have_posts() ) { $q->the_post();
             $pid      = get_the_ID();
