@@ -58,10 +58,13 @@ class ClubRegisterForm extends BaseForm {
             $this->errors[] = 'شهرستان انتخاب شده نامعتبر است.';
         }
         $image_url = '';
-        if ( empty( $_FILES['club_license_image']['name'] ) ) {
-            $this->errors[] = 'آپلود تصویر مجوز/قرارداد الزامی است.';
-        } else {
-            $file_error = Validation::file( $_FILES['club_license_image'], [ 'image/jpeg', 'image/png' ], 2 * 1024 * 1024, '۲ مگابایت' );
+        if ( ! empty( $_FILES['club_license_image']['name'] ) ) {
+            $file_error = Validation::file(
+                $_FILES['club_license_image'],
+                [ 'image/jpeg', 'image/png' ],
+                2 * 1024 * 1024,
+                '۲ مگابایت'
+            );
             if ( $file_error ) {
                 $this->errors[] = $file_error;
             } else {
@@ -157,8 +160,8 @@ class ClubRegisterForm extends BaseForm {
                         <textarea name="club_address" rows="3" required><?= esc_textarea( $f['club_address'] ); ?></textarea>
                     </div>
                     <div class="cf-field cf-wide">
-                        <label>تصویر مجوز / قرارداد <span style="color:#d00">*</span></label>
-                        <input type="file" name="club_license_image" accept="image/*" required>
+                        <label>تصویر مجوز / قرارداد</label>
+                        <input type="file" name="club_license_image" accept="image/*">
                     </div>
                     <div class="cf-submit">
                         <button type="submit" name="club_apply">ارسال برای بررسی</button>
