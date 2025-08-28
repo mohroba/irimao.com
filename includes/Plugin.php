@@ -30,6 +30,7 @@ use IMAOCustom\Services\Avatar;
 use IMAOCustom\Services\SecurityHeaders;
 use IMAOCustom\Services\Eligibility;
 use IMAOCustom\Services\Ban;
+use IMAOCustom\Services\LoginTracking;
 use IMAOCustom\ServiceManager;
 
 
@@ -69,6 +70,7 @@ class Plugin {
         Avatar::class,
         Eligibility::class,
         Ban::class,
+        LoginTracking::class,
     ];
 
     private function __construct() {
