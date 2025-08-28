@@ -13,10 +13,28 @@ class StyleCommitteeRequests {
 
     public function register_cpt(): void {
         register_post_type( 'style_committe_request', [
-            'label'   => 'درخواست عضویت کمیته',
-            'public'  => false,
-            'show_ui' => false,
-            'supports'=> [ 'title' ],
+            'label'           => 'درخواست عضویت کمیته',
+            'public'          => false,
+            'show_ui'         => false,
+            'supports'        => [ 'title' ],
+            'capability_type' => 'style_committe_request',
+            'map_meta_cap'    => true,
+            'capabilities'    => [
+                'read_post'             => 'read',
+                'create_posts'          => 'read',
+                'edit_post'             => 'read',
+                'edit_posts'            => 'read',
+                'edit_others_posts'     => 'read',
+                'publish_posts'         => 'read',
+                'read_private_posts'    => 'read',
+                'delete_post'           => 'read',
+                'delete_posts'          => 'read',
+                'delete_others_posts'   => 'read',
+                'delete_private_posts'  => 'read',
+                'delete_published_posts'=> 'read',
+                'edit_private_posts'    => 'read',
+                'edit_published_posts'  => 'read',
+            ],
         ] );
     }
 
