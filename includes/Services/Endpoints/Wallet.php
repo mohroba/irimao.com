@@ -2,6 +2,7 @@
 
 namespace IMAOCustom\Services\Endpoints;
 
+use IMAOCustom\Helpers\Price;
 use IMAOCustom\Helpers\Wallet as WalletHelper;
 use WC_Order;
 use WC_Order_Item_Fee;
@@ -275,7 +276,7 @@ class Wallet {
         $balance = self::get_balance( $user_id );
         if ( isset( $_POST['wallet_charge'], $_POST['amount'] ) ) {
             $amount     = max( 0, (float) $_POST['amount'] );
-            $min_charge = ir_price( 10000 );
+            $min_charge = Price::from_rial( 10000 );
             if ( $amount < $min_charge ) {
                 wc_add_notice( 'حداقل شارژ ' . wc_price( $min_charge ) . ' است.', 'error' );
             } else {
