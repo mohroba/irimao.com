@@ -26,12 +26,14 @@ use IMAOCustom\Services\Endpoints\CourseList;
 use IMAOCustom\Services\Endpoints\UserCourseList;
 use IMAOCustom\Services\Endpoints\CourseDetails;
 use IMAOCustom\Services\Endpoints\StyleCommittee;
+use IMAOCustom\Services\Endpoints\StyleCommitteeFormEndpoint;
 use IMAOCustom\Services\Avatar;
 use IMAOCustom\Services\SecurityHeaders;
 use IMAOCustom\Services\Eligibility;
 use IMAOCustom\Services\Ban;
 use IMAOCustom\Services\LoginTracking;
 use IMAOCustom\Services\RoleCleanup;
+use IMAOCustom\Services\StyleCommitteeRequests;
 use IMAOCustom\ServiceManager;
 
 
@@ -68,6 +70,8 @@ class Plugin {
         UserCourseList::class,
         CourseDetails::class,
         StyleCommittee::class,
+        StyleCommitteeFormEndpoint::class,
+        StyleCommitteeRequests::class,
         Avatar::class,
         Eligibility::class,
         Ban::class,
