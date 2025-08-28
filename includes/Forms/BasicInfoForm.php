@@ -71,15 +71,11 @@ class BasicInfoForm extends BaseForm {
 
         $this->posted = $data;
 
-        $gender   = $data['gender'] ?? '';
         $required = [
             'billing_phone','national_id','first_name_fa','last_name_fa','gender','father_name',
             'birth_date','birth_province','birth_city','marital_status','education_status',
             'residence_province','residence_city','residence_address',
         ];
-        if ( $gender === 'male' ) {
-            $required[] = 'military_status';
-        }
         $labels = [
             'billing_phone'      => 'موبایل',
             'national_id'        => 'کد ملی',
@@ -89,12 +85,12 @@ class BasicInfoForm extends BaseForm {
             'father_name'        => 'نام پدر',
             'birth_date'         => 'تاریخ تولد',
             'birth_province'     => 'استان تولد',
-            'birth_city'         => 'شهر تولد',
+            'birth_city'         => 'شهرستان تولد',
             'marital_status'     => 'وضعیت تأهل',
             'education_status'   => 'وضعیت تحصیلی',
             'military_status'    => 'وضعیت خدمت',
             'residence_province' => 'استان سکونت',
-            'residence_city'     => 'شهر سکونت',
+            'residence_city'     => 'شهرستان سکونت',
             'residence_address'  => 'آدرس',
         ];
 
@@ -229,18 +225,18 @@ class BasicInfoForm extends BaseForm {
         // father, birth
         $html .= '<div class="cbif-field"><label for="father_name">نام پدر<span class="required">*</span></label><input type="text" id="father_name" name="father_name" value="' . esc_attr( $f['father_name'] ) . '"></div>';
         $html .= '<div class="cbif-field"><label for="birth_date">تاریخ تولد<span class="required">*</span></label><input type="text" id="birth_date" name="birth_date" class="persian-date" data-jdp data-jdp-only-date value="' . esc_attr( $f['birth_date'] ) . '"></div>';
-        $html .= '<div class="cbif-field"><label>استان/شهر تولد<span class="required">*</span></label><select id="birth_province" name="birth_province" class="crm-select2"><option value="">— انتخاب کنید —</option>';
+        $html .= '<div class="cbif-field"><label for="birth_province">استان تولد<span class="required">*</span></label><select id="birth_province" name="birth_province" class="crm-select2"><option value="">— انتخاب کنید —</option>';
         foreach ( $provinces as $code => $name ) {
             $html .= '<option value="' . esc_attr( $code ) . '"' . $this->sel( $f['birth_province'], $code ) . '>' . esc_html( $name ) . '</option>';
         }
-        $html .= '</select>';
-        $html .= '<select id="birth_city" name="birth_city" class="crm-select2" style="margin-top:8px;"' . ( empty( $birth ) ? ' disabled' : '' ) . '><option value="">' . ( empty( $birth ) ? '— ابتدا استان را انتخاب کنید —' : '— انتخاب کنید —' ) . '</option>';
+        $html .= '</select></div>';
+        $html .= '<div class="cbif-field"><label for="birth_city">شهرستان تولد<span class="required">*</span></label><select id="birth_city" name="birth_city" class="crm-select2"' . ( empty( $birth ) ? ' disabled' : '' ) . '><option value="">' . ( empty( $birth ) ? '— ابتدا استان را انتخاب کنید —' : '— انتخاب کنید —' ) . '</option>';
         foreach ( $birth as $city ) {
             $html .= '<option value="' . esc_attr( $city ) . '"' . $this->sel( $f['birth_city'], $city ) . '>' . esc_html( $city ) . '</option>';
         }
         $html .= '</select></div>';
 
-        // marital, education, military
+        // marital, education, military (optional)
         $html .= '<div class="cbif-field"><label for="marital_status">وضعیت تأهل<span class="required">*</span></label><select id="marital_status" name="marital_status" class="crm-select2"><option value="">— انتخاب کنید —</option><option value="single"' . $this->sel( $f['marital_status'], 'single' ) . '>مجرد</option><option value="married"' . $this->sel( $f['marital_status'], 'married' ) . '>متأهل</option></select></div>';
         $edu = [
             '' => '— انتخاب کنید —',
@@ -267,19 +263,19 @@ class BasicInfoForm extends BaseForm {
             'studying'          => 'اشتغال به تحصیل',
             'seminarian'        => 'اشتغال به خدمت – طلبه',
         ];
-        $html .= '<div class="cbif-field"><label for="military_status">وضعیت خدمت<span class="required">*</span></label><select id="military_status" name="military_status" class="crm-select2">';
+        $html .= '<div class="cbif-field"><label for="military_status">وضعیت خدمت</label><select id="military_status" name="military_status" class="crm-select2">';
         foreach ( $mil as $v => $t ) {
             $html .= '<option value="' . esc_attr( $v ) . '"' . $this->sel( $f['military_status'], $v ) . '>' . esc_html( $t ) . '</option>';
         }
         $html .= '</select></div>';
 
         // residence
-        $html .= '<div class="cbif-field"><label>استان/شهر اقامت<span class="required">*</span></label><select id="residence_province" name="residence_province" class="crm-select2"><option value="">— انتخاب کنید —</option>';
+        $html .= '<div class="cbif-field"><label for="residence_province">استان سکونت<span class="required">*</span></label><select id="residence_province" name="residence_province" class="crm-select2"><option value="">— انتخاب کنید —</option>';
         foreach ( $provinces as $code => $name ) {
             $html .= '<option value="' . esc_attr( $code ) . '"' . $this->sel( $f['residence_province'], $code ) . '>' . esc_html( $name ) . '</option>';
         }
-        $html .= '</select>';
-        $html .= '<select id="residence_city" name="residence_city" class="crm-select2" style="margin-top:8px;"' . ( empty( $res ) ? ' disabled' : '' ) . '><option value="">' . ( empty( $res ) ? '— ابتدا استان را انتخاب کنید —' : '— انتخاب کنید —' ) . '</option>';
+        $html .= '</select></div>';
+        $html .= '<div class="cbif-field"><label for="residence_city">شهرستان سکونت<span class="required">*</span></label><select id="residence_city" name="residence_city" class="crm-select2"' . ( empty( $res ) ? ' disabled' : '' ) . '><option value="">' . ( empty( $res ) ? '— ابتدا استان را انتخاب کنید —' : '— انتخاب کنید —' ) . '</option>';
         foreach ( $res as $city ) {
             $html .= '<option value="' . esc_attr( $city ) . '"' . $this->sel( $f['residence_city'], $city ) . '>' . esc_html( $city ) . '</option>';
         }

@@ -446,7 +446,7 @@ function myacc_basic_info_form() {
       echo '<input type="text" id="birth_date" name="birth_date" class="persian-date" data-jdp data-jdp-only-date value="'.esc_attr($get_meta('birth_date')).'">';
       echo '</div>';
       echo '<div class="cbif-field">';
-      echo '<label>'.__('استان/شهر تولد','crm-plugin').'<span class="required">*</span></label>';
+      echo '<label>'.__('استان/شهرستان تولد','crm-plugin').'<span class="required">*</span></label>';
         // get saved values
           $birth_province = $get_meta('birth_province');
           $birth_city     = $get_meta('birth_city');
@@ -531,7 +531,7 @@ function myacc_basic_info_form() {
 
       // Row 5: Residence Province→City / Postal / Village
       echo '<div class="cbif-field">';
-        echo '<label>'.__('استان/شهر اقامت','crm-plugin').'<span class="required">*</span></label>';
+        echo '<label>'.__('استان/شهرستان اقامت','crm-plugin').'<span class="required">*</span></label>';
          // get saved values
           $res_province = $get_meta('residence_province');
           $res_city     = $get_meta('residence_city');
@@ -1972,12 +1972,12 @@ function crm_basic_info_fields() {
 		'father_name'       => 'نام پدر',
 		'birth_date'        => 'تاریخ تولد',
 		'birth_province'    => 'استان تولد',
-		'birth_city'        => 'شهر تولد',
+                'birth_city'        => 'شهرستان تولد',
 		'marital_status'    => 'وضعیت تاهل',
 		'education_status'  => 'وضعیت تحصیلی',
 		'military_status'   => 'وضعیت خدمت',
 		'residence_province'=> 'استان سکونت',
-		'residence_city'    => 'شهر سکونت',
+                'residence_city'    => 'شهرستان سکونت',
 		'postal_code'       => 'کدپستی',
 		'residence_address' => 'آدرس',
 		'club_id' => 'باشگاه',
@@ -2320,10 +2320,10 @@ add_shortcode( 'club_register', function () {
 					</select>
 				</div>
 
-				<div class="cf-field">
-					<label>شهر <span style="color:#d00">*</span></label>
-					<select name="club_city" id="club_city" class="crm-select2"
-					        <?php echo $locked?'disabled':''; ?> required>
+                                <div class="cf-field">
+                                        <label>شهرستان <span style="color:#d00">*</span></label>
+                                        <select name="club_city" id="club_city" class="crm-select2"
+                                                <?php echo $locked?'disabled':''; ?> required>
 						<?php
 						if ( $locked || $val('club_city') ) {
 							echo '<option>'. esc_html( $val('club_city') ?: '— انتخاب کنید —' ) .'</option>';
@@ -2407,8 +2407,8 @@ function crm_club_admin_page() {
 				<th>ردیف</th>
 				<th>نام باشگاه</th>
 				<th>صاحب امتیاز</th>
-				<th>استان</th>
-				<th>شهر</th>
+                                <th>استان</th>
+                                <th>شهرستان</th>
 				<th>وضعیت</th>
 				<th>اقدام</th>
 			</tr></thead>
@@ -2475,7 +2475,7 @@ jQuery(function($){
 				    html =
 					'<h2>'+d.title+'</h2>'+
 					'<p><strong>صاحب امتیاز:</strong> '+d.owner+'</p>'+
-					'<p><strong>استان/شهر:</strong> '+d.province+' - '+d.city+'</p>'+
+                                   '<p><strong>استان/شهرستان:</strong> '+d.province+' - '+d.city+'</p>'+
 					'<p><strong>کد پستی:</strong> '+d.postal+'</p>'+
 					'<p><strong>آدرس:</strong><br>'+d.address+'</p>'+
 					'<p><strong>تصویر مجوز:</strong><br>'+

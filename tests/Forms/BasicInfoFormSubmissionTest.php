@@ -66,12 +66,12 @@ class BasicInfoFormSubmissionTest extends TestCase {
             'father_name'       => 'پدر',
             'birth_date'        => '1400/01/01',
             'birth_province'    => 'IR-01',
-            'birth_city'        => 'شهر',
+            'birth_city'        => 'شهرستان',
             'marital_status'    => 'single',
             'education_status'  => 'none',
             'military_status'   => 'completed',
             'residence_province'=> 'IR-01',
-            'residence_city'    => 'شهر',
+            'residence_city'    => 'شهرستان',
             'residence_address' => 'آدرس',
             'billing_email'     => 'new@example.com',
         ];
@@ -100,11 +100,23 @@ class BasicInfoFormSubmissionTest extends TestCase {
         $this->assertSame('old@example.com', $GLOBALS['current_user_email']);
     }
 
+    public function test_military_status_optional_for_male(): void {
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+        $data = $this->validPostData();
+        $data['military_status'] = '';
+        $_POST = $data;
+        $form = new BasicInfoForm();
+        $html = $form->render();
+        $this->assertStringNotContainsString('وضعیت خدمت الزامی است', $html);
+        $this->assertArrayHasKey('military_status', $GLOBALS['user_meta']);
+        $this->assertSame('', $GLOBALS['user_meta']['military_status']);
+    }
+
     public function test_validation_error_and_repopulate(): void {
         $_SERVER['REQUEST_METHOD'] = 'POST';
         $data = $this->validPostData();
         $data['first_name_fa'] = '';
-        $data['gender']        = 'female'; // avoid military requirement
+        $data['gender']        = 'female';
         $_POST = $data;
         $form = new BasicInfoForm();
         $html = $form->render();

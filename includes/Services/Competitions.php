@@ -220,7 +220,7 @@ class Competitions
      */
     private function attendee_fields(): array
     {
-        return ['ID' => 'ID', 'display_name' => 'نام', 'billing_email' => 'ایمیل', 'billing_phone' => 'شماره موبایل', 'national_id' => 'کد ملی', 'gender' => 'جنسیت', 'first_name_fa' => 'نام (فا)', 'last_name_fa' => 'نام خانوادگی (فا)', 'first_name_en' => 'نام (En)', 'last_name_en' => 'نام خانوادگی (En)', 'father_name' => 'نام پدر', 'birth_date' => 'تاریخ تولد', 'birth_province' => 'استان تولد', 'birth_city' => 'شهر تولد', 'marital_status' => 'وضعیت تأهل', 'education_status' => 'وضعیت تحصیلی', 'military_status' => 'وضعیت خدمت', 'residence_province' => 'استان سکونت', 'residence_city' => 'شهر سکونت', 'postal_code' => 'کدپستی', 'residence_address' => 'آدرس', 'iban' => 'شماره شبا', 'card_number' => 'شماره کارت', 'coach_id' => 'مربی', 'club_id' => 'باشگاه',];
+        return ['ID' => 'ID', 'display_name' => 'نام', 'billing_email' => 'ایمیل', 'billing_phone' => 'شماره موبایل', 'national_id' => 'کد ملی', 'gender' => 'جنسیت', 'first_name_fa' => 'نام (فا)', 'last_name_fa' => 'نام خانوادگی (فا)', 'first_name_en' => 'نام (En)', 'last_name_en' => 'نام خانوادگی (En)', 'father_name' => 'نام پدر', 'birth_date' => 'تاریخ تولد', 'birth_province' => 'استان تولد', 'birth_city' => 'شهرستان تولد', 'marital_status' => 'وضعیت تأهل', 'education_status' => 'وضعیت تحصیلی', 'military_status' => 'وضعیت خدمت', 'residence_province' => 'استان سکونت', 'residence_city' => 'شهرستان سکونت', 'postal_code' => 'کدپستی', 'residence_address' => 'آدرس', 'iban' => 'شماره شبا', 'card_number' => 'شماره کارت', 'coach_id' => 'مربی', 'club_id' => 'باشگاه',];
     }
 
     /**

@@ -38,7 +38,7 @@ class ClubRegisterForm extends BaseForm {
             'club_name'     => 'نام باشگاه',
             'club_owner'    => 'صاحب امتیاز',
             'club_province' => 'استان',
-            'club_city'     => 'شهر',
+            'club_city'     => 'شهرستان',
             'club_address'  => 'آدرس باشگاه',
         ];
         foreach ( $required as $k => $label ) {
@@ -55,11 +55,11 @@ class ClubRegisterForm extends BaseForm {
         }
         $cities = CityMap::get_cities( $data['club_province'] );
         if ( $data['club_city'] && ! in_array( $data['club_city'], $cities, true ) ) {
-            $this->errors[] = 'شهر انتخاب شده نامعتبر است.';
+            $this->errors[] = 'شهرستان انتخاب شده نامعتبر است.';
         }
         $image_url = '';
         if ( empty( $_FILES['club_license_image']['name'] ) ) {
-            $this->errors[] = 'آپلود تصویر مجوز الزامی است.';
+            $this->errors[] = 'آپلود تصویر مجوز/قرارداد الزامی است.';
         } else {
             $file_error = Validation::file( $_FILES['club_license_image'], [ 'image/jpeg', 'image/png' ], 2 * 1024 * 1024, '۲ مگابایت' );
             if ( $file_error ) {
@@ -140,7 +140,7 @@ class ClubRegisterForm extends BaseForm {
                         </select>
                     </div>
                     <div class="cf-field">
-                        <label>شهر <span style="color:#d00">*</span></label>
+                        <label>شهرستان <span style="color:#d00">*</span></label>
                         <select name="club_city" id="club_city" class="crm-select2" required>
                             <?php if ( ! empty( $f['club_city'] ) ): ?>
                                 <option><?= esc_html( $f['club_city'] ); ?></option>
@@ -157,7 +157,7 @@ class ClubRegisterForm extends BaseForm {
                         <textarea name="club_address" rows="3" required><?= esc_textarea( $f['club_address'] ); ?></textarea>
                     </div>
                     <div class="cf-field cf-wide">
-                        <label>تصویر مجوز <span style="color:#d00">*</span></label>
+                        <label>تصویر مجوز / قرارداد <span style="color:#d00">*</span></label>
                         <input type="file" name="club_license_image" accept="image/*" required>
                     </div>
                     <div class="cf-submit">
@@ -178,7 +178,7 @@ class ClubRegisterForm extends BaseForm {
         if ( $q->have_posts() ) {
             $students_url = esc_url( wc_get_account_endpoint_url( 'club-students' ) );
             echo '<div class="club-form-container" style="margin-top:20px"><div class="sd-header" style="margin-bottom: 15px">درخواست های شما</div><table class="shop_table striped" style="text-align:center"><thead><tr>'
-                .'<th>#</th><th>نام باشگاه</th><th>صاحب امتیاز</th><th>استان</th><th>شهر</th><th>وضعیت</th><th>دلیل رد</th><th>مجوز</th><th>شاگردان</th>'
+                .'<th>#</th><th>نام باشگاه</th><th>صاحب امتیاز</th><th>استان</th><th>شهرستان</th><th>وضعیت</th><th>دلیل رد</th><th>مجوز/قرارداد</th><th>شاگردان</th>'
                 .'</tr></thead><tbody>';
             $i = 1;
             while ( $q->have_posts() ) { $q->the_post();

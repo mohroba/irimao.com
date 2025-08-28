@@ -7,10 +7,10 @@ jQuery(function($){
       if(r.success){
         var d=r.data,html='<h2>'+d.title+'</h2>'+
           '<p><strong>صاحب امتیاز:</strong> '+d.owner+'</p>'+
-          '<p><strong>استان/شهر:</strong> '+d.province+' - '+d.city+'</p>'+
+          '<p><strong>استان/شهرستان:</strong> '+d.province+' - '+d.city+'</p>'+
           '<p><strong>کد پستی:</strong> '+d.postal+'</p>'+
           '<p><strong>آدرس:</strong><br>'+d.address+'</p>'+
-          '<p><strong>تصویر مجوز:</strong><br><a href="'+d.lic+'" target="_blank"><img src="'+d.lic+'" style="max-width:200px;border:1px solid #ccc"></a></p>'+
+          '<p><strong>تصویر مجوز/قرارداد:</strong><br><a href="'+d.lic+'" target="_blank"><img src="'+d.lic+'" style="max-width:200px;border:1px solid #ccc"></a></p>'+
           (d.reason ? '<p style="color:#d00;"><strong>دلیل رد:</strong> '+d.reason+'</p>' : '');
         $('#TB_ajaxContent .modal-inner').html(html);
       }else{
