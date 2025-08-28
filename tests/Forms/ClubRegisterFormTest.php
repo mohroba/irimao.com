@@ -28,6 +28,13 @@ class ClubRegisterFormTest extends TestCase {
         $this->assertStringContainsString('\\wp_handle_upload', $content);
     }
 
+    public function test_license_file_is_optional(): void {
+        $content = file_get_contents( __DIR__ . '/../../includes/Forms/ClubRegisterForm.php' );
+        $this->assertStringNotContainsString('آپلود تصویر مجوز/قرارداد الزامی است', $content);
+        $this->assertStringNotContainsString('<input type="file" name="club_license_image" accept="image/*" required', $content);
+        $this->assertStringNotContainsString('تصویر مجوز / قرارداد <span', $content);
+    }
+
     public function test_render_includes_needs_swal_class(): void {
         if ( ! function_exists( 'get_current_user_id' ) ) {
             $this->markTestSkipped( 'WordPress functions not available.' );
