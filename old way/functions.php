@@ -446,7 +446,7 @@ function myacc_basic_info_form() {
       echo '<input type="text" id="birth_date" name="birth_date" class="persian-date" data-jdp data-jdp-only-date value="'.esc_attr($get_meta('birth_date')).'">';
       echo '</div>';
       echo '<div class="cbif-field">';
-      echo '<label>'.__('استان/شهرستان تولد','crm-plugin').'<span class="required">*</span></label>';
+      echo '<label>'.__('استان/شهرستان محل تولد','crm-plugin').'<span class="required">*</span></label>';
         // get saved values
           $birth_province = $get_meta('birth_province');
           $birth_city     = $get_meta('birth_city');
@@ -1971,13 +1971,13 @@ function crm_basic_info_fields() {
 		'gender'            => 'جنسیت',
 		'father_name'       => 'نام پدر',
 		'birth_date'        => 'تاریخ تولد',
-		'birth_province'    => 'استان تولد',
-                'birth_city'        => 'شهرستان تولد',
 		'marital_status'    => 'وضعیت تاهل',
 		'education_status'  => 'وضعیت تحصیلی',
 		'military_status'   => 'وضعیت خدمت',
-		'residence_province'=> 'استان سکونت',
-                'residence_city'    => 'شهرستان سکونت',
+                'birth_province'    => 'استان محل تولد',
+                'birth_city'        => 'شهرستان محل تولد',
+                'residence_province'=> 'استان محل سکونت',
+                'residence_city'    => 'شهرستان محل سکونت',
 		'postal_code'       => 'کدپستی',
 		'residence_address' => 'آدرس',
 		'club_id' => 'باشگاه',
