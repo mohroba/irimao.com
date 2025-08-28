@@ -94,10 +94,10 @@ class CourseList {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php $i = 1; foreach ( $posts as $post ) : setup_postdata( $post ); $cid = $post->ID; ?>
+                    <?php $i = 1; foreach ( $posts as $post ) : $cid = $post->ID; ?>
                         <tr>
                             <td><?php echo $i++; ?></td>
-                            <td><?php the_title(); ?></td>
+                            <td><?php echo esc_html( get_the_title( $cid ) ); ?></td>
                             <?php foreach ( $cols as $key => $label ) :
                                 if ( function_exists( 'taxonomy_exists' ) && taxonomy_exists( $key ) ) {
                                     $terms = get_the_terms( $cid, $key );
@@ -110,7 +110,7 @@ class CourseList {
                             <?php endforeach; ?>
                             <td><a href="<?php echo esc_url( '/my-account/course-details/?course_id=' . $cid ); ?>">جزئیات / ثبت‌نام</a></td>
                         </tr>
-                    <?php endforeach; wp_reset_postdata(); ?>
+                    <?php endforeach; ?>
                 </tbody>
             </table>
         </div>

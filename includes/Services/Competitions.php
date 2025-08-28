@@ -524,9 +524,9 @@ class Competitions
         }
         echo '<th>قیمت</th><th>اقدام</th></tr></thead><tbody>';
         $i = 1;
-        foreach ( $posts as $post ) : setup_postdata( $post );
+        foreach ( $posts as $post ) :
             $pid = $post->ID;
-            echo '<tr><td>' . ( $i++ ) . '</td><td>' . get_the_title() . '</td>';
+            echo '<tr><td>' . ( $i++ ) . '</td><td>' . esc_html( get_the_title( $pid ) ) . '</td>';
             foreach ( $tax_cols as $slug => $label ) {
                 $terms = wp_get_post_terms( $pid, $slug, [ 'fields' => 'names' ] );
                 echo '<td>' . ( $terms ? implode( ', ', $terms ) : '—' ) . '</td>';
@@ -534,7 +534,7 @@ class Competitions
             $price = get_post_meta( $pid, 'price', true );
             echo '<td>' . wc_price( $price ) . '</td>';
             echo '<td><a href="' . esc_url( '/my-account/competition-details/?competition_id=' . $pid ) . '">جزئیات / ثبت‌نام</a></td></tr>';
-        endforeach; wp_reset_postdata();
+        endforeach;
         echo '</tbody></table></div>';
         return ob_get_clean();
     }

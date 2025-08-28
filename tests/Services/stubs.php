@@ -45,8 +45,17 @@ if ( ! function_exists( 'get_post_meta' ) ) {
         $map = [
             100 => [ '_linked_post_id' => 10 ],
             200 => [ '_linked_post_id' => 20 ],
-            10  => [ 'course_code' => 'C123', 'start_date' => '2024-01-01' ],
-            20  => [ 'competition_code' => 'COMP20' ],
+            10  => [
+                'course_code'        => 'C123',
+                'start_date'         => '2024-01-01',
+                'registration_start' => '1402/01/01',
+                'registration_end'   => '1402/12/29',
+            ],
+            20  => [
+                'competition_code'   => 'COMP20',
+                'registration_start' => '1402/01/01',
+                'registration_end'   => '1402/12/29',
+            ],
         ];
         return $map[ $id ][ $key ] ?? '';
     }
