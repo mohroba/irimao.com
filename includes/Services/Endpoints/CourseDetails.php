@@ -23,7 +23,7 @@ class CourseDetails {
             'exam_date'          => 'تاریخ آزمون',
             'registration_start' => 'شروع ثبت‌نام',
             'registration_end'   => 'پایان ثبت‌نام',
-            'board'              => 'هیئت',
+            'board'              => 'استان',
             'gender'             => 'جنسیت دوره',
             'level'              => 'سطح دوره',
             'attendance'         => 'نوع حضور',

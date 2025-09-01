@@ -61,4 +61,21 @@ class RegistrationTest extends TestCase {
         $this->assertSame( '1234567890', $GLOBALS['wpdb']->updated['data']['user_login'] );
         $this->assertSame( 'users', $GLOBALS['wpdb']->updated['table'] );
     }
+
+    public function test_converts_persian_digits(): void {
+        if ( ! class_exists( Registration::class ) ) {
+            $this->markTestSkipped( 'Plugin not loaded.' );
+        }
+        $user_id = 2;
+        $GLOBALS['test_user_meta'][$user_id] = [
+            'digits_form_data' => serialize([
+                [ 'label' => 'کدملی', 'meta_key' => 'field_nat' ],
+            ]),
+            'field_nat' => '۱۲۳۴۵۶۷۸۹۰',
+        ];
+        $reg = new Registration();
+        $reg->set_national_id_and_wc_names( $user_id );
+        $this->assertSame( '1234567890', get_user_meta( $user_id, 'national_id', true ) );
+        $this->assertSame( '1234567890', $GLOBALS['wpdb']->updated['data']['user_login'] );
+    }
 }
