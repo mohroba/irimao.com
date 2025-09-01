@@ -70,7 +70,7 @@ class Courses
         };
 
         $tax('gender', 'جنسیت', 'جنسیت');
-        $tax('board', 'هیئت', 'هیئت‌ها', true);
+        $tax('board', 'استان', 'استان‌ها', true);
         $tax('course_type', 'نوع دوره', 'انواع دوره');
         $tax('age_category', 'رده سنی', 'رده‌های سنی', true);
         $tax('level', 'سطح', 'سطوح', true);
@@ -111,7 +111,7 @@ class Courses
         wp_nonce_field('crm_save_details', 'crm_details_nonce');
         $val = static fn(string $k) => esc_attr(get_post_meta($post->ID, $k, true));
         $fields = self::detail_fields();
-        $number_field = ['points', 'min_degree'];
+        $number_field = ['points'];
         $tel_fields = ['organizer_tel'];
         $date_fields = ['start_date', 'end_date', 'exam_date', 'registration_start', 'registration_end'];
         echo '<table class="form-table striped"><tbody>';

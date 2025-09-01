@@ -13,7 +13,7 @@ class CourseData {
             'course_code' => 'کد دوره',
             'course_type' => 'نوع دوره',
             'level'       => 'سطح دوره',
-            'board'       => 'هیئت',
+            'board'       => 'استان',
             'attendance'  => 'نوع حضور',
             'gender'      => 'جنسیت دوره',
         ];

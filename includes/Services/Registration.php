@@ -68,6 +68,7 @@ class Registration {
      * Update national ID meta and user login.
      */
     private function update_national_id( int $user_id, string $national_id ): void {
+        $national_id = $this->normalize_digits( $national_id );
         update_user_meta( $user_id, 'national_id', sanitize_text_field( $national_id ) );
 
         global $wpdb;
@@ -76,6 +77,16 @@ class Registration {
             [ 'user_login' => sanitize_user( $national_id, true ) ],
             [ 'ID' => $user_id ]
         );
+    }
+
+    /**
+     * Convert Persian and Arabic digits to standard Latin digits.
+     */
+    private function normalize_digits( string $value ): string {
+        $persian = [ '۰','۱','۲','۳','۴','۵','۶','۷','۸','۹' ];
+        $arabic  = [ '٠','١','٢','٣','٤','٥','٦','٧','٨','٩' ];
+        $latin   = [ '0','1','2','3','4','5','6','7','8','9' ];
+        return str_replace( array_merge( $persian, $arabic ), array_merge( $latin, $latin ), $value );
     }
 
     /**

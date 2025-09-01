@@ -50,7 +50,7 @@ class Competitions
         };
 
         $tax('gender', 'جنسیت', 'جنسیت');
-        $tax('board', 'هیئت', 'هیئت‌ها', true);
+        $tax('board', 'استان', 'استان‌ها', true);
         $tax('competition_type', 'نوع مسابقه', 'انواع مسابقه');
         $tax('age_category', 'رده سنی', 'رده‌های سنی', true);
         $tax('level', 'سطح', 'سطوح', true);
@@ -91,7 +91,7 @@ class Competitions
         wp_nonce_field('crm_save_details', 'crm_details_nonce');
         $val = static fn(string $k) => esc_attr(get_post_meta($post->ID, $k, true));
         $fields = self::detail_fields();
-        $number_field = ['min_degree'];
+        $number_field = [];
         $tel_fields = ['organizer_tel'];
         $date_fields = ['start_date', 'end_date', 'registration_start', 'registration_end'];
         echo '<table class="form-table striped"><tbody>';
@@ -432,6 +432,9 @@ class Competitions
         if (isset($_REQUEST['age_category_term'])) {
             $data['age_category_term'] = (int)$_REQUEST['age_category_term'];
         }
+        if (isset($_REQUEST['competition_type_term'])) {
+            $data['competition_type_term'] = (int)$_REQUEST['competition_type_term'];
+        }
         return $data;
     }
 
@@ -449,6 +452,12 @@ class Competitions
                 $data[] = ['name' => 'رده سنی', 'value' => $term->name];
             }
         }
+        if (!empty($cart_item['competition_type_term'])) {
+            $term = get_term($cart_item['competition_type_term'], 'competition_type');
+            if ($term) {
+                $data[] = ['name' => 'نوع مسابقه', 'value' => $term->name];
+            }
+        }
         return $data;
     }
 
@@ -464,6 +473,12 @@ class Competitions
             $term = get_term($cart_item['age_category_term'], 'age_category');
             if ($term) {
                 $item->add_meta_data('رده سنی', $term->name, true);
+            }
+        }
+        if (!empty($cart_item['competition_type_term'])) {
+            $term = get_term($cart_item['competition_type_term'], 'competition_type');
+            if ($term) {
+                $item->add_meta_data('نوع مسابقه', $term->name, true);
             }
         }
     }
@@ -514,7 +529,7 @@ class Competitions
             return '<p>مسابقه‌ در حال ثبت نامی موجود نیست.</p>';
         }
 
-        $tax_cols = [ 'weight_class' => 'کلاس وزنی', 'gender' => 'جنسیت', 'board' => 'هیئت', 'age_category' => 'رده سنی', 'level' => 'سطح', ];
+        $tax_cols = [ 'weight_class' => 'کلاس وزنی', 'gender' => 'جنسیت', 'board' => 'استان', 'age_category' => 'رده سنی', 'level' => 'سطح', ];
         ob_start();
         echo '<div class="sd-container">';
         echo '<div class="sd-header">لیست مسابقات</div>';
@@ -563,6 +578,7 @@ class Competitions
 
         $weights = wp_get_post_terms($cid, 'weight_class');
         $ages    = wp_get_post_terms($cid, 'age_category');
+        $types   = wp_get_post_terms($cid, 'competition_type');
         $prod_id = (int) get_post_meta($cid, self::META_LINKED_PRODUCT, true);
         if (! $prod_id) {
             $prod_id = $this->sync_product($cid);
@@ -570,7 +586,7 @@ class Competitions
 
         $fields     = self::detail_fields() + [
             'competition_type' => 'نوع مسابقه',
-            'board'            => 'هیئت',
+            'board'            => 'استان',
             'gender'           => 'جنسیت',
             'level'            => 'سطح',
         ];
@@ -606,6 +622,17 @@ class Competitions
                             <td><?php echo nl2br(esc_html($conditions)); ?></td>
                         </tr>
                     <?php endif; ?>
+                    <tr>
+                        <th>نوع مسابقه</th>
+                        <td>
+                            <select name="competition_type_term" required>
+                                <option value="">— انتخاب کنید —</option>
+                                <?php foreach ($types as $t) : ?>
+                                    <option value="<?php echo $t->term_id; ?>"><?php echo esc_html($t->name); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </td>
+                    </tr>
                     <tr>
                         <th>کلاس وزنی</th>
                         <td>

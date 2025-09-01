@@ -64,9 +64,10 @@ class CompetitionShortcodesTest extends TestCase {
         foreach ( Competitions::detail_fields() as $label ) {
             $this->assertStringContainsString( $label, $html );
         }
-        foreach ( [ 'نوع مسابقه', 'هیئت', 'جنسیت', 'سطح' ] as $label ) {
+        foreach ( [ 'نوع مسابقه', 'استان', 'جنسیت', 'سطح' ] as $label ) {
             $this->assertStringContainsString( $label, $html );
         }
+        $this->assertStringContainsString( 'name="competition_type_term"', $html );
     }
 
     /** @runInSeparateProcess */
