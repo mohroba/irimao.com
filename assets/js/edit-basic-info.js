@@ -26,7 +26,6 @@ jQuery(function($){
   });
 
   $('.crm-select2').select2({ dir: 'rtl', width: 'resolve' });
-  jalaliDatepicker.startWatch();
 
   function toggleMilitary(){
       var g = $('#gender').val();
