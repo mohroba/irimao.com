@@ -10,8 +10,7 @@ use WC_Order_Item_Fee;
 class Wallet {
     private const META_LOG     = 'crm_wallet_log';
     private const META_USED    = 'crm_used_wallet';
-    private const META_LINKED  = 'crm_linked_course';
-    private const META_PAYOUT  = 'crm_payout_meta';
+    private const META_LINKED  = '_linked_post_id';
     private const CRON_HOOK    = 'crm_cancel_unpaid_wallet_orders';
 
     public function register(): void {
@@ -175,23 +174,36 @@ class Wallet {
             self::add_log( $user_id, -$used, 'استفاده در سفارش #' . $order_id );
         }
         foreach ( $order->get_items() as $item ) {
-            $course_id = (int) get_post_meta( $item->get_product_id(), self::META_LINKED, true );
-            if ( ! $course_id ) {
+            $post_id = (int) get_post_meta( $item->get_product_id(), self::META_LINKED, true );
+            if ( ! $post_id ) {
                 continue;
             }
-            $payouts   = (array) get_post_meta( $course_id, self::META_PAYOUT, true );
+            $ptype      = get_post_type( $post_id );
+            $payout_key = '_' . $ptype . '_payouts';
+            $payouts    = (array) get_post_meta( $post_id, $payout_key, true );
             $line_total = $item->get_total();
             foreach ( $payouts as $p ) {
-                $dest = (int) ( $p['user_id'] ?? 0 );
-                if ( ! $dest ) {
-                    continue;
+                $targets = [];
+                $uid     = (int) ( $p['user_id'] ?? 0 );
+                $role    = $p['role'] ?? '';
+                if ( $uid ) {
+                    $targets[] = $uid;
+                } elseif ( $role ) {
+                    $meta_key = $role . '_id';
+                    $dynamic  = (int) get_user_meta( $user_id, $meta_key, true );
+                    if ( $dynamic ) {
+                        $targets[] = $dynamic;
+                    }
                 }
-                $amt = ( $p['type'] === 'percent' ) ? $line_total * $p['value'] / 100 : (float) $p['value'];
-                if ( $amt <= 0 ) {
-                    continue;
+                foreach ( $targets as $dest ) {
+                    $amt = ( $p['type'] === 'percent' ) ? $line_total * $p['value'] / 100 : (float) $p['value'];
+                    if ( $amt <= 0 ) {
+                        continue;
+                    }
+                    self::add_balance( $dest, $amt );
+                    $label = ( $ptype === 'competition' ) ? 'مسابقه' : 'دوره';
+                    self::add_log( $dest, $amt, 'درآمد از ' . $label . ' #' . $post_id . ' (سفارش ' . $order_id . ')' );
                 }
-                self::add_balance( $dest, $amt );
-                self::add_log( $dest, $amt, 'درآمد از دوره #' . $course_id . ' (سفارش ' . $order_id . ')' );
             }
         }
     }

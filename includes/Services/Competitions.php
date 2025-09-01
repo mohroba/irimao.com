@@ -16,6 +16,7 @@ class Competitions
 {
     private const META_LINKED_PRODUCT = '_linked_product_id';
     private const META_LINKED_COMPETITION = '_linked_post_id';
+    private const META_PAYOUTS = '_competition_payouts';
     private const META_MANUAL = '_manual_attendees';
 
     public function register(): void
@@ -82,6 +83,7 @@ class Competitions
     public function add_meta_boxes(): void
     {
         add_meta_box('crm_details', 'جزئیات', [$this, 'render_details_box'], 'competition', 'normal', 'high');
+        add_meta_box('crm_payouts', 'ذی‌نفعان', [$this, 'render_payouts_box'], 'competition', 'normal', 'default');
         add_meta_box('crm_manual', 'افزودن شرکت کننده به صورت دستی', [$this, 'render_manual_box'], 'competition', 'side', 'default');
         add_meta_box('crm_attendees', 'شرکت‌کنندگان', [$this, 'render_attendees_box'], 'competition', 'side', 'default');
     }
@@ -121,6 +123,52 @@ class Competitions
     public static function detail_fields(): array
     {
         return ['competition_code' => 'کد', 'start_date' => 'تاریخ شروع', 'end_date' => 'تاریخ پایان', 'registration_start' => 'شروع ثبت‌نام', 'registration_end' => 'پایان ثبت‌نام', 'organizer' => 'مسئول برگزاری', 'organizer_tel' => 'شماره همراه مسئول برگزاری', 'supervisor' => 'ناظر', 'address' => 'آدرس محل برگزاری', 'min_degree' => 'حداقل درجه فنی', 'price' => 'هزینه ثبت نام مسابقه (تومان)',];
+    }
+
+    public function render_payouts_box(WP_Post $post): void
+    {
+        wp_nonce_field('crm_save_payouts', 'crm_payouts_nonce');
+        $rows      = (array) get_post_meta($post->ID, self::META_PAYOUTS, true);
+        $user_opts = function ($sel) {
+            $opts = '';
+            foreach (get_users(['fields' => ['ID', 'display_name']]) as $u) {
+                $opts .= sprintf('<option value="%d"%s>%s</option>', $u->ID, selected($u->ID, $sel, false), esc_html($u->display_name));
+            }
+            return $opts;
+        };
+        $role_opts = function ($sel) {
+            $opts = '<option value=""></option>';
+            foreach (get_editable_roles() as $slug => $data) {
+                $opts .= sprintf('<option value="%s"%s>%s</option>', esc_attr($slug), selected($slug, $sel, false), esc_html($data['name']));
+            }
+            return $opts;
+        };
+        echo '<table class="widefat striped" id="crm-payout-table"><thead><tr><th>کاربر</th><th>نقش</th><th>نوع</th><th>مقدار</th><th></th></tr></thead><tbody id="crm-payout-body">';
+        $rowTpl = function ($uid = '', $role = '', $type = 'percent', $val = '') use ($user_opts, $role_opts) {
+            return '<tr>'
+                . '<td><select name="payout_user_id[]" class="crm-select2" style="width:100%">' . $user_opts($uid) . '</select></td>'
+                . '<td><select name="payout_role[]" style="width:100%">' . $role_opts($role) . '</select></td>'
+                . '<td><select name="payout_type[]"><option value="percent"' . selected('percent', $type, false) . '>درصد</option><option value="fixed"' . selected('fixed', $type, false) . '>مبلغ ثابت</option></select></td>'
+                . '<td><input type="number" step="0.01" name="payout_value[]" value="' . esc_attr($val) . '"></td>'
+                . '<td><span class="dashicons dashicons-no-alt crm-remove-row" style="cursor:pointer;color:#c00"></span></td>'
+                . '</tr>';
+        };
+        if ($rows) {
+            foreach ($rows as $r) {
+                echo $rowTpl($r['user_id'] ?? '', $r['role'] ?? '', $r['type'] ?? 'percent', $r['value'] ?? '');
+            }
+        }
+        echo '</tbody></table><button type="button" class="button" id="crm-add-payout">افزودن</button>';
+        ?>
+        <script>jQuery(function ($) {
+                $('#crm-add-payout').on('click', function () {
+                    $('#crm-payout-body').append(`<?php echo addslashes($rowTpl()); ?>`);
+                });
+                $(document).on('click', '.crm-remove-row', function () {
+                    $(this).closest('tr').remove();
+                });
+            });</script>
+        <?php
     }
 
     public function render_manual_box(WP_Post $post): void
@@ -374,6 +422,24 @@ class Competitions
                 }
                 update_post_meta($post_id, $k, $val);
             }
+        }
+
+        if (isset($_POST['crm_payouts_nonce'])) {
+            $rows = [];
+            foreach ((array)($_POST['payout_user_id'] ?? []) as $i => $uid) {
+                $uid  = (int) $uid;
+                $role = sanitize_text_field($_POST['payout_role'][$i] ?? '');
+                if (!$uid && $role === '') {
+                    continue;
+                }
+                $rows[] = [
+                    'user_id' => $uid,
+                    'role'    => $role,
+                    'type'    => sanitize_text_field($_POST['payout_type'][$i] ?? 'percent'),
+                    'value'   => (float)($_POST['payout_value'][$i] ?? 0),
+                ];
+            }
+            update_post_meta($post_id, self::META_PAYOUTS, $rows);
         }
 
         if (isset($_POST['crm_manual_nonce'])) {
