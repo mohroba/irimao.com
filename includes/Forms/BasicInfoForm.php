@@ -57,10 +57,13 @@ class BasicInfoForm extends BaseForm {
                 $data[ $key ] = sanitize_textarea_field( $_POST[ $key ] ?? '' );
             } elseif ( $key === 'billing_email' ) {
                 $data[ $key ] = sanitize_email( $_POST[ $key ] ?? '' );
+            } elseif ( $key === 'birth_date' ) {
+                continue;
             } else {
                 $data[ $key ] = sanitize_text_field( $_POST[ $key ] ?? '' );
             }
         }
+        $data['birth_date'] = $this->read_date( 'birth_date' );
 
         if ( $locked ) {
             foreach ( [ 'coach_id', 'club_id' ] as $k ) {
@@ -226,7 +229,9 @@ class BasicInfoForm extends BaseForm {
 
         // father, birth
         $html .= '<div class="cbif-field"><label for="father_name">نام پدر<span class="required">*</span></label><input type="text" id="father_name" name="father_name" value="' . esc_attr( $f['father_name'] ) . '"></div>';
-        $html .= '<div class="cbif-field"><label for="birth_date">تاریخ تولد<span class="required">*</span></label><input type="text" id="birth_date" name="birth_date" class="persian-date" data-jdp data-jdp-only-date value="' . esc_attr( $f['birth_date'] ) . '"></div>';
+        $html .= '<div class="cbif-field"><label>تاریخ تولد<span class="required">*</span></label>'
+            . $this->date_select( 'birth_date', $f['birth_date'], true )
+            . '</div>';
         $html .= '<div class="cbif-field"><label for="birth_province">استان محل تولد<span class="required">*</span></label><select id="birth_province" name="birth_province" class="crm-select2"><option value="">— انتخاب کنید —</option>';
         foreach ( $provinces as $code => $name ) {
             $html .= '<option value="' . esc_attr( $code ) . '"' . $this->sel( $f['birth_province'], $code ) . '>' . esc_html( $name ) . '</option>';

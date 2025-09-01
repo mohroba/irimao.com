@@ -1,25 +1,35 @@
 <?php
 namespace IMAOCustom\Helpers {
-    function get_user_meta( $id, $key, $single = true ) {
-        return $GLOBALS['test_user_meta'][ $id ][ $key ] ?? 0;
+    if (!function_exists(__NAMESPACE__.'\\get_user_meta')) {
+        function get_user_meta( $id, $key, $single = true ) {
+            return $GLOBALS['test_user_meta'][ $id ][ $key ] ?? 0;
+        }
     }
-    function update_user_meta( $id, $key, $value ) {
-        $GLOBALS['test_user_meta'][ $id ][ $key ] = $value;
+    if (!function_exists(__NAMESPACE__.'\\update_user_meta')) {
+        function update_user_meta( $id, $key, $value ) {
+            $GLOBALS['test_user_meta'][ $id ][ $key ] = $value;
+        }
     }
 }
 
 namespace IMAOCustom\Services\Endpoints {
-    function get_post_meta( $id, $key, $single = true ) {
-        return $GLOBALS['test_post_meta'][ $id ][ $key ] ?? '';
+    if (!function_exists(__NAMESPACE__.'\\get_post_meta')) {
+        function get_post_meta( $id, $key, $single = true ) {
+            return $GLOBALS['test_post_meta'][ $id ][ $key ] ?? '';
+        }
     }
-    function get_user_meta( $id, $key, $single = true ) {
-        return $GLOBALS['test_user_meta'][ $id ][ $key ] ?? 0;
+    if (!function_exists(__NAMESPACE__.'\\get_user_meta')) {
+        function get_user_meta( $id, $key, $single = true ) {
+            return $GLOBALS['test_user_meta'][ $id ][ $key ] ?? 0;
+        }
     }
-    function update_user_meta( $id, $key, $value ) {
-        $GLOBALS['test_user_meta'][ $id ][ $key ] = $value;
+    if (!function_exists(__NAMESPACE__.'\\update_user_meta')) {
+        function update_user_meta( $id, $key, $value ) {
+            $GLOBALS['test_user_meta'][ $id ][ $key ] = $value;
+        }
     }
-    function current_time( $type = '' ) { return 'now'; }
-    function get_post_type( $id ) { return $GLOBALS['test_post_types'][ $id ] ?? ''; }
+    if (!function_exists(__NAMESPACE__.'\\current_time')) { function current_time( $type = '' ) { return 'now'; } }
+    if (!function_exists(__NAMESPACE__.'\\get_post_type')) { function get_post_type( $id ) { return $GLOBALS['test_post_types'][ $id ] ?? ''; } }
 }
 
 namespace {

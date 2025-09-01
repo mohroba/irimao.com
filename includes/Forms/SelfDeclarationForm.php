@@ -18,9 +18,9 @@ class SelfDeclarationForm extends BaseForm {
         $coursetype = (int) ( $_POST['coursetype'] ?? 0 );
         $degree     = sanitize_text_field( $_POST['degree'] ?? '' );
         $hokm       = sanitize_text_field( $_POST['hokm_number'] ?? '' );
-        $getdate    = sanitize_text_field( $_POST['getdate'] ?? '' );
-        $exam_date  = sanitize_text_field( $_POST['exam_date'] ?? '' );
-        $theory     = sanitize_text_field( $_POST['theory_date'] ?? '' );
+        $getdate    = $this->read_date( 'getdate' );
+        $exam_date  = $this->read_date( 'exam_date' );
+        $theory     = $this->read_date( 'theory_date' );
         $board      = sanitize_text_field( $_POST['boards'] ?? '' );
 
         if ( ! $coursetype ) {
@@ -122,16 +122,16 @@ class SelfDeclarationForm extends BaseForm {
                     </div>
                     <div class="sd-field">
                         <label>تاریخ اخذ حکم<span style="color:#d00">*</span></label>
-                        <input type="text" name="getdate" class="persian-date" data-jdp-only-date data-jdp required value="<?= esc_attr( $_POST['getdate'] ?? '' ); ?>">
+                        <?= $this->date_select( 'getdate', $this->read_date( 'getdate' ), true ); ?>
                     </div>
                     <div class="sd-field">
                         <label>تاریخ دوره/آزمون عملی<span style="color:#d00">*</span></label>
-                        <input type="text" name="exam_date" class="persian-date" data-jdp-only-date data-jdp required value="<?= esc_attr( $_POST['exam_date'] ?? '' ); ?>">
+                        <?= $this->date_select( 'exam_date', $this->read_date( 'exam_date' ), true ); ?>
                         <div class="helper-note">در ثبت قهرمانی، تاریخ مسابقه نهایی ثبت شود.</div>
                     </div>
                     <div class="sd-field">
                         <label>تاریخ تئوری</label>
-                        <input type="text" name="theory_date" class="persian-date" data-jdp-only-date data-jdp value="<?= esc_attr( $_POST['theory_date'] ?? '' ); ?>">
+                        <?= $this->date_select( 'theory_date', $this->read_date( 'theory_date' ) ); ?>
                         <div class="helper-note">این فیلد فقط برای دوره های مربیگری تکمیل شود.</div>
                     </div>
                     <div class="sd-field">

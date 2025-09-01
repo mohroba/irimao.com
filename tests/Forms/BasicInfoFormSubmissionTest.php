@@ -6,6 +6,9 @@ namespace IMAOCustom\Forms {
     function get_userdata( $uid ) { return (object) [ 'user_email' => $GLOBALS['current_user_email'] ]; }
     function get_user_meta($uid, $key, $single = true) { return \IMAOCustom\Helpers\get_user_meta($uid, $key, $single); }
     function update_user_meta($uid, $key, $value) { \IMAOCustom\Helpers\update_user_meta($uid, $key, $value); }
+    if (!function_exists(__NAMESPACE__.'\\selected')) {
+        function selected($selected, $current, $echo = true){ return $selected == $current ? ' selected="selected"' : ''; }
+    }
     class WP_Error {
         private string $message;
         public function __construct( $code, $message ) { $this->message = $message; }
@@ -37,10 +40,14 @@ namespace IMAOCustom\Forms {
 
 namespace IMAOCustom\Helpers {
     $GLOBALS['user_meta'] = [];
-    function get_user_meta($uid, $key, $single = true) {
-        return $GLOBALS['user_meta'][$key] ?? '';
+    if (!function_exists(__NAMESPACE__.'\\get_user_meta')) {
+        function get_user_meta($uid, $key, $single = true) {
+            return $GLOBALS['user_meta'][$key] ?? '';
+        }
     }
-    function update_user_meta($uid, $key, $value) { $GLOBALS['user_meta'][$key] = $value; }
+    if (!function_exists(__NAMESPACE__.'\\update_user_meta')) {
+        function update_user_meta($uid, $key, $value) { $GLOBALS['user_meta'][$key] = $value; }
+    }
 }
 
 namespace Tests\Forms {
@@ -65,7 +72,9 @@ class BasicInfoFormSubmissionTest extends TestCase {
             'last_name_fa'      => 'خانوادگی',
             'gender'            => 'male',
             'father_name'       => 'پدر',
-            'birth_date'        => '1400/01/01',
+            'birth_date_year'   => '1400',
+            'birth_date_month'  => '1',
+            'birth_date_day'    => '1',
             'birth_province'    => 'IR-01',
             'birth_city'        => 'شهرستان',
             'marital_status'    => 'single',
