@@ -3320,7 +3320,7 @@ function crm_register_shared_taxonomies(){
   $tax( 'level',         'سطح',           'سطوح',         true , $objs );
 
   // weight_class only for competition
-  $tax( 'weight_class',  'کلاس وزنی',     'کلاس‌های وزنی', false, [ 'competition' ] );
+  $tax( 'weight_class',  'کلاس وزنی',     'کلاس‌های وزنی', true, [ 'competition' ] );
 }
 
 // Ensure taxonomies are attached to course CPT even if course was

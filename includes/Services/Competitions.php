@@ -51,10 +51,10 @@ class Competitions
 
         $tax('gender', 'جنسیت', 'جنسیت');
         $tax('board', 'استان', 'استان‌ها', true);
-        $tax('competition_type', 'نوع مسابقه', 'انواع مسابقه');
+        $tax('competition_type', 'نوع مسابقه', 'انواع مسابقه', true);
         $tax('age_category', 'رده سنی', 'رده‌های سنی', true);
         $tax('level', 'سطح', 'سطوح', true);
-        $tax('weight_class', 'کلاس وزنی', 'کلاس‌های وزنی');
+        $tax('weight_class', 'کلاس وزنی', 'کلاس‌های وزنی', true);
     }
 
     /**
