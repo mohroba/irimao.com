@@ -136,21 +136,34 @@ class Courses
     public function render_payouts_box(WP_Post $post): void
     {
         wp_nonce_field('crm_save_payouts', 'crm_payouts_nonce');
-        $rows = (array)get_post_meta($post->ID, self::META_PAYOUTS, true);
-        $user_opts = function ($sel) {
+        $rows      = (array) get_post_meta( $post->ID, self::META_PAYOUTS, true );
+        $user_opts = function ( $sel ) {
             $opts = '';
-            foreach (get_users(['fields' => ['ID', 'display_name']]) as $u) {
-                $opts .= sprintf('<option value="%d"%s>%s</option>', $u->ID, selected($u->ID, $sel, false), esc_html($u->display_name));
+            foreach ( get_users( [ 'fields' => [ 'ID', 'display_name' ] ] ) as $u ) {
+                $opts .= sprintf( '<option value="%d"%s>%s</option>', $u->ID, selected( $u->ID, $sel, false ), esc_html( $u->display_name ) );
             }
             return $opts;
         };
-        echo '<table class="widefat striped" id="crm-payout-table"><thead><tr><th>کاربر</th><th>نوع</th><th>مقدار</th><th></th></tr></thead><tbody id="crm-payout-body">';
-        $rowTpl = function ($uid = '', $type = 'percent', $val = '') use ($user_opts) {
-            return '<tr>' . '<td><select name="payout_user_id[]" class="crm-select2" style="width:100%">' . $user_opts($uid) . '</select></td>' . '<td><select name="payout_type[]"><option value="percent"' . selected('percent', $type, false) . '>درصد</option><option value="fixed"' . selected('fixed', $type, false) . '>مبلغ ثابت</option></select></td>' . '<td><input type="number" step="0.01" name="payout_value[]" value="' . esc_attr($val) . '"></td>' . '<td><span class="dashicons dashicons-no-alt crm-remove-row" style="cursor:pointer;color:#c00"></span></td>' . '</tr>';
+        $role_opts = function ( $sel ) {
+            $opts = '<option value=""></option>';
+            foreach ( get_editable_roles() as $slug => $data ) {
+                $opts .= sprintf( '<option value="%s"%s>%s</option>', esc_attr( $slug ), selected( $slug, $sel, false ), esc_html( $data['name'] ) );
+            }
+            return $opts;
         };
-        if ($rows) {
-            foreach ($rows as $r) {
-                echo $rowTpl($r['user_id'] ?? '', $r['type'] ?? 'percent', $r['value'] ?? '');
+        echo '<table class="widefat striped" id="crm-payout-table"><thead><tr><th>کاربر</th><th>نقش</th><th>نوع</th><th>مقدار</th><th></th></tr></thead><tbody id="crm-payout-body">';
+        $rowTpl = function ( $uid = '', $role = '', $type = 'percent', $val = '' ) use ( $user_opts, $role_opts ) {
+            return '<tr>'
+                . '<td><select name="payout_user_id[]" class="crm-select2" style="width:100%">' . $user_opts( $uid ) . '</select></td>'
+                . '<td><select name="payout_role[]" style="width:100%">' . $role_opts( $role ) . '</select></td>'
+                . '<td><select name="payout_type[]"><option value="percent"' . selected( 'percent', $type, false ) . '>درصد</option><option value="fixed"' . selected( 'fixed', $type, false ) . '>مبلغ ثابت</option></select></td>'
+                . '<td><input type="number" step="0.01" name="payout_value[]" value="' . esc_attr( $val ) . '"></td>'
+                . '<td><span class="dashicons dashicons-no-alt crm-remove-row" style="cursor:pointer;color:#c00"></span></td>'
+                . '</tr>';
+        };
+        if ( $rows ) {
+            foreach ( $rows as $r ) {
+                echo $rowTpl( $r['user_id'] ?? '', $r['role'] ?? '', $r['type'] ?? 'percent', $r['value'] ?? '' );
             }
         }
         echo '</tbody></table><button type="button" class="button" id="crm-add-payout">افزودن</button>';
@@ -417,14 +430,18 @@ class Courses
 
         if (isset($_POST['crm_payouts_nonce'])) {
             $rows = [];
-            if (!empty($_POST['payout_user_id'])) {
-                foreach ((array)$_POST['payout_user_id'] as $i => $uid) {
-                    $uid = (int)$uid;
-                    if (!$uid) {
-                        continue;
-                    }
-                    $rows[] = ['user_id' => $uid, 'type' => sanitize_text_field($_POST['payout_type'][$i] ?? 'percent'), 'value' => (float)($_POST['payout_value'][$i] ?? 0),];
+            foreach ((array)($_POST['payout_user_id'] ?? []) as $i => $uid) {
+                $uid  = (int) $uid;
+                $role = sanitize_text_field($_POST['payout_role'][$i] ?? '');
+                if (!$uid && $role === '') {
+                    continue;
                 }
+                $rows[] = [
+                    'user_id' => $uid,
+                    'role'    => $role,
+                    'type'    => sanitize_text_field($_POST['payout_type'][$i] ?? 'percent'),
+                    'value'   => (float)($_POST['payout_value'][$i] ?? 0),
+                ];
             }
             update_post_meta($post_id, self::META_PAYOUTS, $rows);
         }
