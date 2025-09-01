@@ -25,3 +25,7 @@
 .club-form-container .cf-field input,
 .club-form-container .cf-field textarea,
 .club-form-container .cf-field select{padding:8px !Important;border:1px solid #ccc !Important;border-radius:4px !Important;font-size:14px !Important; background-color: #F9FAFB !important;width:100%}
+.date-select {
+    display: flex;
+    gap: 10px;
+}

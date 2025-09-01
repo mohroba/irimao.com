@@ -56,3 +56,7 @@ jdp-container{
     .cbif-grid{grid-template-columns:1fr}
     .cbif-wide{grid-column:1}
 }
+.date-select {
+    display: flex;
+    gap: 10px;
+}
