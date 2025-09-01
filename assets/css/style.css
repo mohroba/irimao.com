@@ -17,3 +17,8 @@ Template: astra
 .text-right{text-align:right;}
 .text-center{text-align:center;}
 .text-left{text-align:left;}
+
+.date-select {
+    display: flex;
+    gap: 10px;
+}
