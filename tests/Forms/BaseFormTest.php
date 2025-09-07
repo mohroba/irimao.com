@@ -38,5 +38,13 @@ namespace {
             $this->assertStringContainsString('value="2" selected', $html);
             $this->assertStringContainsString('value="5" selected', $html);
         }
+
+        public function test_date_select_handles_varied_input_formats(): void {
+            $form = new BaseFormStub();
+            $html = $form->expose_date_select('birth', '۱۴۰۰-۰۲-۰۵ 00:00:00', true);
+            $this->assertStringContainsString('value="1400" selected', $html);
+            $this->assertStringContainsString('value="2" selected', $html);
+            $this->assertStringContainsString('value="5" selected', $html);
+        }
     }
 }

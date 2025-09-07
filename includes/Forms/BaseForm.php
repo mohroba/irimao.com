@@ -2,6 +2,7 @@
 
 namespace IMAOCustom\Forms;
 
+use IMAOCustom\Helpers\Date;
 use IMAOCustom\Services\Validation;
 
 abstract class BaseForm {
@@ -66,7 +67,7 @@ abstract class BaseForm {
      * Render three select elements for a date input.
      */
     protected function date_select( string $name, string $value = '', bool $required = false ): string {
-        [ $year, $month, $day ] = array_pad( explode( '/', $value ), 3, '' );
+        [ $year, $month, $day ] = Date::split( $value );
         $req = $required ? ' required' : '';
         $years  = range( 1300, 1500 );
         $months = [
