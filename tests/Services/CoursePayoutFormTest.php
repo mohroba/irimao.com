@@ -44,5 +44,6 @@ class CoursePayoutFormTest extends TestCase {
         $this->assertStringContainsString('name="payout_mode"', $html);
         $this->assertStringContainsString('payout-user-form', $html);
         $this->assertStringContainsString('payout-role-form', $html);
+        $this->assertStringNotContainsString('payout_user_role', $html);
     }
 }
