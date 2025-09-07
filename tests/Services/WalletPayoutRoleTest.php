@@ -56,10 +56,13 @@ namespace {
             $GLOBALS['test_post_types'] = [];
         }
 
-        public function test_coach_role_payout(): void {
+        public function test_predefined_roles_payout_and_skip(): void {
             $GLOBALS['test_post_meta'] = [
                 55 => [ '_linked_post_id' => 10 ],
-                10 => [ '_course_payouts' => [ [ 'role' => 'coach', 'type' => 'percent', 'value' => 10 ] ] ],
+                10 => [ '_course_payouts' => [
+                    [ 'recipient_type' => 'predefined', 'role' => 'coach', 'type' => 'percent', 'value' => 10 ],
+                    [ 'recipient_type' => 'predefined', 'role' => 'documentation', 'type' => 'percent', 'value' => 10 ],
+                ] ],
             ];
             $GLOBALS['test_post_types'] = [ 10 => 'course' ];
             $GLOBALS['test_user_meta'] = [
@@ -69,6 +72,7 @@ namespace {
             $svc = new Wallet();
             $svc->after_payment( 1 );
             $this->assertSame( 20.0, Wallet::get_balance( 100 ) );
+            $this->assertCount( 2, $GLOBALS['test_user_meta'] );
         }
     }
 }

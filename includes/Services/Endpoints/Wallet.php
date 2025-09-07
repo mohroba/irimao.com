@@ -184,15 +184,35 @@ class Wallet {
             $line_total = $item->get_total();
             foreach ( $payouts as $p ) {
                 $targets = [];
-                $uid     = (int) ( $p['user_id'] ?? 0 );
-                $role    = $p['role'] ?? '';
-                if ( $uid ) {
-                    $targets[] = $uid;
-                } elseif ( $role ) {
-                    $meta_key = $role . '_id';
-                    $dynamic  = (int) get_user_meta( $user_id, $meta_key, true );
-                    if ( $dynamic ) {
-                        $targets[] = $dynamic;
+                $rtype   = $p['recipient_type'] ?? 'user';
+                if ( $rtype === 'predefined' ) {
+                    $role = $p['role'] ?? '';
+                    if ( $role ) {
+                        $defs = \IMAOCustom\Plugin::get_payout_roles();
+                        $def  = $defs[ $role ] ?? null;
+                        if ( $def ) {
+                            if ( ( $def['resolver'] ?? '' ) === 'user_meta' ) {
+                                $meta_key = $def['meta_key'] ?? ( $role . '_id' );
+                                $dynamic  = (int) get_user_meta( $user_id, $meta_key, true );
+                                if ( $dynamic ) {
+                                    $targets[] = $dynamic;
+                                }
+                            } else {
+                                continue;
+                            }
+                        }
+                    }
+                } else {
+                    $uid  = (int) ( $p['user_id'] ?? 0 );
+                    $role = $p['role'] ?? '';
+                    if ( $uid ) {
+                        $targets[] = $uid;
+                    } elseif ( $role ) {
+                        $meta_key = $role . '_id';
+                        $dynamic  = (int) get_user_meta( $user_id, $meta_key, true );
+                        if ( $dynamic ) {
+                            $targets[] = $dynamic;
+                        }
                     }
                 }
                 foreach ( $targets as $dest ) {

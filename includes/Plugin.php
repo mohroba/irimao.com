@@ -96,5 +96,19 @@ class Plugin {
         $manager        = new ServiceManager( $this->service_classes );
         $this->services = $manager->register_all();
     }
+
+    /**
+     * Load payout role configuration.
+     *
+     * @return array<string,array{label:string,resolver:string,meta_key?:string}>
+     */
+    public static function get_payout_roles(): array {
+        static $roles = null;
+        if ( $roles === null ) {
+            $file  = __DIR__ . '/Config/PayoutRoles.php';
+            $roles = is_file( $file ) ? require $file : [];
+        }
+        return $roles;
+    }
 }
 
