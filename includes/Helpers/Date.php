@@ -53,6 +53,19 @@ class Date {
     }
 
     /**
+     * Split a date string into year, month and day parts after normalization.
+     *
+     * Accepts various separators or Persian digits and ignores time portions.
+     * Returns an array with three elements: [year, month, day].
+     */
+    public static function split(string $date): array {
+        $date   = self::normalize($date);
+        $date   = explode(' ', $date)[0];
+        $parts  = explode('/', $date);
+        return array_pad($parts, 3, '');
+    }
+
+    /**
      * Parse a Jalali date string (yyyy/MM/dd) to Jalalian instance.
      */
     private static function parse(string $date): ?Jalalian {

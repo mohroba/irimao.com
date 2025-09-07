@@ -23,4 +23,8 @@ class DateTest extends TestCase {
         $this->assertTrue(Date::is_between('1402/01/01', '1402/01/31', '1402/01/31'));
         $this->assertTrue(Date::is_between('1402/01/31', '1402/01/01', '1402/01/15'));
     }
+
+    public function test_split_handles_various_formats(): void {
+        $this->assertSame(['1400','02','05'], Date::split('۱۴۰۰-۰۲-۰۵ 12:00:00'));
+    }
 }
