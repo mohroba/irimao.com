@@ -7,6 +7,11 @@ class CompetitionShortcodesTest extends TestCase {
         if ( ! class_exists( 'WP_Query' ) ) {
             $this->markTestSkipped( 'WordPress functions not available.' );
         }
+        if ( ! function_exists( 'get_user_meta' ) ) {
+            function get_user_meta( $id, $key, $single = true ) {
+                return $key === 'gender' ? 'male' : '1385/01/01';
+            }
+        }
         $svc = new Competitions();
         $output = $svc->competitions_list_shortcode();
         $this->assertStringContainsString( 'class="sd-container"', $output );
@@ -71,10 +76,12 @@ class CompetitionShortcodesTest extends TestCase {
     }
 
     /** @runInSeparateProcess */
-    public function test_competitions_list_filters_by_registration_dates(): void {
+    public function test_competitions_list_filters_by_gender_and_age(): void {
         require_once __DIR__ . '/stubs.php';
         if ( ! function_exists( 'get_user_meta' ) ) {
-            function get_user_meta( $id, $key, $single = true ) { return 'male'; }
+            function get_user_meta( $id, $key, $single = true ) {
+                return $key === 'gender' ? 'male' : '1385/01/01';
+            }
         }
         if ( ! function_exists( 'wp_reset_postdata' ) ) {
             function wp_reset_postdata() {}
@@ -86,11 +93,7 @@ class CompetitionShortcodesTest extends TestCase {
         $html = $svc->competitions_list_shortcode();
         $this->assertStringContainsString( 'ثبت نامی', $html );
         $args = WP_Query::$args;
-        $this->assertArrayHasKey( 'meta_query', $args );
-        $this->assertSame( 'registration_start', $args['meta_query'][0]['key'] );
-        $this->assertSame( '<=', $args['meta_query'][0]['compare'] );
-        $this->assertSame( 'registration_end', $args['meta_query'][1]['key'] );
-        $this->assertSame( '>=', $args['meta_query'][1]['compare'] );
         $this->assertSame( 'men', $args['tax_query'][0]['terms'] );
+        $this->assertSame( 'adults-18-38', $args['tax_query'][1]['terms'] );
     }
 }
