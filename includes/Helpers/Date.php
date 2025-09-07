@@ -70,6 +70,7 @@ class Date {
      */
     private static function parse(string $date): ?Jalalian {
         $date = self::normalize($date);
+        $date = explode(' ', $date)[0];
         try {
             return Jalalian::fromFormat('Y/m/d', $date);
         } catch (\Exception $e) {

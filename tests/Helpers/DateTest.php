@@ -27,4 +27,12 @@ class DateTest extends TestCase {
     public function test_split_handles_various_formats(): void {
         $this->assertSame(['1400','02','05'], Date::split('۱۴۰۰-۰۲-۰۵ 12:00:00'));
     }
+
+    public function test_age_ignores_time_portion(): void {
+        $this->assertSame(Date::age('1400/01/01'), Date::age('1400/01/01 08:00:00'));
+    }
+
+    public function test_is_between_ignores_time_portions(): void {
+        $this->assertTrue(Date::is_between('1402/01/01 00:00:00', '1402/01/31 23:59:59', '1402/01/15 12:30:00'));
+    }
 }
