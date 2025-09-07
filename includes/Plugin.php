@@ -8,6 +8,7 @@ use IMAOCustom\Services\SelfDeclarations;
 use IMAOCustom\Services\ClubApplications;
 use IMAOCustom\Services\Courses;
 use IMAOCustom\Services\AgeCategories;
+use IMAOCustom\Services\AgeCategoryWeightSeeder;
 use IMAOCustom\Services\Endpoints\EditBasicInfo;
 use IMAOCustom\Services\Endpoints\IdentityProfessional;
 use IMAOCustom\Services\Endpoints\ChangePassword;
@@ -53,6 +54,7 @@ class Plugin {
         ClubApplications::class,
         Courses::class,
         AgeCategories::class,
+        AgeCategoryWeightSeeder::class,
         EditBasicInfo::class,
         IdentityProfessional::class,
         ChangePassword::class,
