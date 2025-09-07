@@ -147,13 +147,6 @@ class Competitions
             }
             return $opts;
         };
-        $wp_role_opts = function ( $sel ) {
-            $opts = '<option value=""></option>';
-            foreach ( get_editable_roles() as $slug => $data ) {
-                $opts .= sprintf( '<option value="%s"%s>%s</option>', esc_attr( $slug ), selected( $slug, $sel, false ), esc_html( $data['name'] ) );
-            }
-            return $opts;
-        };
         $payout_roles = \IMAOCustom\Plugin::get_payout_roles();
         $predef_opts  = function ( $sel ) use ( $payout_roles ) {
             $opts = '<option value=""></option>';
@@ -169,18 +162,17 @@ class Competitions
             . '</p>';
 
         echo '<div class="payout-user-form"' . ( $mode === 'predefined' ? ' style="display:none"' : '' ) . '>';
-        echo '<table class="widefat striped" id="crm-payout-user-table"><thead><tr><th>کاربر</th><th>نقش</th><th>نوع</th><th>مقدار</th><th></th></tr></thead><tbody id="crm-payout-user-body">';
-        $userRow = function ( $uid = '', $role = '', $type = 'percent', $val = '' ) use ( $users_opts, $wp_role_opts ) {
+        echo '<table class="widefat striped" id="crm-payout-user-table"><thead><tr><th>کاربر</th><th>نوع</th><th>مقدار</th><th></th></tr></thead><tbody id="crm-payout-user-body">';
+        $userRow = function ( $uid = '', $type = 'percent', $val = '' ) use ( $users_opts ) {
             return '<tr>'
                 . '<td><select name="payout_user_id[]" class="crm-select2" style="width:100%">' . $users_opts( $uid ) . '</select></td>'
-                . '<td><select name="payout_user_role[]" style="width:100%">' . $wp_role_opts( $role ) . '</select></td>'
                 . '<td><select name="payout_user_type[]"><option value="percent"' . selected( 'percent', $type, false ) . '>درصد</option><option value="fixed"' . selected( 'fixed', $type, false ) . '>مبلغ ثابت</option></select></td>'
                 . '<td><input type="number" step="0.01" name="payout_user_value[]" value="' . esc_attr( $val ) . '"></td>'
                 . '<td><span class="dashicons dashicons-no-alt crm-remove-row" style="cursor:pointer;color:#c00"></span></td>'
                 . '</tr>';
         };
         foreach ( $user_rows as $r ) {
-            echo $userRow( $r['user_id'] ?? '', $r['role'] ?? '', $r['type'] ?? 'percent', $r['value'] ?? '' );
+            echo $userRow( $r['user_id'] ?? '', $r['type'] ?? 'percent', $r['value'] ?? '' );
         }
         echo '</tbody></table><button type="button" class="button" id="crm-add-payout-user">افزودن</button></div>';
 
@@ -485,15 +477,13 @@ class Competitions
                 }
             } else {
                 foreach ( (array) ( $_POST['payout_user_id'] ?? [] ) as $i => $uid ) {
-                    $uid  = (int) $uid;
-                    $role = sanitize_text_field( $_POST['payout_user_role'][ $i ] ?? '' );
-                    if ( ! $uid && $role === '' ) {
+                    $uid = (int) $uid;
+                    if ( ! $uid ) {
                         continue;
                     }
                     $rows[] = [
                         'recipient_type' => 'user',
                         'user_id'        => $uid,
-                        'role'           => $role,
                         'type'           => sanitize_text_field( $_POST['payout_user_type'][ $i ] ?? 'percent' ),
                         'value'          => (float) ( $_POST['payout_user_value'][ $i ] ?? 0 ),
                     ];

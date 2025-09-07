@@ -14,7 +14,6 @@ namespace {
                 'crm_payouts_nonce'=>'n',
                 'payout_mode'=>'user',
                 'payout_user_id'=>[5],
-                'payout_user_role'=>[''],
                 'payout_user_type'=>['percent'],
                 'payout_user_value'=>['10'],
             ];
@@ -24,6 +23,7 @@ namespace {
             $rows=$GLOBALS['updated_meta']['_course_payouts'];
             $this->assertSame('user',$rows[0]['recipient_type']);
             $this->assertSame(5,$rows[0]['user_id']);
+            $this->assertArrayNotHasKey('role',$rows[0]);
         }
         public function test_predefined_mode_saves_recipient_type(): void {
             $_POST = [
