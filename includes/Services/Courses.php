@@ -70,7 +70,8 @@ class Courses
             register_taxonomy($slug, 'course', $args);
         };
 
-        $tax('gender', 'جنسیت', 'جنسیت');
+        // Make gender taxonomy hierarchical to allow parent/child terms
+        $tax('gender', 'جنسیت', 'جنسیت', true);
         $tax('board', 'استان', 'استان‌ها', true);
         $tax('course_type', 'نوع دوره', 'انواع دوره');
         $tax('age_category', 'رده سنی', 'رده‌های سنی', true);
