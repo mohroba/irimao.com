@@ -113,7 +113,14 @@ class CourseList {
                             <?php foreach ( $cols as $key => $label ) :
                                 if ( function_exists( 'taxonomy_exists' ) && taxonomy_exists( $key ) ) {
                                     $terms = get_the_terms( $cid, $key );
-                                    $val   = $terms && ! is_wp_error( $terms ) ? join( ', ', wp_list_pluck( $terms, 'name' ) ) : '';
+                                    if ( ! is_wp_error( $terms ) && $terms ) {
+                                        if ( $key === 'age_category' ) {
+                                            $terms = array_filter( $terms, static fn( $t ) => (int) $t->parent === 0 );
+                                        }
+                                        $val = join( ', ', wp_list_pluck( $terms, 'name' ) );
+                                    } else {
+                                        $val = '';
+                                    }
                                 } else {
                                     $val = get_post_meta( $cid, $key, true );
                                 }
