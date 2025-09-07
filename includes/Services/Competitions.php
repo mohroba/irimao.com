@@ -52,7 +52,8 @@ class Competitions
             }
         };
 
-        $tax('gender', 'جنسیت', 'جنسیت');
+        // Make gender taxonomy hierarchical
+        $tax('gender', 'جنسیت', 'جنسیت', true);
         $tax('board', 'استان', 'استان‌ها', true);
         $tax('competition_type', 'نوع مسابقه', 'انواع مسابقه', true);
         $tax('age_category', 'رده سنی', 'رده‌های سنی', true);
