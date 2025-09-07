@@ -4,6 +4,7 @@ namespace IMAOCustom\Services;
 
 use IMAOCustom\Helpers\Date;
 use IMAOCustom\Helpers\FieldLabel;
+use IMAOCustom\Helpers\AgeCategory;
 use IMAOCustom\Helpers\UserMeta;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -56,7 +57,6 @@ class Competitions
         $tax('competition_type', 'نوع مسابقه', 'انواع مسابقه', true);
         $tax('age_category', 'رده سنی', 'رده‌های سنی', true);
         $tax('level', 'سطح', 'سطوح', true);
-        $tax('weight_class', 'کلاس وزنی', 'کلاس‌های وزنی', true);
     }
 
     /**
@@ -78,7 +78,7 @@ class Competitions
     {
         $labels = ['name' => 'مسابقات', 'singular_name' => 'مسابقه', 'add_new' => 'افزودن مسابقه', 'add_new_item' => 'مسابقهٔ جدید', 'edit_item' => 'ویرایش مسابقه', 'new_item' => 'مسابقهٔ جدید', 'view_item' => 'مشاهدهٔ مسابقه', 'search_items' => 'جستجوی مسابقه', 'menu_name' => 'مسابقات',];
 
-        register_post_type('competition', ['labels' => $labels, 'public' => true, 'show_ui' => true, 'show_in_menu' => true, 'menu_icon' => 'dashicons-awards', 'has_archive' => true, 'rewrite' => ['slug' => 'competitions'], 'supports' => ['title', 'thumbnail'], 'taxonomies' => ['gender', 'board', 'competition_type', 'age_category', 'weight_class', 'level'], 'show_in_rest' => true,]);
+        register_post_type('competition', ['labels' => $labels, 'public' => true, 'show_ui' => true, 'show_in_menu' => true, 'menu_icon' => 'dashicons-awards', 'has_archive' => true, 'rewrite' => ['slug' => 'competitions'], 'supports' => ['title', 'thumbnail'], 'taxonomies' => ['gender', 'board', 'competition_type', 'age_category', 'level'], 'show_in_rest' => true,]);
     }
 
     public function add_meta_boxes(): void
@@ -543,10 +543,12 @@ class Competitions
     public function add_cart_item_data($data, $prod_id)
     {
         if (isset($_REQUEST['weight_class_term'])) {
-            $data['weight_class_term'] = (int)$_REQUEST['weight_class_term'];
-        }
-        if (isset($_REQUEST['age_category_term'])) {
-            $data['age_category_term'] = (int)$_REQUEST['age_category_term'];
+            $weight = (int)$_REQUEST['weight_class_term'];
+            $data['weight_class_term'] = $weight;
+            $term = get_term($weight, 'age_category');
+            if ($term && $term->parent) {
+                $data['age_category_term'] = (int)$term->parent;
+            }
         }
         if (isset($_REQUEST['competition_type_term'])) {
             $data['competition_type_term'] = (int)$_REQUEST['competition_type_term'];
@@ -557,7 +559,7 @@ class Competitions
     public function add_item_data($data, $cart_item)
     {
         if (!empty($cart_item['weight_class_term'])) {
-            $term = get_term($cart_item['weight_class_term'], 'weight_class');
+            $term = get_term($cart_item['weight_class_term'], 'age_category');
             if ($term) {
                 $data[] = ['name' => 'کلاس وزنی', 'value' => $term->name];
             }
@@ -580,7 +582,7 @@ class Competitions
     public function add_order_line_item_meta($item, $cart_item)
     {
         if (!empty($cart_item['weight_class_term'])) {
-            $term = get_term($cart_item['weight_class_term'], 'weight_class');
+            $term = get_term($cart_item['weight_class_term'], 'age_category');
             if ($term) {
                 $item->add_meta_data('کلاس وزنی', $term->name, true);
             }
@@ -601,20 +603,26 @@ class Competitions
 
     public function competitions_list_shortcode(): string
     {
-        $gender = '';
+        $gender   = '';
+        $age_slug = '';
         if (function_exists('get_current_user_id')) {
             $uid = get_current_user_id();
             if ($uid) {
-                $gender = strtolower(trim(UserMeta::get($uid, 'gender', '')));
-                if ($gender === 'male') {
-                    $gender = 'men';
-                } elseif ($gender === 'female') {
-                    $gender = 'women';
+                $gender = UserMeta::gender_slug($uid);
+                $birth  = UserMeta::get($uid, 'birth_date', '');
+                if ($birth) {
+                    $age = Date::age($birth);
+                    if ($age !== null) {
+                        $age_slug = AgeCategory::slug_from_age($age);
+                    }
                 }
             }
         }
         if (!$gender) {
             return '<p>برای مشاهدهٔ لیست مسابقات ابتدا جنسیت خود را در بخش اطلاعات پایه ثبت کنید.</p>';
+        }
+        if (!$age_slug) {
+            return '<p>برای مشاهدهٔ لیست مسابقات ابتدا تاریخ تولد خود را در بخش اطلاعات پایه ثبت کنید.</p>';
         }
 
         $q = new WP_Query([
@@ -627,6 +635,11 @@ class Competitions
                     'taxonomy' => 'gender',
                     'field'    => 'slug',
                     'terms'    => $gender,
+                ],
+                [
+                    'taxonomy' => 'age_category',
+                    'field'    => 'slug',
+                    'terms'    => $age_slug,
                 ],
             ],
         ]);
@@ -645,7 +658,7 @@ class Competitions
             return '<p>مسابقه‌ در حال ثبت نامی موجود نیست.</p>';
         }
 
-        $tax_cols = [ 'weight_class' => 'کلاس وزنی', 'gender' => 'جنسیت', 'board' => 'استان', 'age_category' => 'رده سنی', 'level' => 'سطح', ];
+        $tax_cols = [ 'gender' => 'جنسیت', 'board' => 'استان', 'age_category' => 'رده سنی', 'level' => 'سطح', ];
         ob_start();
         echo '<div class="sd-container">';
         echo '<div class="sd-header">لیست مسابقات</div>';
@@ -692,8 +705,22 @@ class Competitions
             return '<p style="text-align:center;color:#c00;">این مسابقه با جنسیت شما سازگار نیست.</p>';
         }
 
-        $weights = wp_get_post_terms($cid, 'weight_class');
-        $ages    = wp_get_post_terms($cid, 'age_category');
+        $terms   = wp_get_post_terms($cid, 'age_category');
+        $ages    = [];
+        $weights = [];
+        foreach ($terms as $t) {
+            if ($t->parent) {
+                $weights[$t->parent][] = $t;
+                if (!isset($ages[$t->parent])) {
+                    $p = get_term($t->parent, 'age_category');
+                    if ($p && !is_wp_error($p)) {
+                        $ages[$p->term_id] = $p;
+                    }
+                }
+            } else {
+                $ages[$t->term_id] = $t;
+            }
+        }
         $types   = wp_get_post_terms($cid, 'competition_type');
         $prod_id = (int) get_post_meta($cid, self::META_LINKED_PRODUCT, true);
         if (! $prod_id) {
@@ -754,20 +781,15 @@ class Competitions
                         <td>
                             <select name="weight_class_term" required>
                                 <option value="">— انتخاب کنید —</option>
-                                <?php foreach ($weights as $t) : ?>
-                                    <option value="<?php echo $t->term_id; ?>"><?php echo esc_html($t->name); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>رده سنی</th>
-                        <td>
-                            <select name="age_category_term" required>
-                                <option value="">— انتخاب کنید —</option>
-                                <?php foreach ($ages as $t) : ?>
-                                    <option value="<?php echo $t->term_id; ?>"><?php echo esc_html($t->name); ?></option>
-                                <?php endforeach; ?>
+                                <?php foreach ($ages as $aid => $age) :
+                                    if (!empty($weights[$aid])) : ?>
+                                        <optgroup label="<?php echo esc_attr($age->name); ?>">
+                                            <?php foreach ($weights[$aid] as $t) : ?>
+                                                <option value="<?php echo $t->term_id; ?>"><?php echo esc_html($t->name); ?></option>
+                                            <?php endforeach; ?>
+                                        </optgroup>
+                                    <?php endif;
+                                endforeach; ?>
                             </select>
                         </td>
                     </tr>

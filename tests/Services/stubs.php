@@ -1,4 +1,5 @@
 <?php
+error_reporting(E_ALL & ~E_DEPRECATED);
 if ( ! function_exists( 'is_user_logged_in' ) ) {
     function is_user_logged_in() { return true; }
 }
@@ -48,13 +49,13 @@ if ( ! function_exists( 'get_post_meta' ) ) {
             10  => [
                 'course_code'        => 'C123',
                 'start_date'         => '2024-01-01',
-                'registration_start' => '1402/01/01',
-                'registration_end'   => '1402/12/29',
+                'registration_start' => '1400/01/01',
+                'registration_end'   => '1500/12/29',
             ],
             20  => [
                 'competition_code'   => 'COMP20',
-                'registration_start' => '1402/01/01',
-                'registration_end'   => '1402/12/29',
+                'registration_start' => '1400/01/01',
+                'registration_end'   => '1500/12/29',
             ],
         ];
         return $map[ $id ][ $key ] ?? '';
@@ -84,4 +85,25 @@ if ( ! function_exists( 'esc_html' ) ) {
 }
 if ( ! function_exists( 'esc_url' ) ) {
     function esc_url( $s ) { return $s; }
+}
+if ( ! function_exists( 'get_terms' ) ) {
+    function get_terms( $args ) {
+        return [
+            (object) [ 'term_id' => 1, 'slug' => 'adults-18-38' ],
+            (object) [ 'term_id' => 2, 'slug' => 'youth-15-17' ],
+            (object) [ 'term_id' => 3, 'slug' => 'teenagers-12-14' ],
+            (object) [ 'term_id' => 4, 'slug' => 'toddlers-7-11' ],
+        ];
+    }
+}
+if ( ! function_exists( 'get_term_meta' ) ) {
+    function get_term_meta( $term_id, $key, $single = true ) {
+        $map = [
+            1 => [ 'age_start' => 18, 'age_end' => 38 ],
+            2 => [ 'age_start' => 15, 'age_end' => 17 ],
+            3 => [ 'age_start' => 12, 'age_end' => 14 ],
+            4 => [ 'age_start' => 7,  'age_end' => 11 ],
+        ];
+        return $map[ $term_id ][ $key ] ?? '';
+    }
 }

@@ -140,15 +140,20 @@ class Ranking {
                     <th>کلاس وزنی<span style="color:#d00">*</span></th>
                     <td>
                         <?php
-                        echo wp_dropdown_categories( [
-                            'taxonomy'         => 'weight_class',
-                            'name'             => 'weight_class',
-                            'show_option_none' => '— انتخاب —',
-                            'option_none_value'=> '',
-                            'hide_empty'       => false,
-                            'echo'             => 0,
-                            'class'            => 'crm-select2',
-                        ] );
+                        $terms = get_terms([
+                            'taxonomy'   => 'age_category',
+                            'hide_empty' => false,
+                        ]);
+                        echo '<select name="weight_class" class="crm-select2" required>'; 
+                        echo '<option value="">— انتخاب —</option>';
+                        foreach ($terms as $t) {
+                            if ($t->parent) {
+                                $parent = get_term($t->parent, 'age_category');
+                                $label  = ($parent ? $parent->name . ' - ' : '') . $t->name;
+                                printf('<option value="%d">%s</option>', $t->term_id, esc_html($label));
+                            }
+                        }
+                        echo '</select>';
                         ?>
                     </td>
                 </tr>
@@ -254,16 +259,20 @@ class Ranking {
         }
         echo '</select> ';
 
-        echo wp_dropdown_categories( [
-            'taxonomy'         => 'weight_class',
-            'name'             => 'weight_class',
-            'selected'         => $w_term,
-            'show_option_none' => 'همه کلاس‌ها',
-            'option_none_value'=> 0,
-            'hide_empty'       => false,
-            'echo'             => 0,
-            'class'            => 'crm-select2',
-        ] );
+        $terms = get_terms([
+            'taxonomy'   => 'age_category',
+            'hide_empty' => false,
+        ]);
+        echo '<select name="weight_class" class="crm-select2" style="min-width:200px">';
+        echo '<option value="0">همه کلاس‌ها</option>';
+        foreach ($terms as $t) {
+            if ($t->parent) {
+                $parent = get_term($t->parent, 'age_category');
+                $label  = ($parent ? $parent->name . ' - ' : '') . $t->name;
+                printf('<option value="%d"%s>%s</option>', $t->term_id, selected($w_term, $t->term_id, false), esc_html($label));
+            }
+        }
+        echo '</select>';
 
         submit_button( 'نمایش', 'secondary', '', false );
         echo '</form>';
@@ -317,7 +326,7 @@ class Ranking {
                 <thead><tr><th>#</th><th>مسابقه</th><th>کلاس وزنی</th><th>امتیاز</th></tr></thead><tbody>
                 <?php $i = 1; foreach ( $my as $row ) :
                     $title = get_the_title( $row->competition_id );
-                    $term  = get_term( $row->weight_class, 'weight_class' ); ?>
+                    $term  = get_term( $row->weight_class, 'age_category' ); ?>
                     <tr>
                         <td><?php echo $i++; ?></td>
                         <td><?php echo esc_html( $title ); ?></td>

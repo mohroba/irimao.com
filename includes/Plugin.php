@@ -7,6 +7,7 @@ use IMAOCustom\Services\Registration;
 use IMAOCustom\Services\SelfDeclarations;
 use IMAOCustom\Services\ClubApplications;
 use IMAOCustom\Services\Courses;
+use IMAOCustom\Services\AgeCategories;
 use IMAOCustom\Services\Endpoints\EditBasicInfo;
 use IMAOCustom\Services\Endpoints\IdentityProfessional;
 use IMAOCustom\Services\Endpoints\ChangePassword;
@@ -51,6 +52,7 @@ class Plugin {
         SelfDeclarations::class,
         ClubApplications::class,
         Courses::class,
+        AgeCategories::class,
         EditBasicInfo::class,
         IdentityProfessional::class,
         ChangePassword::class,

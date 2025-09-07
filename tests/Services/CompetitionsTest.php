@@ -25,10 +25,10 @@ class CompetitionsTest extends TestCase {
         $this->assertArrayHasKey( 'crm_competitions_list', $GLOBALS['shortcodes'] );
         $this->assertArrayHasKey( 'crm_competition_details', $GLOBALS['shortcodes'] );
         $this->assertArrayHasKey( 'crm_user_competitions', $GLOBALS['shortcodes'] );
-        $this->assertArrayHasKey( 'weight_class', $GLOBALS['registered_taxonomies'] );
+        $this->assertArrayNotHasKey( 'weight_class', $GLOBALS['registered_taxonomies'] );
         $this->assertArrayHasKey( 'age_category', $GLOBALS['registered_taxonomies'] );
         $this->assertArrayHasKey( 'competition_type', $GLOBALS['registered_taxonomies'] );
-        $this->assertTrue( $GLOBALS['registered_taxonomies']['weight_class']['hierarchical'] );
+        $this->assertTrue( $GLOBALS['registered_taxonomies']['age_category']['hierarchical'] );
         $this->assertTrue( $GLOBALS['registered_taxonomies']['competition_type']['hierarchical'] );
         $this->assertArrayHasKey( 'manage_competition_posts_columns', $GLOBALS['filters'] );
         $this->assertArrayHasKey( 'admin_post_export_competition_attendees', $GLOBALS['actions'] );

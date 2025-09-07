@@ -42,6 +42,17 @@ class Date {
     }
 
     /**
+     * Calculate age in years from a Jalali birth date.
+     */
+    public static function age(string $birth): ?int {
+        $birthDate = self::parse($birth);
+        if (! $birthDate) {
+            return null;
+        }
+        return $birthDate->toCarbon()->age;
+    }
+
+    /**
      * Parse a Jalali date string (yyyy/MM/dd) to Jalalian instance.
      */
     private static function parse(string $date): ?Jalalian {

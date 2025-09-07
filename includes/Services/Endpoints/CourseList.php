@@ -4,6 +4,7 @@ namespace IMAOCustom\Services\Endpoints;
 
 use IMAOCustom\Helpers\CourseData;
 use IMAOCustom\Helpers\Date;
+use IMAOCustom\Helpers\AgeCategory;
 use IMAOCustom\Helpers\UserMeta;
 use WP_Query;
 
@@ -33,20 +34,26 @@ class CourseList {
     }
 
     private function render(): string {
-        $gender = '';
+        $gender   = '';
+        $age_slug = '';
         if ( function_exists( 'get_current_user_id' ) ) {
             $uid = get_current_user_id();
             if ( $uid ) {
-                $gender = strtolower( trim( UserMeta::get( $uid, 'gender', '' ) ) );
-                if ( $gender === 'male' ) {
-                    $gender = 'men';
-                } elseif ( $gender === 'female' ) {
-                    $gender = 'women';
+                $gender = UserMeta::gender_slug( $uid );
+                $birth  = UserMeta::get( $uid, 'birth_date', '' );
+                if ( $birth ) {
+                    $age = Date::age( $birth );
+                    if ( $age !== null ) {
+                        $age_slug = AgeCategory::slug_from_age( $age );
+                    }
                 }
             }
         }
         if ( ! $gender ) {
             return '<p>برای مشاهدهٔ دوره‌ها ابتدا جنسیت خود را در بخش اطلاعات پایه ثبت کنید.</p>';
+        }
+        if ( ! $age_slug ) {
+            return '<p>برای مشاهدهٔ دوره‌ها ابتدا تاریخ تولد خود را در بخش اطلاعات پایه ثبت کنید.</p>';
         }
 
         $q = new WP_Query([
@@ -59,6 +66,11 @@ class CourseList {
                     'taxonomy' => 'gender',
                     'field'    => 'slug',
                     'terms'    => $gender,
+                ],
+                [
+                    'taxonomy' => 'age_category',
+                    'field'    => 'slug',
+                    'terms'    => $age_slug,
                 ],
             ],
         ]);

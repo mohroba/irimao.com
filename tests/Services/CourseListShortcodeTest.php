@@ -4,10 +4,12 @@ use IMAOCustom\Services\Endpoints\CourseList;
 
 class CourseListShortcodeTest extends TestCase {
     /** @runInSeparateProcess */
-    public function test_course_list_filters_by_registration_dates_and_gender(): void {
+    public function test_course_list_filters_by_gender_and_age(): void {
         require_once __DIR__ . '/stubs.php';
         if ( ! function_exists( 'get_user_meta' ) ) {
-            function get_user_meta( $id, $key, $single = true ) { return 'male'; }
+            function get_user_meta( $id, $key, $single = true ) {
+                return $key === 'gender' ? 'male' : '1385/01/01';
+            }
         }
         if ( ! function_exists( 'wp_reset_postdata' ) ) { function wp_reset_postdata() {} }
         if ( ! class_exists( 'WP_Query' ) ) {
@@ -17,10 +19,7 @@ class CourseListShortcodeTest extends TestCase {
         $html = $svc->shortcode();
         $this->assertStringContainsString( 'ثبت نامی', $html );
         $args = WP_Query::$args;
-        $this->assertSame( 'registration_start', $args['meta_query'][0]['key'] );
-        $this->assertSame( '<=', $args['meta_query'][0]['compare'] );
-        $this->assertSame( 'registration_end', $args['meta_query'][1]['key'] );
-        $this->assertSame( '>=', $args['meta_query'][1]['compare'] );
         $this->assertSame( 'men', $args['tax_query'][0]['terms'] );
+        $this->assertSame( 'adults-18-38', $args['tax_query'][1]['terms'] );
     }
 }

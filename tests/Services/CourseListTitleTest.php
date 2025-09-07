@@ -6,7 +6,9 @@ class CourseListTitleTest extends TestCase {
     /** @runInSeparateProcess */
     public function test_course_list_shows_post_titles(): void {
         if ( ! function_exists('get_user_meta') ) {
-            function get_user_meta( $id, $key, $single = true ) { return 'male'; }
+            function get_user_meta( $id, $key, $single = true ) {
+                return $key === 'gender' ? 'male' : '1385/01/01';
+            }
         }
         if ( ! function_exists('taxonomy_exists') ) {
             function taxonomy_exists( $t ) { return false; }
@@ -16,6 +18,9 @@ class CourseListTitleTest extends TestCase {
         }
         if ( ! function_exists('get_post') ) {
             function get_post() { return $GLOBALS['post']; }
+        }
+        if ( ! function_exists('get_the_ID') ) {
+            function get_the_ID() { return $GLOBALS['post']->ID; }
         }
         if ( ! function_exists('wp_reset_postdata') ) { function wp_reset_postdata() {} }
         require_once __DIR__ . '/stubs.php';
