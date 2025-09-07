@@ -32,7 +32,17 @@ class DateTest extends TestCase {
         $this->assertSame(Date::age('1400/01/01'), Date::age('1400/01/01 08:00:00'));
     }
 
-    public function test_is_between_ignores_time_portions(): void {
+    public function test_is_between_with_time_range(): void {
         $this->assertTrue(Date::is_between('1402/01/01 00:00:00', '1402/01/31 23:59:59', '1402/01/15 12:30:00'));
+    }
+
+    public function test_is_between_respects_time_boundaries(): void {
+        $start = '1402/01/01 12:00:00';
+        $end   = '1402/01/02 12:00:00';
+
+        $this->assertTrue(Date::is_between($start, $end, '1402/01/01 12:00:00'));
+        $this->assertTrue(Date::is_between($start, $end, '1402/01/02 12:00:00'));
+        $this->assertFalse(Date::is_between($start, $end, '1402/01/01 11:59:59'));
+        $this->assertFalse(Date::is_between($start, $end, '1402/01/02 12:00:01'));
     }
 }

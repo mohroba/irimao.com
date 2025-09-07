@@ -20,6 +20,8 @@ class Date {
 
     /**
      * Check if current date is within the given Jalali range.
+     *
+     * Accepts dates formatted as "Y/m/d" or "Y/m/d H:i:s".
      */
     public static function is_between(string $start, string $end, ?string $current = null): bool {
         $startDate   = self::parse($start);
@@ -66,12 +68,18 @@ class Date {
     }
 
     /**
-     * Parse a Jalali date string (yyyy/MM/dd) to Jalalian instance.
+     * Parse a Jalali date string to a Jalalian instance.
+     *
+     * Supports "Y/m/d" and "Y/m/d H:i:s" formats.
      */
     private static function parse(string $date): ?Jalalian {
         $date = self::normalize($date);
-        $date = explode(' ', $date)[0];
+
         try {
+            if (strpos($date, ' ') !== false) {
+                return Jalalian::fromFormat('Y/m/d H:i:s', $date);
+            }
+
             return Jalalian::fromFormat('Y/m/d', $date);
         } catch (\Exception $e) {
             return null;
