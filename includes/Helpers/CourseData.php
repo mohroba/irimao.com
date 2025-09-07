@@ -14,6 +14,7 @@ class CourseData {
             'course_type' => 'نوع دوره',
             'level'       => 'سطح دوره',
             'board'       => 'استان',
+            'age_category'=> 'رده سنی',
             'attendance'  => 'نوع حضور',
             'gender'      => 'جنسیت دوره',
         ];

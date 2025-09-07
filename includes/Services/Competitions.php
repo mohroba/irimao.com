@@ -673,7 +673,11 @@ class Competitions
             $pid = $post->ID;
             echo '<tr><td>' . ( $i++ ) . '</td><td>' . esc_html( get_the_title( $pid ) ) . '</td>';
             foreach ( $tax_cols as $slug => $label ) {
-                $terms = wp_get_post_terms( $pid, $slug, [ 'fields' => 'names' ] );
+                $args  = [ 'fields' => 'names' ];
+                if ( $slug === 'age_category' ) {
+                    $args['parent'] = 0;
+                }
+                $terms = wp_get_post_terms( $pid, $slug, $args );
                 echo '<td>' . ( $terms ? implode( ', ', $terms ) : '—' ) . '</td>';
             }
             $price = get_post_meta( $pid, 'price', true );
