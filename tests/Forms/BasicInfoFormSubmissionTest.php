@@ -6,8 +6,10 @@ namespace IMAOCustom\Forms {
     function get_userdata( $uid ) { return (object) [ 'user_email' => $GLOBALS['current_user_email'] ]; }
     function get_user_meta($uid, $key, $single = true) { return \IMAOCustom\Helpers\get_user_meta($uid, $key, $single); }
     function update_user_meta($uid, $key, $value) { \IMAOCustom\Helpers\update_user_meta($uid, $key, $value); }
-    if (!function_exists(__NAMESPACE__.'\\selected')) {
-        function selected($selected, $current, $echo = true){ return $selected == $current ? ' selected="selected"' : ''; }
+    if ( ! function_exists( __NAMESPACE__ . '\\selected' ) ) {
+        function selected( $selected, $current, $echo = true ) {
+            return (string) $selected === (string) $current ? ' selected="selected"' : '';
+        }
     }
     class WP_Error {
         private string $message;
@@ -96,6 +98,7 @@ class BasicInfoFormSubmissionTest extends TestCase {
         $this->assertStringContainsString('name="billing_email" value="new@example.com"', $html);
         $this->assertSame('نام', $GLOBALS['user_meta']['first_name_fa']);
         $this->assertSame('new@example.com', $GLOBALS['user_meta']['billing_email']);
+        $this->assertSame('1400/01/01', $GLOBALS['user_meta']['birth_date']);
     }
 
     public function test_empty_billing_email_is_stored(): void {

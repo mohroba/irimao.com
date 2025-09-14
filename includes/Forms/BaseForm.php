@@ -54,9 +54,9 @@ abstract class BaseForm {
      * Read a date from POST parts and format as Y/m/d.
      */
     protected function read_date( string $base ): string {
-        $y = sanitize_text_field( $_POST["{$base}_year"] ?? '' );
-        $m = sanitize_text_field( $_POST["{$base}_month"] ?? '' );
-        $d = sanitize_text_field( $_POST["{$base}_day"] ?? '' );
+        $y = (int) sanitize_text_field( $_POST["{$base}_year"] ?? '' );
+        $m = (int) sanitize_text_field( $_POST["{$base}_month"] ?? '' );
+        $d = (int) sanitize_text_field( $_POST["{$base}_day"] ?? '' );
         if ( $y && $m && $d ) {
             return sprintf( '%04d/%02d/%02d', $y, $m, $d );
         }
@@ -67,9 +67,9 @@ abstract class BaseForm {
      * Render three select elements for a date input.
      */
     protected function date_select( string $name, string $value = '', bool $required = false ): string {
-        [ $year, $month, $day ] = Date::split( $value );
-        $req = $required ? ' required' : '';
-        $years  = range( 1300, 1500 );
+        [ $year, $month, $day ] = array_map( 'intval', Date::split( $value ) );
+        $req   = $required ? ' required' : '';
+        $years = range( 1300, 1500 );
         $months = [
             1  => 'فروردین',
             2  => 'اردیبهشت',
@@ -86,19 +86,19 @@ abstract class BaseForm {
         ];
         $days = range( 1, 31 );
         $out  = '<div class="date-select">';
-        $out .= '<select name="' . esc_attr( $name ) . '_year"' . $req . '><option value="">سال</option>';
-        foreach ( $years as $y ) {
-            $out .= '<option value="' . $y . '"' . selected( (string) $year, (string) $y, false ) . '>' . $y . '</option>';
+        $out .= '<select name="' . esc_attr( $name ) . '_day"' . $req . '><option value="">روز</option>';
+        foreach ( $days as $d ) {
+            $out .= '<option value="' . $d . '"' . selected( $day, $d, false ) . '>' . $d . '</option>';
         }
         $out .= '</select>';
         $out .= '<select name="' . esc_attr( $name ) . '_month"' . $req . '><option value="">ماه</option>';
         foreach ( $months as $i => $label ) {
-            $out .= '<option value="' . $i . '"' . selected( (string) $month, (string) $i, false ) . '>' . esc_html( $label ) . '</option>';
+            $out .= '<option value="' . $i . '"' . selected( $month, $i, false ) . '>' . esc_html( $label ) . '</option>';
         }
         $out .= '</select>';
-        $out .= '<select name="' . esc_attr( $name ) . '_day"' . $req . '><option value="">روز</option>';
-        foreach ( $days as $d ) {
-            $out .= '<option value="' . $d . '"' . selected( (string) $day, (string) $d, false ) . '>' . $d . '</option>';
+        $out .= '<select name="' . esc_attr( $name ) . '_year"' . $req . '><option value="">سال</option>';
+        foreach ( $years as $y ) {
+            $out .= '<option value="' . $y . '"' . selected( $year, $y, false ) . '>' . $y . '</option>';
         }
         $out .= '</select>';
         $out .= '</div>';
