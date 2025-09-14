@@ -497,6 +497,22 @@ class Competitions
             $att = array_map('intval', $_POST['manual_attendees'] ?? []);
             update_post_meta($post_id, self::META_MANUAL, $att);
         }
+
+        // Ensure parent age categories are also assigned when only child terms are selected.
+        $age_terms = wp_get_post_terms($post_id, 'age_category', ['fields' => 'ids']);
+        if (!is_wp_error($age_terms) && $age_terms) {
+            $parents = [];
+            foreach ($age_terms as $tid) {
+                $term = get_term($tid, 'age_category');
+                if ($term && !is_wp_error($term) && $term->parent) {
+                    $parents[] = (int) $term->parent;
+                }
+            }
+            if ($parents) {
+                $all = array_unique(array_merge($age_terms, $parents));
+                wp_set_post_terms($post_id, $all, 'age_category');
+            }
+        }
         $this->sync_product($post_id);
     }
 

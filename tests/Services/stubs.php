@@ -107,3 +107,35 @@ if ( ! function_exists( 'get_term_meta' ) ) {
         return $map[ $term_id ][ $key ] ?? '';
     }
 }
+if ( ! function_exists( 'wp_get_post_terms' ) ) {
+    function wp_get_post_terms( $id, $tax, $args = [] ) {
+        if ( isset( $GLOBALS['mock_post_terms_return'] ) ) {
+            $ret = $GLOBALS['mock_post_terms_return'];
+            if ( ( $args['fields'] ?? '' ) === 'ids' ) {
+                return array_map( 'intval', (array) $ret );
+            }
+            return $ret;
+        }
+        if ( $tax === 'age_category' ) {
+            if ( ( $args['parent'] ?? null ) === 0 ) {
+                return [ 'Parent Age' ];
+            }
+            return [ 'Parent Age', 'Child Weight' ];
+        }
+        return [ 'Term' ];
+    }
+}
+if ( ! function_exists( 'get_term' ) ) {
+    function get_term( $id, $tax ) {
+        if ( isset( $GLOBALS['mock_terms'][ $id ] ) ) {
+            return (object) $GLOBALS['mock_terms'][ $id ];
+        }
+        return (object) [ 'term_id' => $id, 'name' => 'Term', 'parent' => 0 ];
+    }
+}
+if ( ! function_exists( 'wp_set_post_terms' ) ) {
+    function wp_set_post_terms( $post_id, $terms, $tax ) {
+        $GLOBALS['wp_set_post_terms_last'] = [ $post_id, $terms, $tax ];
+        return true;
+    }
+}
