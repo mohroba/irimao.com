@@ -11,6 +11,7 @@ class UserManagement {
         add_action( 'wp_ajax_crm_admin_update_role', [ $this, 'update_role' ] );
         add_action( 'wp_ajax_crm_admin_id_status', [ $this, 'change_status' ] );
         add_action( 'wp_ajax_crm_admin_toggle_ban', [ $this, 'toggle_ban' ] );
+        add_action( 'admin_post_imao_login_as', [ $this, 'login_as_user' ] );
     }
 
     public function add_menu(): void {
@@ -76,6 +77,22 @@ class UserManagement {
         return FieldLabel::get( $key, $value );
     }
 
+    public function login_as_user(): void {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'Access denied' );
+        }
+        $user_id = isset( $_GET['user_id'] ) ? (int) $_GET['user_id'] : 0;
+        $nonce   = $_GET['_wpnonce'] ?? '';
+        if ( ! $user_id || ! wp_verify_nonce( $nonce, 'imao_login_as_' . $user_id ) ) {
+            wp_die( 'Invalid request' );
+        }
+        wp_set_current_user( $user_id );
+        wp_set_auth_cookie( $user_id );
+        $redirect = admin_url();
+        wp_safe_redirect( $redirect );
+        exit;
+    }
+
     public function basic_info_page(): void {
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( 'Access denied' );
@@ -104,8 +121,9 @@ class UserManagement {
                 $val = $this->display_value( $k, $raw );
                 echo '<td>' . esc_html( $val ) . '</td>';
             }
-            $link = admin_url( 'users.php?page=imao-basic-info&edit_user=' . $u->ID );
-            echo '<td><a class="button" href="' . esc_url( $link ) . '">ویرایش</a></td></tr>';
+            $edit_link  = admin_url( 'users.php?page=imao-basic-info&edit_user=' . $u->ID );
+            $login_link = wp_nonce_url( admin_url( 'admin-post.php?action=imao_login_as&user_id=' . $u->ID ), 'imao_login_as_' . $u->ID );
+            echo '<td><a class="button" href="' . esc_url( $edit_link ) . '">ویرایش</a> <a class="button" href="' . esc_url( $login_link ) . '">ورود</a></td></tr>';
         }
         echo '</tbody></table></div>';
     }

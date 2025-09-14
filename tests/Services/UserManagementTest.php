@@ -3,9 +3,15 @@ namespace IMAOCustom\Services\Admin {
     function current_user_can() { return true; }
     function wp_die( $msg = '' ) { throw new \Exception( $msg ); }
     function get_users() { return [ (object) ['ID' => 1, 'display_name' => 'کاربر', 'user_email' => 'user@example.com'] ]; }
-    function admin_url( $url ) { return $url; }
+    function admin_url( $url = '' ) { return $url ?: '/wp-admin/'; }
     function esc_html( $text ) { return $text; }
     function esc_url( $text ) { return $text; }
+    function wp_create_nonce( $action ) { return 'valid'; }
+    function wp_nonce_url( $url, $action ) { return $url . '&_wpnonce=valid'; }
+    function wp_verify_nonce( $nonce, $action ) { return $nonce === 'valid'; }
+    function wp_set_current_user( $id ) { $GLOBALS['current_user'] = $id; }
+    function wp_set_auth_cookie( $id ) { $GLOBALS['auth_user'] = $id; }
+    function wp_safe_redirect( $url ) { $GLOBALS['redirected_to'] = $url; throw new \Exception( 'redirect' ); }
     function check_ajax_referer() { return true; }
     function wp_send_json_success() { return true; }
     function wp_send_json_error() { return false; }
@@ -37,6 +43,20 @@ class UserManagementTest extends TestCase {
         $html = ob_get_clean();
         $this->assertStringContainsString('ایمیل', $html);
         $this->assertStringContainsString('user@example.com', $html);
+        $this->assertStringContainsString('ورود', $html);
+    }
+
+    public function test_login_as_user_sets_auth_cookie_and_redirects(): void {
+        $um = new UserManagement();
+        $_GET = [ 'user_id' => 1, '_wpnonce' => 'valid' ];
+        try {
+            $um->login_as_user();
+        } catch ( \Exception $e ) {
+            // swallow redirect exception
+        }
+        $this->assertSame( 1, $GLOBALS['current_user'] );
+        $this->assertSame( 1, $GLOBALS['auth_user'] );
+        $this->assertSame( '/wp-admin/', $GLOBALS['redirected_to'] );
     }
 
     public function test_change_status_updates_role(): void {
