@@ -11,6 +11,7 @@ class AgeCategories
         add_action('age_category_edit_form_fields', [$this, 'edit_fields']);
         add_action('created_age_category', [$this, 'save_fields']);
         add_action('edited_age_category', [$this, 'save_fields']);
+        add_filter('wp_terms_checklist_args', [$this, 'disable_checked_ontop'], 10, 2);
     }
 
     public function add_fields(): void
@@ -51,5 +52,13 @@ class AgeCategories
         if (isset($_POST['age_end'])) {
             update_term_meta($term_id, 'age_end', (int) $_POST['age_end']);
         }
+    }
+
+    public function disable_checked_ontop(array $args, int $post_id): array
+    {
+        if (($args['taxonomy'] ?? '') === 'age_category') {
+            $args['checked_ontop'] = false;
+        }
+        return $args;
     }
 }
