@@ -4,7 +4,7 @@ use IMAOCustom\Forms\IdentityProfessionalForm;
 
 class IdentityProfessionalFormTest extends TestCase {
     public function test_render_requires_login(): void {
-        if ( ! function_exists( 'is_user_logged_in' ) ) {
+        if ( ! function_exists( 'plugin_dir_url' ) ) {
             $this->markTestSkipped( 'WordPress functions not available.' );
         }
         $_SERVER['REQUEST_METHOD'] = 'GET';

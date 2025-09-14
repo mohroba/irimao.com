@@ -165,9 +165,11 @@ class BasicInfoForm extends BaseForm {
     }
 
     /**
-     * Clubs for selection.
+     * Fetch all approved clubs with their owning coach and address.
+     *
+     * @return array<int, array<string, mixed>>
      */
-    private function club_options(): array {
+    private function club_data(): array {
         $posts = get_posts( [
             'post_type'   => 'club_application',
             'post_status' => 'publish',
@@ -175,9 +177,14 @@ class BasicInfoForm extends BaseForm {
             'orderby'     => 'title',
             'order'       => 'ASC',
         ] );
-        $out = [ '' => '— انتخاب باشگاه —' ];
+        $out = [];
         foreach ( $posts as $p ) {
-            $out[ $p->ID ] = $p->post_title;
+            $out[] = [
+                'id'      => $p->ID,
+                'name'    => $p->post_title,
+                'address' => get_post_meta( $p->ID, 'club_address', true ),
+                'coach'   => (int) $p->post_author,
+            ];
         }
         return $out;
     }
@@ -193,7 +200,22 @@ class BasicInfoForm extends BaseForm {
         $birth     = CityMap::get_cities( (string) $f['birth_province'] );
         $res       = CityMap::get_cities( (string) $f['residence_province'] );
         $coaches   = $this->coach_options();
-        $clubs     = $this->club_options();
+        $club_data = $this->club_data();
+        $clubs     = array_filter(
+            $club_data,
+            static fn( $c ) => (string) $c['coach'] === (string) $f['coach_id']
+        );
+        $clubs_map = [];
+        foreach ( $club_data as $c ) {
+            $clubs_map[ $c['coach'] ][] = [
+                'id'      => $c['id'],
+                'name'    => $c['name'],
+                'address' => $c['address'],
+            ];
+        }
+        if ( function_exists( 'wp_localize_script' ) ) {
+            wp_localize_script( 'imao-edit-basic-info', 'CBIF_CLUBS', $clubs_map );
+        }
 
         $html = '';
         if ( $status === 'approved' ) {
@@ -305,8 +327,9 @@ class BasicInfoForm extends BaseForm {
         }
         $html .= '</select></div>';
         $html .= '<div class="cbif-field"><label for="club_id">انتخاب باشگاه</label><select id="club_id" name="club_id" class="crm-select2">';
-        foreach ( $clubs as $id => $name ) {
-            $html .= '<option value="' . esc_attr( $id ) . '"' . $this->sel( $f['club_id'], (string) $id ) . '>' . esc_html( $name ) . '</option>';
+        $html .= '<option value="">— انتخاب باشگاه —</option>';
+        foreach ( $clubs as $c ) {
+            $html .= '<option value="' . esc_attr( $c['id'] ) . '" data-address="' . esc_attr( $c['address'] ) . '"' . $this->sel( $f['club_id'], (string) $c['id'] ) . '>' . esc_html( $c['name'] ) . '</option>';
         }
         $html .= '</select></div>';
 

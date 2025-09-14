@@ -27,6 +27,41 @@ jQuery(function($){
 
   $('.crm-select2').select2({ dir: 'rtl', width: 'resolve' });
 
+  const $coach = $('#coach_id');
+  const $club  = $('#club_id');
+  const initialCoach = $coach.val();
+  const initialClub  = $club.val();
+
+  function clubTpl(state){
+    if(!state.id){ return state.text; }
+    const addr = $(state.element).data('address');
+    if(addr){
+      return $('<span>'+state.text+'<small class="club-addr">'+addr+'</small></span>');
+    }
+    return state.text;
+  }
+
+  function fillClubs(coachId){
+    const list = (typeof CBIF_CLUBS !== 'undefined' && CBIF_CLUBS[coachId]) ? CBIF_CLUBS[coachId] : [];
+    const current = $club.val();
+    $club.empty();
+    $club.append(new Option('— انتخاب باشگاه —',''));
+    list.forEach(c => {
+      const selected = current && current === String(c.id);
+      const opt = new Option(c.name, c.id, selected, selected);
+      opt.dataset.address = c.address;
+      $club.append(opt);
+    });
+    if($club.data('select2')){
+      $club.trigger('change.select2');
+    }
+  }
+
+  fillClubs(initialCoach);
+  if($club.data('select2')){ $club.select2('destroy'); }
+  $club.select2({ dir: 'rtl', width: 'resolve', templateResult: clubTpl, templateSelection: clubTpl });
+  $coach.on('change', function(){ fillClubs(this.value); });
+
   function toggleMilitary(){
       var g = $('#gender').val();
       var $ms = $('#military_status');
@@ -75,11 +110,6 @@ jQuery(function($){
     const $form  = $('#id-form');
     const status = $form.data('status');
     if (status && status !== 'pending' && status !== 'rejected') {
-        const $coach = $('#coach_id');
-        const $club  = $('#club_id');
-        const initialCoach = $coach.val();
-        const initialClub  = $club.val();
-
         $form
             .find(
                 'input:not([name="coach_id"]):not([name="club_id"]):not([type="hidden"]), ' +
