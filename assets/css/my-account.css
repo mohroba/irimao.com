@@ -46,6 +46,8 @@ jdp-container{
 .cbif-submit{grid-column:3/4;text-align:left;margin-top:10px}
 .cbif-submit button{background:#20a8d8;color:#fff;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;font-size:15px}
 
+.club-addr{display:block;font-size:12px;color:#666;margin-top:2px}
+
 @media (max-width:992px){
     .cbif-grid{grid-template-columns:repeat(2,1fr)}
     .cbif-wide{grid-column:span 2}

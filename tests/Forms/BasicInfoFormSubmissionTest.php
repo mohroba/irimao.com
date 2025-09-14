@@ -38,6 +38,7 @@ namespace IMAOCustom\Forms {
     function esc_textarea($text) { return $text; }
     function get_users($args = []) { return $GLOBALS['get_users_return'] ?? []; }
     function get_posts($args = []) { return $GLOBALS['get_posts_return'] ?? []; }
+    function get_post_meta($id, $key, $single = true) { return $GLOBALS['post_meta'][$id][$key] ?? ''; }
 }
 
 namespace IMAOCustom\Helpers {
@@ -52,6 +53,15 @@ namespace IMAOCustom\Helpers {
     }
 }
 
+namespace {
+    function wp_localize_script($handle, $name, $data) {
+        if ($name === 'CBIF_CLUBS') {
+            $GLOBALS['localized_scripts'][$name] = $data;
+        }
+        return true;
+    }
+}
+
 namespace Tests\Forms {
 use PHPUnit\Framework\TestCase;
 use IMAOCustom\Forms\BasicInfoForm;
@@ -62,7 +72,9 @@ class BasicInfoFormSubmissionTest extends TestCase {
         $GLOBALS['current_user_email'] = 'old@example.com';
         $_POST                      = [];
         $_SERVER['REQUEST_METHOD']  = 'GET';
-        unset($GLOBALS['get_users_return']);
+        unset($GLOBALS['get_users_return'], $GLOBALS['get_posts_return']);
+        $GLOBALS['post_meta'] = [];
+        $GLOBALS['localized_scripts'] = [];
     }
 
     private function validPostData(): array {
@@ -176,6 +188,32 @@ class BasicInfoFormSubmissionTest extends TestCase {
         $this->assertNotEmpty($m[1] ?? '');
         $this->assertStringNotContainsString('value="1"', $m[1]);
         $this->assertStringContainsString('value="2"', $m[1]);
+    }
+
+    public function test_club_mapping_localized(): void {
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $GLOBALS['get_posts_return'] = [
+            (object) ['ID'=>10, 'post_title'=>'باشگاه الف', 'post_author'=>5],
+            (object) ['ID'=>11, 'post_title'=>'باشگاه ب', 'post_author'=>5],
+            (object) ['ID'=>12, 'post_title'=>'باشگاه ج', 'post_author'=>6],
+        ];
+        $GLOBALS['post_meta'] = [
+            10 => ['club_address' => 'آدرس ۱'],
+            11 => ['club_address' => 'آدرس ۲'],
+            12 => ['club_address' => 'آدرس ۳'],
+        ];
+        $form = new BasicInfoForm();
+        $form->render();
+        $expected = [
+            5 => [
+                ['id'=>10,'name'=>'باشگاه الف','address'=>'آدرس ۱'],
+                ['id'=>11,'name'=>'باشگاه ب','address'=>'آدرس ۲'],
+            ],
+            6 => [
+                ['id'=>12,'name'=>'باشگاه ج','address'=>'آدرس ۳'],
+            ],
+        ];
+        $this->assertSame($expected, $GLOBALS['localized_scripts']['CBIF_CLUBS'] ?? []);
     }
 }
 

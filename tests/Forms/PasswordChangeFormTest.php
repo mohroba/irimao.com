@@ -4,7 +4,7 @@ use IMAOCustom\Forms\PasswordChangeForm;
 
 class PasswordChangeFormTest extends TestCase {
     public function test_skip_without_wp(): void {
-        if ( ! function_exists( 'get_current_user_id' ) ) {
+        if ( ! function_exists( 'wp_get_current_user' ) ) {
             $this->markTestSkipped( 'WordPress functions not available.' );
         }
         $form   = new PasswordChangeForm();
