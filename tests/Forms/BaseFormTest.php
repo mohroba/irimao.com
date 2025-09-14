@@ -1,9 +1,13 @@
 <?php
 namespace {
-    if (!function_exists('selected')) { function selected($selected, $current, $echo = true){ return $selected == $current ? ' selected="selected"' : ''; } }
-    if (!function_exists('esc_attr')) { function esc_attr($v){ return $v; } }
-    if (!function_exists('esc_html')) { function esc_html($v){ return $v; } }
-    if (!function_exists('sanitize_text_field')) { function sanitize_text_field($v){ return $v; } }
+    if ( ! function_exists( 'selected' ) ) {
+        function selected( $selected, $current, $echo = true ) {
+            return (string) $selected === (string) $current ? ' selected="selected"' : '';
+        }
+    }
+    if ( ! function_exists( 'esc_attr' ) ) { function esc_attr( $v ) { return $v; } }
+    if ( ! function_exists( 'esc_html' ) ) { function esc_html( $v ) { return $v; } }
+    if ( ! function_exists( 'sanitize_text_field' ) ) { function sanitize_text_field( $v ) { return $v; } }
 }
 
 namespace IMAOCustom\Forms {
@@ -32,11 +36,26 @@ namespace {
 
         public function test_date_select_marks_selected_options(): void {
             $form = new BaseFormStub();
-            $html = $form->expose_date_select('birth', '1400/02/05', true);
-            $this->assertStringContainsString('name="birth_year"', $html);
-            $this->assertStringContainsString('value="1400" selected', $html);
-            $this->assertStringContainsString('value="2" selected', $html);
-            $this->assertStringContainsString('value="5" selected', $html);
+            $html = $form->expose_date_select( 'birth', '1400/02/05', true );
+            $this->assertStringContainsString( 'name="birth_day"', $html );
+            $this->assertStringContainsString( 'name="birth_month"', $html );
+            $this->assertStringContainsString( 'name="birth_year"', $html );
+            $this->assertStringContainsString( 'value="1400" selected', $html );
+            $this->assertStringContainsString( 'value="2" selected', $html );
+            $this->assertStringContainsString( 'value="5" selected', $html );
+        }
+
+        public function test_date_select_order_is_day_month_year(): void {
+            $form = new BaseFormStub();
+            $html = $form->expose_date_select( 'birth', '1400/02/05', true );
+            $dayPos   = strpos( $html, 'name="birth_day"' );
+            $monthPos = strpos( $html, 'name="birth_month"' );
+            $yearPos  = strpos( $html, 'name="birth_year"' );
+            $this->assertNotFalse( $dayPos );
+            $this->assertNotFalse( $monthPos );
+            $this->assertNotFalse( $yearPos );
+            $this->assertLessThan( $monthPos, $dayPos );
+            $this->assertLessThan( $yearPos, $monthPos );
         }
 
         public function test_date_select_handles_varied_input_formats(): void {
