@@ -3,6 +3,9 @@ use PHPUnit\Framework\TestCase;
 use IMAOCustom\Services\Competitions;
 
 class CompetitionShortcodesTest extends TestCase {
+    protected $backupGlobals = false;
+    protected $backupStaticAttributes = false;
+
     public function test_competitions_list_has_container_and_header(): void {
         if ( ! class_exists( 'WP_Query' ) ) {
             $this->markTestSkipped( 'WordPress functions not available.' );
@@ -30,14 +33,10 @@ class CompetitionShortcodesTest extends TestCase {
         $this->assertStringContainsString( 'class="striped"', $output );
     }
 
-    /** @runInSeparateProcess */
     public function test_competition_details_shows_all_fields(): void {
         require_once __DIR__ . '/stubs.php';
         if ( ! function_exists( 'shortcode_atts' ) ) {
             function shortcode_atts( $pairs, $atts, $shortcode = '' ) { return array_merge( $pairs, $atts ); }
-        }
-        if ( ! function_exists( 'get_user_meta' ) ) {
-            function get_user_meta( $id, $key, $single = true ) { return $key === 'identity_verified_professional' ? 'approved' : 'male'; }
         }
         if ( ! function_exists( 'wp_get_post_terms' ) ) {
             function wp_get_post_terms( $id, $tax, $args = [] ) { return []; }
@@ -73,6 +72,68 @@ class CompetitionShortcodesTest extends TestCase {
             $this->assertStringContainsString( $label, $html );
         }
         $this->assertStringContainsString( 'name="competition_type_term"', $html );
+    }
+
+    public function test_competition_details_uses_assigned_types(): void {
+        require_once __DIR__ . '/stubs.php';
+        if ( ! function_exists( 'shortcode_atts' ) ) {
+            function shortcode_atts( $pairs, $atts, $shortcode = '' ) { return array_merge( $pairs, $atts ); }
+        }
+        if ( ! function_exists( 'get_user_meta' ) ) {
+            function get_user_meta( $id, $key, $single = true ) { return $key === 'identity_verified_professional' ? 'approved' : 'male'; }
+        }
+        if ( ! function_exists( 'wc_get_cart_url' ) ) {
+            function wc_get_cart_url() { return '/cart'; }
+        }
+        if ( ! function_exists( 'get_the_terms' ) ) {
+            function get_the_terms( $id, $tax ) { return []; }
+        }
+        if ( ! function_exists( 'is_wp_error' ) ) {
+            function is_wp_error( $thing ) { return false; }
+        }
+        if ( ! function_exists( 'get_option' ) ) {
+            function get_option( $key, $default = [] ) {
+                if ( ! isset( $GLOBALS['test_options'] ) ) {
+                    $GLOBALS['test_options'] = [];
+                }
+                return $GLOBALS['test_options'][ $key ] ?? $default;
+            }
+        }
+        $GLOBALS['test_options'] = [
+            'imao_age_category_type_map' => [
+                1 => [ 501 ],
+                3 => [ 502 ],
+            ],
+        ];
+        $GLOBALS['mock_post_terms_return'] = [
+            'age_category'      => [
+                (object) [ 'term_id' => 1, 'name' => 'رده بزرگسال', 'slug' => 'adults-18-38', 'parent' => 0 ],
+                (object) [ 'term_id' => 2, 'name' => 'وزن بزرگسال', 'slug' => 'adults-light', 'parent' => 1 ],
+                (object) [ 'term_id' => 3, 'name' => 'رده نوجوان', 'slug' => 'teenagers-12-14', 'parent' => 0 ],
+                (object) [ 'term_id' => 4, 'name' => 'وزن نوجوان', 'slug' => 'teen-light', 'parent' => 3 ],
+            ],
+            'competition_type' => [
+                (object) [ 'term_id' => 501, 'name' => 'کومیته', 'parent' => 0 ],
+                (object) [ 'term_id' => 502, 'name' => 'کاتا', 'parent' => 0 ],
+            ],
+        ];
+        $GLOBALS['mock_terms'] = [
+            1   => [ 'term_id' => 1, 'name' => 'رده بزرگسال', 'slug' => 'adults-18-38', 'parent' => 0 ],
+            2   => [ 'term_id' => 2, 'name' => 'وزن بزرگسال', 'slug' => 'adults-light', 'parent' => 1 ],
+            3   => [ 'term_id' => 3, 'name' => 'رده نوجوان', 'slug' => 'teenagers-12-14', 'parent' => 0 ],
+            4   => [ 'term_id' => 4, 'name' => 'وزن نوجوان', 'slug' => 'teen-light', 'parent' => 3 ],
+            501 => [ 'term_id' => 501, 'name' => 'کومیته', 'slug' => 'kumite', 'parent' => 0 ],
+            502 => [ 'term_id' => 502, 'name' => 'کاتا', 'slug' => 'kata', 'parent' => 0 ],
+        ];
+
+        $svc  = new Competitions();
+        $html = $svc->competition_details_shortcode( [ 'id' => 20 ] );
+
+        $this->assertStringContainsString( 'value="501"', $html );
+        $this->assertStringNotContainsString( 'value="502"', $html );
+        $this->assertStringNotContainsString( 'رده نوجوان', $html );
+
+        unset( $GLOBALS['mock_post_terms_return'], $GLOBALS['test_options'], $GLOBALS['mock_terms'] );
     }
 
     /** @runInSeparateProcess */
