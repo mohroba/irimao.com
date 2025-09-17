@@ -5,6 +5,7 @@ namespace IMAOCustom\Services;
 use IMAOCustom\Helpers\Date;
 use IMAOCustom\Helpers\FieldLabel;
 use IMAOCustom\Helpers\AgeCategory;
+use IMAOCustom\Helpers\CompetitionTypeAssignments;
 use IMAOCustom\Helpers\UserMeta;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -12,6 +13,7 @@ use WC_Product_Simple;
 use WP_Post;
 use WP_Query;
 use WP_User;
+use WP_Term;
 
 class Competitions
 {
@@ -745,22 +747,115 @@ class Competitions
         }
 
         $terms   = wp_get_post_terms($cid, 'age_category');
+        if (!is_array($terms) || (function_exists('is_wp_error') && is_wp_error($terms))) {
+            $terms = [];
+        }
         $ages    = [];
         $weights = [];
+        $normalize_term = static function ($term, string $taxonomy) {
+            if ($term instanceof WP_Term) {
+                return $term;
+            }
+            if (is_object($term)) {
+                $term_id = (int) ($term->term_id ?? 0);
+            } elseif (is_array($term)) {
+                $term_id = (int) ($term['term_id'] ?? 0);
+            } else {
+                $term_id = (int) $term;
+            }
+            if ($term_id <= 0) {
+                return null;
+            }
+            $fetched = get_term($term_id, $taxonomy);
+            if ($fetched && (!function_exists('is_wp_error') || !is_wp_error($fetched))) {
+                return $fetched;
+            }
+            if (is_object($term)) {
+                return $term;
+            }
+            if (is_array($term)) {
+                return (object) $term;
+            }
+            return null;
+        };
         foreach ($terms as $t) {
-            if ($t->parent) {
-                $weights[$t->parent][] = $t;
-                if (!isset($ages[$t->parent])) {
-                    $p = get_term($t->parent, 'age_category');
-                    if ($p && !is_wp_error($p)) {
-                        $ages[$p->term_id] = $p;
+            $term_obj = $normalize_term($t, 'age_category');
+            if (!$term_obj) {
+                continue;
+            }
+            $term_id   = (int) ($term_obj->term_id ?? 0);
+            $parent_id = (int) ($term_obj->parent ?? 0);
+            if ($parent_id) {
+                $weights[$parent_id][] = $term_obj;
+                if (!isset($ages[$parent_id])) {
+                    $p = get_term($parent_id, 'age_category');
+                    if ($p && (!function_exists('is_wp_error') || !is_wp_error($p))) {
+                        $p_obj = $p instanceof WP_Term ? $p : (is_object($p) ? $p : (object) $p);
+                        $parent_term_id = (int) ($p_obj->term_id ?? $parent_id);
+                        if ($parent_term_id) {
+                            $ages[$parent_term_id] = $p_obj;
+                        }
                     }
                 }
-            } else {
-                $ages[$t->term_id] = $t;
+            } elseif ($term_id) {
+                $ages[$term_id] = $term_obj;
             }
         }
-        $types   = wp_get_post_terms($cid, 'competition_type');
+
+        $competition_types = wp_get_post_terms($cid, 'competition_type');
+        if (!is_array($competition_types) || (function_exists('is_wp_error') && is_wp_error($competition_types))) {
+            $competition_types = [];
+        }
+        $competition_type_map = [];
+        foreach ($competition_types as $term) {
+            $term_obj = $normalize_term($term, 'competition_type');
+            if (!$term_obj) {
+                continue;
+            }
+            $term_id = (int) ($term_obj->term_id ?? 0);
+            if ($term_id) {
+                $competition_type_map[$term_id] = $term_obj;
+            }
+        }
+
+        $types = [];
+        $age_type_ids = CompetitionTypeAssignments::types_for_ages(array_keys($ages));
+        if ($age_type_ids) {
+            $ids_for_select = $age_type_ids;
+            if ($competition_type_map) {
+                $intersection = array_values(array_intersect($age_type_ids, array_keys($competition_type_map)));
+                if ($intersection) {
+                    $ids_for_select = $intersection;
+                }
+            }
+
+            if ($ids_for_select && function_exists('get_terms')) {
+                $fetched = get_terms([
+                    'taxonomy'   => 'competition_type',
+                    'hide_empty' => false,
+                    'include'    => $ids_for_select,
+                ]);
+                if (is_array($fetched) && !is_wp_error($fetched)) {
+                    $by_id = [];
+                    foreach ($fetched as $term) {
+                        if ($term instanceof WP_Term) {
+                            $by_id[$term->term_id] = $term;
+                        }
+                    }
+                    foreach ($ids_for_select as $id) {
+                        if (isset($by_id[$id])) {
+                            $types[] = $by_id[$id];
+                        } elseif (isset($competition_type_map[$id])) {
+                            $types[] = $competition_type_map[$id];
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!$types) {
+            $types = array_values($competition_type_map);
+        }
         $prod_id = (int) get_post_meta($cid, self::META_LINKED_PRODUCT, true);
         if (! $prod_id) {
             $prod_id = $this->sync_product($cid);

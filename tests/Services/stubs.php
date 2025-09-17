@@ -88,12 +88,38 @@ if ( ! function_exists( 'esc_url' ) ) {
 }
 if ( ! function_exists( 'get_terms' ) ) {
     function get_terms( $args ) {
-        return [
-            (object) [ 'term_id' => 1, 'slug' => 'adults-18-38' ],
-            (object) [ 'term_id' => 2, 'slug' => 'youth-15-17' ],
-            (object) [ 'term_id' => 3, 'slug' => 'teenagers-12-14' ],
-            (object) [ 'term_id' => 4, 'slug' => 'toddlers-7-11' ],
+        $taxonomy = is_array( $args ) ? ( $args['taxonomy'] ?? '' ) : '';
+        if ( $taxonomy === 'competition_type' ) {
+            $all = [
+                501 => 'کومیته',
+                502 => 'کاتا',
+                503 => 'تیمی',
+            ];
+            $include = isset( $args['include'] ) ? array_map( 'intval', (array) $args['include'] ) : array_keys( $all );
+            $terms   = [];
+            foreach ( $include as $id ) {
+                $name    = $all[ $id ] ?? ( 'نوع ' . $id );
+                $terms[] = (object) [ 'term_id' => $id, 'name' => $name, 'slug' => (string) $id, 'parent' => 0 ];
+            }
+            return $terms;
+        }
+        $parent = is_array( $args ) && array_key_exists( 'parent', $args ) ? (int) $args['parent'] : null;
+        $all    = [
+            (object) [ 'term_id' => 1, 'name' => 'Parent Age', 'slug' => 'adults-18-38', 'parent' => 0 ],
+            (object) [ 'term_id' => 2, 'name' => 'Child Weight', 'slug' => 'adults-light', 'parent' => 1 ],
+            (object) [ 'term_id' => 3, 'name' => 'Teenage', 'slug' => 'teenagers-12-14', 'parent' => 0 ],
+            (object) [ 'term_id' => 4, 'name' => 'Junior', 'slug' => 'toddlers-7-11', 'parent' => 0 ],
         ];
+        if ( $parent !== null ) {
+            $filtered = [];
+            foreach ( $all as $term ) {
+                if ( $term->parent === $parent ) {
+                    $filtered[] = $term;
+                }
+            }
+            return $filtered;
+        }
+        return $all;
     }
 }
 if ( ! function_exists( 'get_term_meta' ) ) {
@@ -110,19 +136,74 @@ if ( ! function_exists( 'get_term_meta' ) ) {
 if ( ! function_exists( 'wp_get_post_terms' ) ) {
     function wp_get_post_terms( $id, $tax, $args = [] ) {
         if ( isset( $GLOBALS['mock_post_terms_return'] ) ) {
-            $ret = $GLOBALS['mock_post_terms_return'];
-            if ( ( $args['fields'] ?? '' ) === 'ids' ) {
-                return array_map( 'intval', (array) $ret );
+            $source = $GLOBALS['mock_post_terms_return'];
+            if ( is_array( $source ) ) {
+                if ( array_key_exists( $tax, $source ) ) {
+                    $ret = $source[ $tax ];
+                } elseif ( array_key_exists( 0, $source ) ) {
+                    $ret = $source;
+                } else {
+                    $ret = [];
+                }
+            } else {
+                $ret = $source;
             }
-            return $ret;
-        }
-        if ( $tax === 'age_category' ) {
-            if ( ( $args['parent'] ?? null ) === 0 ) {
-                return [ 'Parent Age' ];
+        } elseif ( $tax === 'age_category' ) {
+            $ret = [
+                (object) [ 'term_id' => 1, 'name' => 'Parent Age', 'slug' => 'adults-18-38', 'parent' => 0 ],
+                (object) [ 'term_id' => 2, 'name' => 'Child Weight', 'slug' => 'adults-light', 'parent' => 1 ],
+            ];
+            if ( isset( $args['parent'] ) && (int) $args['parent'] === 0 ) {
+                $ret = array_values( array_filter( $ret, static function ( $item ) {
+                    if ( is_object( $item ) ) {
+                        return (int) ( $item->parent ?? 0 ) === 0;
+                    }
+                    if ( is_array( $item ) ) {
+                        return (int) ( $item['parent'] ?? 0 ) === 0;
+                    }
+                    return false;
+                } ) );
             }
-            return [ 'Parent Age', 'Child Weight' ];
+        } elseif ( $tax === 'competition_type' ) {
+            $ret = [
+                (object) [ 'term_id' => 501, 'name' => 'کومیته', 'slug' => 'kumite', 'parent' => 0 ],
+                (object) [ 'term_id' => 502, 'name' => 'کاتا', 'slug' => 'kata', 'parent' => 0 ],
+            ];
+        } else {
+            $ret = [];
         }
-        return [ 'Term' ];
+
+        if ( ( $args['fields'] ?? '' ) === 'ids' ) {
+            return array_map( 'intval', (array) $ret );
+        }
+        if ( ( $args['fields'] ?? '' ) === 'names' ) {
+            $names = [];
+            foreach ( (array) $ret as $item ) {
+                if ( is_object( $item ) && isset( $item->name ) ) {
+                    $names[] = $item->name;
+                } elseif ( is_array( $item ) && isset( $item['name'] ) ) {
+                    $names[] = $item['name'];
+                } else {
+                    $names[] = (string) $item;
+                }
+            }
+            return $names;
+        }
+        if ( ( $args['fields'] ?? '' ) === 'slugs' ) {
+            $slugs = [];
+            foreach ( (array) $ret as $item ) {
+                if ( is_object( $item ) && isset( $item->slug ) ) {
+                    $slugs[] = $item->slug;
+                } elseif ( is_array( $item ) && isset( $item['slug'] ) ) {
+                    $slugs[] = $item['slug'];
+                } else {
+                    $slugs[] = (string) $item;
+                }
+            }
+            return $slugs;
+        }
+
+        return $ret;
     }
 }
 if ( ! function_exists( 'get_term' ) ) {
