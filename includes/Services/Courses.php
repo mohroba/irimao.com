@@ -24,7 +24,7 @@ class Courses
      */
     public static function detail_fields(): array
     {
-        return ['course_code' => 'کد', 'start_date' => 'تاریخ شروع', 'end_date' => 'تاریخ پایان', 'exam_date' => 'تاریخ آزمون', 'registration_start' => 'شروع ثبت‌نام', 'registration_end' => 'پایان ثبت‌نام', 'attendance' => 'نوع حضور', 'course_time' => 'ساعت برگزاری دوره', 'organizer' => 'مسئول برگزاری', 'organizer_tel' => 'شماره همراه مسئول برگزاری', 'instructor' => 'مدرس دوره', 'examiner' => 'ممتحن', 'supervisor' => 'ناظر', 'address' => 'آدرس محل برگزاری', 'min_degree' => 'حداقل درجه فنی', 'points' => 'امتیاز دوره', 'price' => 'شهریه دوره (تومان)',];
+        return ['course_code' => 'کد', 'start_date' => 'تاریخ شروع', 'end_date' => 'تاریخ پایان', 'exam_date' => 'تاریخ آزمون', 'registration_start' => 'شروع ثبت‌نام', 'registration_end' => 'پایان ثبت‌نام', 'attendance' => 'نوع حضور', 'course_time' => 'ساعت برگزاری دوره', 'organizer' => 'مسئول برگزاری', 'organizer_tel' => 'شماره همراه مسئول برگزاری', 'instructor' => 'مدرس دوره', 'examiner' => 'ممتحن', 'address' => 'آدرس محل برگزاری', 'min_degree' => 'حداقل درجه فنی', 'points' => 'امتیاز دوره', 'price' => 'شهریه دوره (تومان)',];
     }
 
     /**

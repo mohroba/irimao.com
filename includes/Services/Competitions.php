@@ -97,13 +97,16 @@ class Competitions
         $fields = self::detail_fields();
         $number_field = [];
         $tel_fields = ['organizer_tel'];
-        $date_fields = ['start_date', 'end_date', 'registration_start', 'registration_end'];
+        $date_fields = ['start_date', 'end_date', 'registration_start', 'registration_end', 'weigh_in_start_date', 'weigh_in_end_date'];
+        $time_fields = ['weigh_in_start', 'weigh_in_end'];
         echo '<table class="form-table striped"><tbody>';
         foreach ($fields as $k => $label) {
             $type = 'text';
             $class = '';
             if (in_array($k, $date_fields, true)) {
                 $class = 'class="crm-date" data-jdp data-jdp-only-date';
+            } elseif (in_array($k, $time_fields, true)) {
+                $class = 'class="crm-date" data-jdp data-jdp-only-time';
             } elseif ($k === 'price') {
                 $type = 'number';
                 $class = 'min="0" step="1000"';
@@ -124,7 +127,22 @@ class Competitions
      */
     public static function detail_fields(): array
     {
-        return ['competition_code' => 'کد', 'start_date' => 'تاریخ شروع', 'end_date' => 'تاریخ پایان', 'registration_start' => 'شروع ثبت‌نام', 'registration_end' => 'پایان ثبت‌نام', 'organizer' => 'مسئول برگزاری', 'organizer_tel' => 'شماره همراه مسئول برگزاری', 'supervisor' => 'ناظر', 'address' => 'آدرس محل برگزاری', 'min_degree' => 'حداقل درجه فنی', 'price' => 'هزینه ثبت نام مسابقه (تومان)',];
+        return [
+            'competition_code' => 'کد',
+            'start_date' => 'تاریخ شروع',
+            'end_date' => 'تاریخ پایان',
+            'registration_start' => 'شروع ثبت‌نام',
+            'registration_end' => 'پایان ثبت‌نام',
+            'weigh_in_start_date' => 'تاریخ شروع وزن‌کشی',
+            'weigh_in_start' => 'ساعت شروع وزن‌کشی',
+            'weigh_in_end_date' => 'تاریخ پایان وزن‌کشی',
+            'weigh_in_end' => 'ساعت پایان وزن‌کشی',
+            'organizer' => 'مسئول برگزاری',
+            'organizer_tel' => 'شماره همراه مسئول برگزاری',
+            'address' => 'آدرس محل برگزاری',
+            'min_degree' => 'حداقل درجه فنی',
+            'price' => 'هزینه ثبت نام مسابقه (تومان)',
+        ];
     }
 
     public function render_payouts_box(WP_Post $post): void
