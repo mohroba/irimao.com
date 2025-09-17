@@ -38,9 +38,6 @@ class CompetitionShortcodesTest extends TestCase {
         if ( ! function_exists( 'shortcode_atts' ) ) {
             function shortcode_atts( $pairs, $atts, $shortcode = '' ) { return array_merge( $pairs, $atts ); }
         }
-        if ( ! function_exists( 'get_user_meta' ) ) {
-            function get_user_meta( $id, $key, $single = true ) { return $key === 'identity_verified_professional' ? 'approved' : 'male'; }
-        }
         if ( ! function_exists( 'wp_get_post_terms' ) ) {
             function wp_get_post_terms( $id, $tax, $args = [] ) { return []; }
         }
@@ -105,17 +102,28 @@ class CompetitionShortcodesTest extends TestCase {
         $GLOBALS['test_options'] = [
             'imao_age_category_type_map' => [
                 1 => [ 501 ],
+                3 => [ 502 ],
             ],
         ];
         $GLOBALS['mock_post_terms_return'] = [
             'age_category'      => [
-                (object) [ 'term_id' => 1, 'name' => 'رده الف', 'parent' => 0 ],
-                (object) [ 'term_id' => 2, 'name' => 'وزن ۱', 'parent' => 1 ],
+                (object) [ 'term_id' => 1, 'name' => 'رده بزرگسال', 'slug' => 'adults-18-38', 'parent' => 0 ],
+                (object) [ 'term_id' => 2, 'name' => 'وزن بزرگسال', 'slug' => 'adults-light', 'parent' => 1 ],
+                (object) [ 'term_id' => 3, 'name' => 'رده نوجوان', 'slug' => 'teenagers-12-14', 'parent' => 0 ],
+                (object) [ 'term_id' => 4, 'name' => 'وزن نوجوان', 'slug' => 'teen-light', 'parent' => 3 ],
             ],
             'competition_type' => [
                 (object) [ 'term_id' => 501, 'name' => 'کومیته', 'parent' => 0 ],
                 (object) [ 'term_id' => 502, 'name' => 'کاتا', 'parent' => 0 ],
             ],
+        ];
+        $GLOBALS['mock_terms'] = [
+            1   => [ 'term_id' => 1, 'name' => 'رده بزرگسال', 'slug' => 'adults-18-38', 'parent' => 0 ],
+            2   => [ 'term_id' => 2, 'name' => 'وزن بزرگسال', 'slug' => 'adults-light', 'parent' => 1 ],
+            3   => [ 'term_id' => 3, 'name' => 'رده نوجوان', 'slug' => 'teenagers-12-14', 'parent' => 0 ],
+            4   => [ 'term_id' => 4, 'name' => 'وزن نوجوان', 'slug' => 'teen-light', 'parent' => 3 ],
+            501 => [ 'term_id' => 501, 'name' => 'کومیته', 'slug' => 'kumite', 'parent' => 0 ],
+            502 => [ 'term_id' => 502, 'name' => 'کاتا', 'slug' => 'kata', 'parent' => 0 ],
         ];
 
         $svc  = new Competitions();
@@ -123,8 +131,9 @@ class CompetitionShortcodesTest extends TestCase {
 
         $this->assertStringContainsString( 'value="501"', $html );
         $this->assertStringNotContainsString( 'value="502"', $html );
+        $this->assertStringNotContainsString( 'رده نوجوان', $html );
 
-        unset( $GLOBALS['mock_post_terms_return'], $GLOBALS['test_options'] );
+        unset( $GLOBALS['mock_post_terms_return'], $GLOBALS['test_options'], $GLOBALS['mock_terms'] );
     }
 
     /** @runInSeparateProcess */

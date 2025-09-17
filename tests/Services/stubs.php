@@ -6,6 +6,16 @@ if ( ! function_exists( 'is_user_logged_in' ) ) {
 if ( ! function_exists( 'get_current_user_id' ) ) {
     function get_current_user_id() { return 1; }
 }
+if ( ! function_exists( 'get_user_meta' ) ) {
+    function get_user_meta( $id, $key, $single = true ) {
+        $defaults = [
+            'gender'                         => 'male',
+            'birth_date'                     => '1375/01/01',
+            'identity_verified_professional' => 'approved',
+        ];
+        return $defaults[ $key ] ?? '';
+    }
+}
 if ( ! class_exists( 'Test_Date' ) ) {
     class Test_Date {
         public function date_i18n( $format ) { return '2024/01/01'; }
@@ -85,6 +95,9 @@ if ( ! function_exists( 'esc_html' ) ) {
 }
 if ( ! function_exists( 'esc_url' ) ) {
     function esc_url( $s ) { return $s; }
+}
+if ( ! function_exists( 'esc_attr' ) ) {
+    function esc_attr( $s ) { return $s; }
 }
 if ( ! function_exists( 'get_terms' ) ) {
     function get_terms( $args ) {
@@ -211,7 +224,19 @@ if ( ! function_exists( 'get_term' ) ) {
         if ( isset( $GLOBALS['mock_terms'][ $id ] ) ) {
             return (object) $GLOBALS['mock_terms'][ $id ];
         }
-        return (object) [ 'term_id' => $id, 'name' => 'Term', 'parent' => 0 ];
+        if ( isset( $GLOBALS['mock_post_terms_return'] ) && is_array( $GLOBALS['mock_post_terms_return'] ) ) {
+            foreach ( $GLOBALS['mock_post_terms_return'] as $terms ) {
+                foreach ( (array) $terms as $term ) {
+                    if ( is_object( $term ) && (int) ( $term->term_id ?? 0 ) === (int) $id ) {
+                        return (object) get_object_vars( $term );
+                    }
+                    if ( is_array( $term ) && (int) ( $term['term_id'] ?? 0 ) === (int) $id ) {
+                        return (object) $term;
+                    }
+                }
+            }
+        }
+        return (object) [ 'term_id' => $id, 'name' => 'Term', 'slug' => '', 'parent' => 0 ];
     }
 }
 if ( ! function_exists( 'wp_set_post_terms' ) ) {

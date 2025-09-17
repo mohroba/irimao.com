@@ -738,8 +738,19 @@ class Competitions
         $uid = get_current_user_id();
         $gender = UserMeta::gender_slug($uid);
         $status = (string)get_user_meta($uid, 'identity_verified_professional', true);
+        $birth  = UserMeta::get($uid, 'birth_date', '');
+        $age_slug = '';
+        if ($birth) {
+            $age_years = Date::age($birth);
+            if ($age_years !== null) {
+                $age_slug = AgeCategory::slug_from_age($age_years);
+            }
+        }
         if (!$gender || $status !== 'approved') {
             return '<p style="text-align:center;color:#c00;">برای ثبت‌نام در مسابقات، ابتدا اطلاعات پایه را تکمیل و هویت خود را تأیید کنید.</p>';
+        }
+        if (!$age_slug) {
+            return '<p style="text-align:center;color:#c00;">برای ثبت‌نام، ابتدا تاریخ تولد خود را در اطلاعات پایه ثبت کنید تا ردهٔ سنی شما مشخص شود.</p>';
         }
         $gterms = wp_get_post_terms($cid, 'gender', ['fields' => 'slugs']);
         if ($gterms && !in_array($gender, $gterms, true)) {
@@ -757,8 +768,15 @@ class Competitions
                 return $term;
             }
             if (is_object($term)) {
+                $slug = (string) ($term->slug ?? '');
+                if ($slug !== '') {
+                    return $term;
+                }
                 $term_id = (int) ($term->term_id ?? 0);
             } elseif (is_array($term)) {
+                if (!empty($term['slug'])) {
+                    return (object) $term;
+                }
                 $term_id = (int) ($term['term_id'] ?? 0);
             } else {
                 $term_id = (int) $term;
@@ -802,6 +820,30 @@ class Competitions
             }
         }
 
+        $eligible_age_ids = [];
+        foreach ($ages as $term_id => $term_obj) {
+            $slug = '';
+            if ($term_obj instanceof WP_Term) {
+                $slug = (string) ($term_obj->slug ?? '');
+            } elseif (is_object($term_obj)) {
+                $slug = (string) ($term_obj->slug ?? '');
+            } elseif (is_array($term_obj)) {
+                $slug = (string) ($term_obj['slug'] ?? '');
+            }
+            if ($slug === $age_slug) {
+                $eligible_age_ids[] = $term_id;
+            }
+        }
+
+        if (!$eligible_age_ids) {
+            return '<p style="text-align:center;color:#c00;">این مسابقه با ردهٔ سنی شما سازگار نیست.</p>';
+        }
+
+        $eligible_keys = array_flip(array_unique($eligible_age_ids));
+        $ages          = array_intersect_key($ages, $eligible_keys);
+        $weights       = array_intersect_key($weights, $eligible_keys);
+
+        $assignment_map = CompetitionTypeAssignments::get_map();
         $competition_types = wp_get_post_terms($cid, 'competition_type');
         if (!is_array($competition_types) || (function_exists('is_wp_error') && is_wp_error($competition_types))) {
             $competition_types = [];
@@ -820,6 +862,9 @@ class Competitions
 
         $types = [];
         $age_type_ids = CompetitionTypeAssignments::types_for_ages(array_keys($ages));
+        if ($assignment_map && !$age_type_ids) {
+            return '<p style="text-align:center;color:#c00;">نوع مسابقه‌ای برای ردهٔ سنی شما تعریف نشده است.</p>';
+        }
         if ($age_type_ids) {
             $ids_for_select = $age_type_ids;
             if ($competition_type_map) {
