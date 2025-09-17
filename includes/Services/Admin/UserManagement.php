@@ -168,11 +168,9 @@ class UserManagement {
             wp_die( 'Access denied' );
         }
         $pro_fields = [
-            'personal_photo'         => 'عکس پرسنلی',
-            'birth_certificate'      => 'تصویر شناسنامه',
-            'national_id_card'       => 'تصویر کارت ملی',
-            'education_certificate'  => 'تصویر آخرین مدرک تحصیلی',
-            'military_service_status'=> 'کارت پایان خدمت/معافیت/اشتغال به تحصیل',
+            'personal_photo'    => 'عکس پرسنلی',
+            'birth_certificate' => 'تصویر شناسنامه',
+            'national_id_card'  => 'تصویر کارت ملی',
         ];
         $users = get_users();
         echo '<div class="wrap"><h1>تأیید هویت حرفه‌ای</h1>';

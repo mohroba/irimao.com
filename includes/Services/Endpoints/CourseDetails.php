@@ -32,7 +32,6 @@ class CourseDetails {
             'organizer_tel'      => 'شماره همراه مسئول برگزاری',
             'instructor'         => 'مدرس دوره',
             'examiner'           => 'ممتحن',
-            'supervisor'         => 'ناظر',
             'address'            => 'آدرس محل برگزاری',
             'min_degree'         => 'حداقل درجه فنی',
             'points'             => 'امتیاز دوره',

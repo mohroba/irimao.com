@@ -11,11 +11,9 @@ class IdentityProfessionalForm extends BaseForm {
      * Meta fields mapped to Persian labels.
      */
     private array $upload_fields = [
-        'personal_photo'        => 'تصویر پرسنلی',
-        'birth_certificate'     => 'تصویر شناسنامه',
-        'national_id_card'      => 'تصویر کارت ملی',
-        'education_certificate' => 'تصویر آخرین مدرک تحصیلی',
-        'military_service_status' => 'تصویر کارت پایان خدمت/معافیت/اشتغال به تحصیل',
+        'personal_photo'    => 'تصویر پرسنلی',
+        'birth_certificate' => 'تصویر شناسنامه',
+        'national_id_card'  => 'تصویر کارت ملی',
     ];
 
     /**
