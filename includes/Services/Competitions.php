@@ -87,6 +87,7 @@ class Competitions
     public function add_meta_boxes(): void
     {
         add_meta_box('crm_details', 'جزئیات', [$this, 'render_details_box'], 'competition', 'normal', 'high');
+        add_meta_box('crm_type_assignments', 'انواع مسابقه در رده‌ها', [$this, 'render_type_assignments_box'], 'competition', 'normal', 'default');
         add_meta_box('crm_payouts', 'ذی‌نفعان', [$this, 'render_payouts_box'], 'competition', 'normal', 'default');
         add_meta_box('crm_manual', 'افزودن شرکت کننده به صورت دستی', [$this, 'render_manual_box'], 'competition', 'side', 'default');
         add_meta_box('crm_attendees', 'شرکت‌کنندگان', [$this, 'render_attendees_box'], 'competition', 'side', 'default');
@@ -237,6 +238,142 @@ class Competitions
             printf('<option value="%d"%s>%s</option>', $u->ID, selected(in_array($u->ID, $att, true), true, false), esc_html($u->display_name));
         }
         echo '</select></p><p style="font-size:12px">نگه‌داشتن CTRL برای چند انتخاب.</p>';
+    }
+
+    public function render_type_assignments_box(WP_Post $post): void
+    {
+        wp_nonce_field('crm_save_type_assignments', 'crm_type_assignments_nonce');
+        $assignments = CompetitionTypeAssignments::get_map($post->ID);
+        $age_terms   = $this->get_top_level_age_categories();
+        $type_terms  = $this->get_competition_type_choices();
+
+        if (!$age_terms) {
+            echo '<p style="color:#c00;">ردهٔ سنی‌ای یافت نشد. ابتدا رده‌های سنی را ایجاد کنید.</p>';
+            return;
+        }
+        if (!$type_terms) {
+            echo '<p style="color:#c00;">نوع مسابقه‌ای تعریف نشده است. ابتدا انواع مسابقه را ایجاد کنید.</p>';
+            return;
+        }
+
+        echo '<p style="margin-bottom:10px;color:#555;">برای هر ردهٔ سنی، نوع یا انواع مسابقهٔ مجاز را مشخص کنید. تنها گزینه‌های مرتبط با این مسابقه به شرکت‌کننده نمایش داده می‌شود.</p>';
+        echo '<table class="widefat striped" style="max-width:800px">';
+        echo '<thead><tr><th>رده سنی</th><th>انواع مسابقه مجاز</th></tr></thead><tbody>';
+        foreach ($age_terms as $age) {
+            $age_id   = (int) $age->term_id;
+            $selected = $assignments[$age_id] ?? [];
+            echo '<tr>';
+            echo '<th scope="row">' . esc_html($age->name) . '</th>';
+            echo '<td>';
+            printf('<select name="type_assignments[%d][]" multiple class="crm-select2" style="min-width:300px" size="6">', $age_id);
+            foreach ($type_terms as $type) {
+                $term   = $type['term'];
+                $indent = str_repeat('— ', max(0, $type['depth']));
+                $term_id = (int) $term->term_id;
+                $is_selected = in_array($term_id, $selected, true) ? ' selected' : '';
+                printf(
+                    '<option value="%d"%s>%s%s</option>',
+                    $term_id,
+                    $is_selected,
+                    $indent ? esc_html($indent) . ' ' : '',
+                    esc_html($term->name)
+                );
+            }
+            echo '</select>';
+            echo '</td>';
+            echo '</tr>';
+        }
+        echo '</tbody></table>';
+    }
+
+    /**
+     * @return array<int,WP_Term>
+     */
+    private function get_top_level_age_categories(): array
+    {
+        $terms = get_terms([
+            'taxonomy'   => 'age_category',
+            'hide_empty' => false,
+            'parent'     => 0,
+            'orderby'    => 'name',
+            'order'      => 'ASC',
+        ]);
+
+        if (!is_array($terms) || empty($terms)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(static function ($term) {
+            return $term instanceof WP_Term ? $term : null;
+        }, $terms)));
+    }
+
+    /**
+     * Build a flattened list of competition types with depth.
+     *
+     * @return array<int,array{term:WP_Term,depth:int}>
+     */
+    private function get_competition_type_choices(): array
+    {
+        return $this->collect_competition_type_terms();
+    }
+
+    /**
+     * @param int $parent
+     * @param int $depth
+     * @return array<int,array{term:WP_Term,depth:int}>
+     */
+    private function collect_competition_type_terms(int $parent = 0, int $depth = 0): array
+    {
+        $terms = get_terms([
+            'taxonomy'   => 'competition_type',
+            'hide_empty' => false,
+            'parent'     => $parent,
+            'orderby'    => 'name',
+            'order'      => 'ASC',
+        ]);
+
+        if (!is_array($terms) || empty($terms)) {
+            return [];
+        }
+
+        $items = [];
+        foreach ($terms as $term) {
+            if (!($term instanceof WP_Term)) {
+                continue;
+            }
+            $items[] = ['term' => $term, 'depth' => $depth];
+            $items   = array_merge($items, $this->collect_competition_type_terms($term->term_id, $depth + 1));
+        }
+
+        return $items;
+    }
+
+    /**
+     * @param int   $competition_id
+     * @param array<int,int> $age_ids
+     * @param array<int,WP_Term> $type_map
+     * @return array<int,WP_Term>
+     */
+    private function filter_types_for_age(int $competition_id, array $age_ids, array $type_map): array
+    {
+        if (!$age_ids || !$type_map) {
+            return [];
+        }
+
+        $type_ids = CompetitionTypeAssignments::types_for_ages($competition_id, $age_ids);
+        if (!$type_ids) {
+            return [];
+        }
+
+        $selected = [];
+        foreach ($type_ids as $tid) {
+            if (isset($type_map[$tid])) {
+                $selected[] = $type_map[$tid];
+            }
+        }
+
+        return $selected;
     }
 
     public function render_attendees_box(WP_Post $post): void
@@ -516,6 +653,17 @@ class Competitions
         if (isset($_POST['crm_manual_nonce'])) {
             $att = array_map('intval', $_POST['manual_attendees'] ?? []);
             update_post_meta($post_id, self::META_MANUAL, $att);
+        }
+
+        if (isset($_POST['crm_type_assignments_nonce'])) {
+            $nonce = $_POST['crm_type_assignments_nonce'];
+            if (!function_exists('wp_verify_nonce') || wp_verify_nonce($nonce, 'crm_save_type_assignments')) {
+                $map = $_POST['type_assignments'] ?? [];
+                if (function_exists('wp_unslash')) {
+                    $map = wp_unslash($map);
+                }
+                CompetitionTypeAssignments::save_map($post_id, is_array($map) ? $map : []);
+            }
         }
 
         // Ensure parent age categories are also assigned when only child terms are selected.
@@ -843,7 +991,7 @@ class Competitions
         $ages          = array_intersect_key($ages, $eligible_keys);
         $weights       = array_intersect_key($weights, $eligible_keys);
 
-        $assignment_map = CompetitionTypeAssignments::get_map();
+        $assignment_map = CompetitionTypeAssignments::get_map($cid);
         $competition_types = wp_get_post_terms($cid, 'competition_type');
         if (!is_array($competition_types) || (function_exists('is_wp_error') && is_wp_error($competition_types))) {
             $competition_types = [];
@@ -860,64 +1008,70 @@ class Competitions
             }
         }
 
-        $types = [];
-        $age_type_ids = CompetitionTypeAssignments::types_for_ages(array_keys($ages));
-        if ($assignment_map && !$age_type_ids) {
+        $types = $this->filter_types_for_age($cid, array_keys($ages), $competition_type_map);
+        if ($assignment_map && !$types) {
             return '<p style="text-align:center;color:#c00;">نوع مسابقه‌ای برای ردهٔ سنی شما تعریف نشده است.</p>';
         }
-        if ($age_type_ids) {
-            $ids_for_select = $age_type_ids;
-            if ($competition_type_map) {
-                $intersection = array_values(array_intersect($age_type_ids, array_keys($competition_type_map)));
-                if ($intersection) {
-                    $ids_for_select = $intersection;
-                }
-            }
-
-            if ($ids_for_select && function_exists('get_terms')) {
-                $fetched = get_terms([
-                    'taxonomy'   => 'competition_type',
-                    'hide_empty' => false,
-                    'include'    => $ids_for_select,
-                ]);
-                if (is_array($fetched) && !is_wp_error($fetched)) {
-                    $by_id = [];
-                    foreach ($fetched as $term) {
-                        if ($term instanceof WP_Term) {
-                            $by_id[$term->term_id] = $term;
-                        }
-                    }
-                    foreach ($ids_for_select as $id) {
-                        if (isset($by_id[$id])) {
-                            $types[] = $by_id[$id];
-                        } elseif (isset($competition_type_map[$id])) {
-                            $types[] = $competition_type_map[$id];
-                        }
-                    }
-                }
-            }
-        }
-
         if (!$types) {
             $types = array_values($competition_type_map);
         }
+        if (!$types) {
+            return '<p style="text-align:center;color:#c00;">نوع مسابقه‌ای برای این مسابقه تعریف نشده است.</p>';
+        }
+        if (count($types) > 1) {
+            $type_names = array_filter(array_map(static function ($term) {
+                if ($term instanceof WP_Term) {
+                    return esc_html($term->name ?? '');
+                }
+                if (is_object($term)) {
+                    return esc_html((string) ($term->name ?? ''));
+                }
+                if (is_array($term)) {
+                    return esc_html((string) ($term['name'] ?? ''));
+                }
+                return '';
+            }, $types));
+            $message = 'برای ردهٔ سنی شما بیش از یک نوع مسابقه تعریف شده است';
+            if ($type_names) {
+                $message .= ' (' . implode('، ', $type_names) . ')';
+            }
+            $message .= '. لطفاً با پشتیبانی تماس بگیرید.';
+            return '<p style="text-align:center;color:#c00;">' . $message . '</p>';
+        }
+        $selected_type = $types[0];
+
         $prod_id = (int) get_post_meta($cid, self::META_LINKED_PRODUCT, true);
         if (! $prod_id) {
             $prod_id = $this->sync_product($cid);
         }
 
         $fields     = self::detail_fields() + [
-            'competition_type' => 'نوع مسابقه',
-            'board'            => 'استان',
-            'gender'           => 'جنسیت',
-            'level'            => 'سطح',
+            'board'  => 'استان',
+            'gender' => 'جنسیت',
+            'level'  => 'سطح',
         ];
-        $tax_fields = ['competition_type', 'board', 'gender', 'level'];
+        $tax_fields = ['board', 'gender', 'level'];
+
+        $selected_type_id = 0;
+        $selected_type_name = '';
+        if ($selected_type instanceof WP_Term) {
+            $selected_type_id   = (int) ($selected_type->term_id ?? 0);
+            $selected_type_name = (string) ($selected_type->name ?? '');
+        } elseif (is_object($selected_type)) {
+            $selected_type_id   = (int) ($selected_type->term_id ?? 0);
+            $selected_type_name = (string) ($selected_type->name ?? '');
+        } elseif (is_array($selected_type)) {
+            $selected_type_id   = (int) ($selected_type['term_id'] ?? 0);
+            $selected_type_name = (string) ($selected_type['name'] ?? '');
+        }
 
         ob_start();
         ?>
         <form method="get" action="<?php echo esc_url(wc_get_cart_url()); ?>" class="crm-competition-form">
             <input type="hidden" name="add-to-cart" value="<?php echo $prod_id; ?>">
+            <?php if ($selected_type_id) : ?>
+                <input type="hidden" name="competition_type_term" value="<?php echo $selected_type_id; ?>">
+            <?php endif; ?>
             <div class="crm-single-course">
                 <h3><?php echo esc_html(get_the_title($cid)); ?></h3>
                 <table class="striped">
@@ -944,17 +1098,12 @@ class Competitions
                             <td><?php echo nl2br(esc_html($conditions)); ?></td>
                         </tr>
                     <?php endif; ?>
-                    <tr>
-                        <th>نوع مسابقه</th>
-                        <td>
-                            <select name="competition_type_term" required>
-                                <option value="">— انتخاب کنید —</option>
-                                <?php foreach ($types as $t) : ?>
-                                    <option value="<?php echo $t->term_id; ?>"><?php echo esc_html($t->name); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </td>
-                    </tr>
+                    <?php if ($selected_type_id) : ?>
+                        <tr>
+                            <th>نوع مسابقه</th>
+                            <td><?php echo esc_html($selected_type_name); ?></td>
+                        </tr>
+                    <?php endif; ?>
                     <tr>
                         <th>کلاس وزنی</th>
                         <td>

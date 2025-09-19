@@ -51,24 +51,60 @@ if ( ! function_exists( 'wc_get_orders' ) ) {
     /** @return array<int,Test_Order> */
     function wc_get_orders( $args ) { return [ new Test_Order() ]; }
 }
+if ( ! isset( $GLOBALS['test_post_meta'] ) ) {
+    $GLOBALS['test_post_meta'] = [];
+}
+if ( ! isset( $GLOBALS['test_post_meta_defaults'] ) ) {
+    $GLOBALS['test_post_meta_defaults'] = [
+        100 => [ '_linked_post_id' => 10 ],
+        200 => [ '_linked_post_id' => 20 ],
+        10  => [
+            'course_code'        => 'C123',
+            'start_date'         => '2024-01-01',
+            'registration_start' => '1400/01/01',
+            'registration_end'   => '1500/12/29',
+        ],
+        20  => [
+            'competition_code'   => 'COMP20',
+            'registration_start' => '1400/01/01',
+            'registration_end'   => '1500/12/29',
+        ],
+    ];
+}
+foreach ( $GLOBALS['test_post_meta_defaults'] as $pid => $meta ) {
+    if ( ! isset( $GLOBALS['test_post_meta'][ $pid ] ) ) {
+        $GLOBALS['test_post_meta'][ $pid ] = $meta;
+    } else {
+        foreach ( $meta as $meta_key => $meta_value ) {
+            if ( ! array_key_exists( $meta_key, $GLOBALS['test_post_meta'][ $pid ] ) ) {
+                $GLOBALS['test_post_meta'][ $pid ][ $meta_key ] = $meta_value;
+            }
+        }
+    }
+}
 if ( ! function_exists( 'get_post_meta' ) ) {
     function get_post_meta( $id, $key, $single = true ) {
-        $map = [
-            100 => [ '_linked_post_id' => 10 ],
-            200 => [ '_linked_post_id' => 20 ],
-            10  => [
-                'course_code'        => 'C123',
-                'start_date'         => '2024-01-01',
-                'registration_start' => '1400/01/01',
-                'registration_end'   => '1500/12/29',
-            ],
-            20  => [
-                'competition_code'   => 'COMP20',
-                'registration_start' => '1400/01/01',
-                'registration_end'   => '1500/12/29',
-            ],
-        ];
-        return $map[ $id ][ $key ] ?? '';
+        if ( isset( $GLOBALS['test_post_meta'][ $id ] ) && array_key_exists( $key, $GLOBALS['test_post_meta'][ $id ] ) ) {
+            return $GLOBALS['test_post_meta'][ $id ][ $key ];
+        }
+        return '';
+    }
+}
+if ( ! function_exists( 'update_post_meta' ) ) {
+    function update_post_meta( $id, $key, $value ) {
+        if ( ! isset( $GLOBALS['test_post_meta'][ $id ] ) ) {
+            $GLOBALS['test_post_meta'][ $id ] = [];
+        }
+        $GLOBALS['test_post_meta'][ $id ][ $key ] = $value;
+        return true;
+    }
+}
+if ( ! function_exists( 'delete_post_meta' ) ) {
+    function delete_post_meta( $id, $key ) {
+        if ( isset( $GLOBALS['test_post_meta'][ $id ][ $key ] ) ) {
+            unset( $GLOBALS['test_post_meta'][ $id ][ $key ] );
+        }
+        return true;
     }
 }
 if ( ! function_exists( 'get_post_type' ) ) {
