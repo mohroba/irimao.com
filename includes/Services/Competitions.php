@@ -1018,27 +1018,22 @@ class Competitions
         if (!$types) {
             return '<p style="text-align:center;color:#c00;">نوع مسابقه‌ای برای این مسابقه تعریف نشده است.</p>';
         }
-        if (count($types) > 1) {
-            $type_names = array_filter(array_map(static function ($term) {
-                if ($term instanceof WP_Term) {
-                    return esc_html($term->name ?? '');
-                }
-                if (is_object($term)) {
-                    return esc_html((string) ($term->name ?? ''));
-                }
-                if (is_array($term)) {
-                    return esc_html((string) ($term['name'] ?? ''));
-                }
-                return '';
-            }, $types));
-            $message = 'برای ردهٔ سنی شما بیش از یک نوع مسابقه تعریف شده است';
-            if ($type_names) {
-                $message .= ' (' . implode('، ', $type_names) . ')';
+        $type_names = array_values(array_filter(array_map(static function ($term) {
+            if ($term instanceof WP_Term) {
+                return (string) ($term->name ?? '');
             }
-            $message .= '. لطفاً با پشتیبانی تماس بگیرید.';
-            return '<p style="text-align:center;color:#c00;">' . $message . '</p>';
-        }
-        $selected_type = $types[0];
+            if (is_object($term)) {
+                return (string) ($term->name ?? '');
+            }
+            if (is_array($term)) {
+                return (string) ($term['name'] ?? '');
+            }
+            return '';
+        }, $types), static function ($name) {
+            return $name !== '';
+        }));
+
+        $selected_type = count($types) === 1 ? $types[0] : null;
 
         $prod_id = (int) get_post_meta($cid, self::META_LINKED_PRODUCT, true);
         if (! $prod_id) {
@@ -1063,6 +1058,11 @@ class Competitions
         } elseif (is_array($selected_type)) {
             $selected_type_id   = (int) ($selected_type['term_id'] ?? 0);
             $selected_type_name = (string) ($selected_type['name'] ?? '');
+        }
+
+        $type_display = $selected_type_name;
+        if ($type_display === '' && $type_names) {
+            $type_display = implode('، ', $type_names);
         }
 
         ob_start();
@@ -1098,10 +1098,10 @@ class Competitions
                             <td><?php echo nl2br(esc_html($conditions)); ?></td>
                         </tr>
                     <?php endif; ?>
-                    <?php if ($selected_type_id) : ?>
+                    <?php if ($type_display !== '') : ?>
                         <tr>
                             <th>نوع مسابقه</th>
-                            <td><?php echo esc_html($selected_type_name); ?></td>
+                            <td><?php echo esc_html($type_display); ?></td>
                         </tr>
                     <?php endif; ?>
                     <tr>
