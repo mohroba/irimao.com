@@ -1,4 +1,16 @@
 <?php
+
+namespace IMAOCustom\Services {
+    if ( ! function_exists( __NAMESPACE__ . '\\is_user_logged_in' ) ) {
+        function is_user_logged_in() { return true; }
+    }
+    if ( ! function_exists( __NAMESPACE__ . '\\get_current_user_id' ) ) {
+        function get_current_user_id() { return 1; }
+    }
+}
+
+namespace {
+
 use PHPUnit\Framework\TestCase;
 use IMAOCustom\Services\Competitions;
 
@@ -60,6 +72,12 @@ class CompetitionShortcodesTest extends TestCase {
         if ( ! function_exists( 'is_wp_error' ) ) {
             function is_wp_error( $thing ) { return false; }
         }
+        $GLOBALS['club_app_meta'][1]['identity_verified_professional'] = 'approved';
+        $GLOBALS['club_app_meta'][1]['gender']                         = 'male';
+        $GLOBALS['club_app_meta'][1]['birth_date']                     = '1375/01/01';
+        $GLOBALS['user_meta']['identity_verified_professional']        = 'approved';
+        $GLOBALS['user_meta']['gender']                                = 'male';
+        $GLOBALS['user_meta']['birth_date']                            = '1375/01/01';
         $GLOBALS['test_post_meta'][20]['_competition_type_assignments'] = [
             1 => [ 501 ],
         ];
@@ -74,6 +92,8 @@ class CompetitionShortcodesTest extends TestCase {
         $this->assertStringContainsString( 'type="hidden" name="competition_type_term"', $html );
         $this->assertStringContainsString( 'کومیته', $html );
         unset( $GLOBALS['test_post_meta'][20]['_competition_type_assignments'] );
+        unset( $GLOBALS['club_app_meta'][1]['identity_verified_professional'], $GLOBALS['club_app_meta'][1]['gender'], $GLOBALS['club_app_meta'][1]['birth_date'] );
+        unset( $GLOBALS['user_meta']['identity_verified_professional'], $GLOBALS['user_meta']['gender'], $GLOBALS['user_meta']['birth_date'] );
     }
 
     public function test_competition_details_uses_assigned_types(): void {
@@ -93,6 +113,12 @@ class CompetitionShortcodesTest extends TestCase {
         if ( ! function_exists( 'is_wp_error' ) ) {
             function is_wp_error( $thing ) { return false; }
         }
+        $GLOBALS['club_app_meta'][1]['identity_verified_professional'] = 'approved';
+        $GLOBALS['club_app_meta'][1]['gender']                         = 'male';
+        $GLOBALS['club_app_meta'][1]['birth_date']                     = '1375/01/01';
+        $GLOBALS['user_meta']['identity_verified_professional']        = 'approved';
+        $GLOBALS['user_meta']['gender']                                = 'male';
+        $GLOBALS['user_meta']['birth_date']                            = '1375/01/01';
         $GLOBALS['test_post_meta'][20]['_competition_type_assignments'] = [
             1 => [ 501 ],
             3 => [ 502 ],
@@ -127,6 +153,65 @@ class CompetitionShortcodesTest extends TestCase {
         $this->assertStringNotContainsString( 'کاتا', $html );
 
         unset( $GLOBALS['mock_post_terms_return'], $GLOBALS['test_post_meta'][20]['_competition_type_assignments'], $GLOBALS['mock_terms'] );
+        unset( $GLOBALS['club_app_meta'][1]['identity_verified_professional'], $GLOBALS['club_app_meta'][1]['gender'], $GLOBALS['club_app_meta'][1]['birth_date'] );
+        unset( $GLOBALS['user_meta']['identity_verified_professional'], $GLOBALS['user_meta']['gender'], $GLOBALS['user_meta']['birth_date'] );
+    }
+
+    public function test_competition_details_lists_multiple_types_without_selector(): void {
+        require_once __DIR__ . '/stubs.php';
+        if ( ! function_exists( 'shortcode_atts' ) ) {
+            function shortcode_atts( $pairs, $atts, $shortcode = '' ) { return array_merge( $pairs, $atts ); }
+        }
+        if ( ! function_exists( 'wc_get_cart_url' ) ) {
+            function wc_get_cart_url() { return '/cart'; }
+        }
+        if ( ! function_exists( 'get_the_terms' ) ) {
+            function get_the_terms( $id, $tax ) { return []; }
+        }
+        if ( ! function_exists( 'is_wp_error' ) ) {
+            function is_wp_error( $thing ) { return false; }
+        }
+
+        $GLOBALS['club_app_meta'][1]['identity_verified_professional'] = 'approved';
+        $GLOBALS['club_app_meta'][1]['gender']                         = 'male';
+        $GLOBALS['club_app_meta'][1]['birth_date']                     = '1375/01/01';
+        $GLOBALS['user_meta']['gender']                                = 'male';
+        $GLOBALS['user_meta']['birth_date']                            = '1375/01/01';
+        $GLOBALS['user_meta']['identity_verified_professional']        = 'approved';
+        $this->assertSame( 'approved', \IMAOCustom\Services\get_user_meta( 1, 'identity_verified_professional', true ) );
+
+        $GLOBALS['test_post_meta'][20]['_competition_type_assignments'] = [
+            1 => [ 501, 502 ],
+        ];
+        $GLOBALS['mock_post_terms_return'] = [
+            'age_category'      => [
+                (object) [ 'term_id' => 1, 'name' => 'رده بزرگسال', 'slug' => 'adults-18-38', 'parent' => 0 ],
+                (object) [ 'term_id' => 2, 'name' => 'وزن بزرگسال', 'slug' => 'adults-light', 'parent' => 1 ],
+            ],
+            'competition_type' => [
+                (object) [ 'term_id' => 501, 'name' => 'کومیته', 'parent' => 0 ],
+                (object) [ 'term_id' => 502, 'name' => 'کاتا', 'parent' => 0 ],
+            ],
+        ];
+        $GLOBALS['mock_terms'] = [
+            1   => [ 'term_id' => 1, 'name' => 'رده بزرگسال', 'slug' => 'adults-18-38', 'parent' => 0 ],
+            2   => [ 'term_id' => 2, 'name' => 'وزن بزرگسال', 'slug' => 'adults-light', 'parent' => 1 ],
+            501 => [ 'term_id' => 501, 'name' => 'کومیته', 'slug' => 'kumite', 'parent' => 0 ],
+            502 => [ 'term_id' => 502, 'name' => 'کاتا', 'slug' => 'kata', 'parent' => 0 ],
+        ];
+
+        $svc  = new Competitions();
+        $html = $svc->competition_details_shortcode( [ 'id' => 20 ] );
+
+        $this->assertStringContainsString( 'کومیته', $html );
+        $this->assertStringContainsString( 'کاتا', $html );
+        $this->assertStringContainsString( 'نوع مسابقه', $html );
+        $this->assertStringNotContainsString( 'با پشتیبانی تماس بگیرید', $html );
+        $this->assertStringNotContainsString( 'name="competition_type_term"', $html );
+
+        unset( $GLOBALS['mock_post_terms_return'], $GLOBALS['test_post_meta'][20]['_competition_type_assignments'], $GLOBALS['mock_terms'] );
+        unset( $GLOBALS['club_app_meta'][1]['identity_verified_professional'], $GLOBALS['club_app_meta'][1]['gender'], $GLOBALS['club_app_meta'][1]['birth_date'] );
+        unset( $GLOBALS['user_meta']['identity_verified_professional'], $GLOBALS['user_meta']['gender'], $GLOBALS['user_meta']['birth_date'] );
     }
 
     /** @runInSeparateProcess */
@@ -150,4 +235,5 @@ class CompetitionShortcodesTest extends TestCase {
         $this->assertSame( 'men', $args['tax_query'][0]['terms'] );
         $this->assertSame( 'adults-18-38', $args['tax_query'][1]['terms'] );
     }
+}
 }
