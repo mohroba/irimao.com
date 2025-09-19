@@ -14,7 +14,6 @@ use IMAOCustom\Services\Endpoints\IdentityProfessional;
 use IMAOCustom\Services\Endpoints\ChangePassword;
 use IMAOCustom\Services\Endpoints\Wallet;
 use IMAOCustom\Services\Admin\UserManagement;
-use IMAOCustom\Services\Admin\CompetitionTypeAssignmentsPage;
 use IMAOCustom\Services\Endpoints\SmartcardIssue;
 use IMAOCustom\Services\Endpoints\SelfDeclaration;
 use IMAOCustom\Services\Endpoints\SelfDeclarationsList;
@@ -61,7 +60,6 @@ class Plugin {
         ChangePassword::class,
         Wallet::class,
         UserManagement::class,
-        CompetitionTypeAssignmentsPage::class,
         SmartcardIssue::class,
         SelfDeclaration::class,
         SelfDeclarationsList::class,

@@ -4,46 +4,57 @@ namespace IMAOCustom\Helpers;
 
 class CompetitionTypeAssignments
 {
-    private const OPTION_KEY = 'imao_age_category_type_map';
+    private const META_KEY = '_competition_type_assignments';
 
     /**
-     * Retrieve the assignment map between age categories and competition types.
+     * Retrieve the assignment map between age categories and competition types for a competition.
      *
      * @return array<int,array<int>>
      */
-    public static function get_map(): array
+    public static function get_map(int $competition_id): array
     {
-        if (!\function_exists('get_option')) {
+        if (!\function_exists('get_post_meta')) {
             return [];
         }
 
-        $raw = \get_option(self::OPTION_KEY, []);
+        $raw = \get_post_meta($competition_id, self::META_KEY, true);
         return self::normalize_map($raw);
     }
 
     /**
-     * Persist the assignment map.
+     * Persist the assignment map for a competition.
      *
      * @param array<int,array<int|string>> $map
      */
-    public static function save_map(array $map): void
+    public static function save_map(int $competition_id, array $map): void
     {
-        if (!\function_exists('update_option')) {
+        if (!\function_exists('update_post_meta')) {
             return;
         }
 
-        \update_option(self::OPTION_KEY, self::normalize_map($map));
+        $normalized = self::normalize_map($map);
+        if ($normalized) {
+            \update_post_meta($competition_id, self::META_KEY, $normalized);
+            return;
+        }
+
+        if (\function_exists('delete_post_meta')) {
+            \delete_post_meta($competition_id, self::META_KEY);
+        } else {
+            \update_post_meta($competition_id, self::META_KEY, []);
+        }
     }
 
     /**
      * Get assigned competition type IDs for the provided age categories.
      *
+     * @param int $competition_id
      * @param array<int,int|string> $age_ids
      * @return array<int,int>
      */
-    public static function types_for_ages(array $age_ids): array
+    public static function types_for_ages(int $competition_id, array $age_ids): array
     {
-        $map = self::get_map();
+        $map = self::get_map($competition_id);
         if (!$map) {
             return [];
         }

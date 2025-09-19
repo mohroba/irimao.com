@@ -38,9 +38,6 @@ class CompetitionShortcodesTest extends TestCase {
         if ( ! function_exists( 'shortcode_atts' ) ) {
             function shortcode_atts( $pairs, $atts, $shortcode = '' ) { return array_merge( $pairs, $atts ); }
         }
-        if ( ! function_exists( 'wp_get_post_terms' ) ) {
-            function wp_get_post_terms( $id, $tax, $args = [] ) { return []; }
-        }
         if ( ! function_exists( 'wc_get_cart_url' ) ) {
             function wc_get_cart_url() { return '/cart'; }
         }
@@ -63,6 +60,9 @@ class CompetitionShortcodesTest extends TestCase {
         if ( ! function_exists( 'is_wp_error' ) ) {
             function is_wp_error( $thing ) { return false; }
         }
+        $GLOBALS['test_post_meta'][20]['_competition_type_assignments'] = [
+            1 => [ 501 ],
+        ];
         $svc  = new Competitions();
         $html = $svc->competition_details_shortcode( [ 'id' => 20 ] );
         foreach ( Competitions::detail_fields() as $label ) {
@@ -71,7 +71,9 @@ class CompetitionShortcodesTest extends TestCase {
         foreach ( [ 'نوع مسابقه', 'استان', 'جنسیت', 'سطح' ] as $label ) {
             $this->assertStringContainsString( $label, $html );
         }
-        $this->assertStringContainsString( 'name="competition_type_term"', $html );
+        $this->assertStringContainsString( 'type="hidden" name="competition_type_term"', $html );
+        $this->assertStringContainsString( 'کومیته', $html );
+        unset( $GLOBALS['test_post_meta'][20]['_competition_type_assignments'] );
     }
 
     public function test_competition_details_uses_assigned_types(): void {
@@ -91,19 +93,9 @@ class CompetitionShortcodesTest extends TestCase {
         if ( ! function_exists( 'is_wp_error' ) ) {
             function is_wp_error( $thing ) { return false; }
         }
-        if ( ! function_exists( 'get_option' ) ) {
-            function get_option( $key, $default = [] ) {
-                if ( ! isset( $GLOBALS['test_options'] ) ) {
-                    $GLOBALS['test_options'] = [];
-                }
-                return $GLOBALS['test_options'][ $key ] ?? $default;
-            }
-        }
-        $GLOBALS['test_options'] = [
-            'imao_age_category_type_map' => [
-                1 => [ 501 ],
-                3 => [ 502 ],
-            ],
+        $GLOBALS['test_post_meta'][20]['_competition_type_assignments'] = [
+            1 => [ 501 ],
+            3 => [ 502 ],
         ];
         $GLOBALS['mock_post_terms_return'] = [
             'age_category'      => [
@@ -131,9 +123,10 @@ class CompetitionShortcodesTest extends TestCase {
 
         $this->assertStringContainsString( 'value="501"', $html );
         $this->assertStringNotContainsString( 'value="502"', $html );
-        $this->assertStringNotContainsString( 'رده نوجوان', $html );
+        $this->assertStringContainsString( 'کومیته', $html );
+        $this->assertStringNotContainsString( 'کاتا', $html );
 
-        unset( $GLOBALS['mock_post_terms_return'], $GLOBALS['test_options'], $GLOBALS['mock_terms'] );
+        unset( $GLOBALS['mock_post_terms_return'], $GLOBALS['test_post_meta'][20]['_competition_type_assignments'], $GLOBALS['mock_terms'] );
     }
 
     /** @runInSeparateProcess */
