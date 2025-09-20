@@ -132,8 +132,8 @@ class Competitions
     {
         return [
             'competition_code' => 'کد',
-            'start_date' => 'تاریخ شروع',
-            'end_date' => 'تاریخ پایان',
+            'start_date' => 'تاریخ شروع مسابقه',
+            'end_date' => 'تاریخ پایان مسابقه',
             'registration_start' => 'شروع ثبت‌نام',
             'registration_end' => 'پایان ثبت‌نام',
             'weigh_in_start_date' => 'تاریخ شروع وزن‌کشی',
