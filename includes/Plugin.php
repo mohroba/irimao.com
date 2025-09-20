@@ -36,6 +36,7 @@ use IMAOCustom\Services\Ban;
 use IMAOCustom\Services\LoginTracking;
 use IMAOCustom\Services\RoleCleanup;
 use IMAOCustom\Services\StyleCommitteeRequests;
+use IMAOCustom\Services\CheckoutPrefill;
 use IMAOCustom\ServiceManager;
 
 
@@ -59,6 +60,7 @@ class Plugin {
         IdentityProfessional::class,
         ChangePassword::class,
         Wallet::class,
+        CheckoutPrefill::class,
         UserManagement::class,
         SmartcardIssue::class,
         SelfDeclaration::class,
