@@ -895,7 +895,7 @@ class Competitions
             }
         }
         if (!$gender || $status !== 'approved') {
-            return '<p style="text-align:center;color:#c00;">برای ثبت‌نام در مسابقات، ابتدا اطلاعات پایه را تکمیل و هویت خود را تأیید کنید.</p>';
+            return '<p style="text-align:center;color:#c00;">جهت ثبت نام در مسابقات، ابتدا اطلاعات پایه را تکمیل و سپس در قسمت بارگذاری مستندات عکس و کارت ملی و شناسنامه را بارگذاری نمایید.</p>';
         }
         if (!$age_slug) {
             return '<p style="text-align:center;color:#c00;">برای ثبت‌نام، ابتدا تاریخ تولد خود را در اطلاعات پایه ثبت کنید تا ردهٔ سنی شما مشخص شود.</p>';
