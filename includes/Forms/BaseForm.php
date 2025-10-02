@@ -34,7 +34,7 @@ abstract class BaseForm {
         if ( empty( $this->errors ) ) {
             return '';
         }
-        $out = '<ul class="notice-warning imao-errors">';
+        $out = '<ul class="notice-warning imao-errors" style="list-style: none">';
         foreach ( $this->errors as $e ) {
             $out .= '<li>' . esc_html( $e ) . '</li>';
         }
