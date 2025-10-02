@@ -13,7 +13,22 @@ if ( ! function_exists( 'get_user_meta' ) ) {
             'birth_date'                     => '1375/01/01',
             'identity_verified_professional' => 'approved',
         ];
+        if ( isset( $GLOBALS['test_user_meta'][ $id ][ $key ] ) ) {
+            return $GLOBALS['test_user_meta'][ $id ][ $key ];
+        }
         return $defaults[ $key ] ?? '';
+    }
+}
+if ( ! function_exists( 'update_user_meta' ) ) {
+    function update_user_meta( $id, $key, $value ) {
+        if ( ! isset( $GLOBALS['test_user_meta'] ) ) {
+            $GLOBALS['test_user_meta'] = [];
+        }
+        if ( ! isset( $GLOBALS['test_user_meta'][ $id ] ) ) {
+            $GLOBALS['test_user_meta'][ $id ] = [];
+        }
+        $GLOBALS['test_user_meta'][ $id ][ $key ] = $value;
+        return true;
     }
 }
 if ( ! class_exists( 'Test_Date' ) ) {

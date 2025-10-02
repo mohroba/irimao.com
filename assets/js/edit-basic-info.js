@@ -77,9 +77,18 @@ jQuery(function($){
     $('#gender').on('change', toggleMilitary);
     toggleMilitary(); // run on load
 
-    const degreeOptions = (typeof IMAOSD !== 'undefined') ? IMAOSD.degreeOptions : {};
+    const sdData = (typeof IMAOSD !== 'undefined') ? IMAOSD : {};
+    const degreeOptions = sdData.degreeOptions || {};
+    const championAgeMap = sdData.championAgeMap || {};
     const $type   = $('#coursetype');
     const $degree = $('#degree');
+    const $ageField = $('#age_category_field');
+    const $weightField = $('#weight_class_field');
+    const $styleField = $('#competition_style_field');
+    const $ageSelect = $('#age_category');
+    const $weightSelect = $('#weight_class');
+    const $competitionStyle = $('#competition_style');
+
     function fillDegrees(){
         if(!$type.length || !$degree.length){return;}
         const list = degreeOptions[$type.val()] || {};
@@ -94,7 +103,11 @@ jQuery(function($){
             $degree.prop('required', true);
             $degree.append(new Option('— انتخاب کنید —',''));
             Object.entries(list).forEach(([val,label]) => {
-                $degree.append(new Option(label, val));
+                const opt = new Option(label, val);
+                if(preselected && String(preselected) === String(val)){
+                    opt.selected = true;
+                }
+                $degree.append(opt);
             });
             if(preselected && list[preselected]){
                 $degree.val(preselected);
@@ -104,8 +117,115 @@ jQuery(function($){
             $degree.trigger('change.select2');
         }
     }
-    $type.on('change', fillDegrees);
-    fillDegrees();
+
+    function fillAgeCategories(){
+        if(!$ageSelect.length){ return ''; }
+        const datasetVal = $ageSelect.data('selected');
+        const currentVal = $ageSelect.val();
+        const preselected = datasetVal ? String(datasetVal) : (currentVal ? String(currentVal) : '');
+        $ageSelect.empty();
+        $ageSelect.append(new Option('— انتخاب کنید —',''));
+        Object.entries(championAgeMap).forEach(([id, meta]) => {
+            const label = (meta && typeof meta === 'object' && meta.label) ? meta.label : meta;
+            const option = new Option(label, id);
+            if(preselected && String(preselected) === String(id)){
+                option.selected = true;
+            }
+            $ageSelect.append(option);
+        });
+        const finalVal = $ageSelect.val();
+        $ageSelect.data('selected','');
+        if($.fn.select2){
+            $ageSelect.trigger('change.select2');
+        }
+        return finalVal || '';
+    }
+
+    function fillWeightClasses(ageId){
+        if(!$weightSelect.length){ return; }
+        const mapEntry = (ageId && championAgeMap[ageId]) ? championAgeMap[ageId] : null;
+        const weights = mapEntry && typeof mapEntry === 'object' && mapEntry.weights ? mapEntry.weights : {};
+        const datasetVal = $weightSelect.data('selected');
+        const currentVal = $weightSelect.val();
+        const preselected = datasetVal ? String(datasetVal) : (currentVal ? String(currentVal) : '');
+        $weightSelect.empty();
+        if(!ageId || Object.keys(weights).length === 0){
+            $weightSelect.append(new Option('— ابتدا رده سنی را انتخاب کنید —',''));
+        }else{
+            $weightSelect.append(new Option('— انتخاب کنید —',''));
+            Object.entries(weights).forEach(([id, label]) => {
+                const option = new Option(label, id);
+                if(preselected && String(preselected) === String(id)){
+                    option.selected = true;
+                }
+                $weightSelect.append(option);
+            });
+        }
+        if(preselected && weights && Object.prototype.hasOwnProperty.call(weights, preselected)){
+            $weightSelect.val(preselected);
+        }
+        $weightSelect.data('selected','');
+        if($.fn.select2){
+            $weightSelect.trigger('change.select2');
+        }
+    }
+
+    function toggleChampionFields(){
+        if(!$type.length){ return; }
+        const isChampion = String($type.val()) === '4';
+        [$ageField, $weightField, $styleField].forEach($field => {
+            if($field && $field.length){
+                $field.toggle(isChampion);
+            }
+        });
+        if($ageSelect.length){
+            $ageSelect.prop('required', isChampion);
+        }
+        if($weightSelect.length){
+            $weightSelect.prop('required', isChampion);
+        }
+        if($competitionStyle.length){
+            $competitionStyle.prop('required', isChampion);
+            if(!isChampion){
+                $competitionStyle.val('');
+            }
+        }
+        if(isChampion){
+            const selectedAge = fillAgeCategories();
+            const ageId = selectedAge || $ageSelect.val();
+            fillWeightClasses(ageId);
+        }else{
+            if($ageSelect.length){
+                $ageSelect.val('');
+                $ageSelect.data('selected','');
+                if($.fn.select2){
+                    $ageSelect.trigger('change.select2');
+                }
+            }
+            if($weightSelect.length){
+                $weightSelect.val('');
+                $weightSelect.data('selected','');
+                $weightSelect.empty().append(new Option('— ابتدا رده سنی را انتخاب کنید —',''));
+                if($.fn.select2){
+                    $weightSelect.trigger('change.select2');
+                }
+            }
+        }
+    }
+
+    if($ageSelect.length){
+        $ageSelect.on('change', function(){
+            fillWeightClasses(this.value);
+        });
+    }
+
+    function handleTypeChange(){
+        fillDegrees();
+        toggleChampionFields();
+    }
+
+    $type.on('change', handleTypeChange);
+    handleTypeChange();
 
     const $form  = $('#id-form');
     const status = $form.data('status');
