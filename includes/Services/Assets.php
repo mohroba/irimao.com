@@ -37,7 +37,8 @@ class Assets {
         wp_enqueue_script( 'imao-select2', $url . 'assets/js/select2.min.js', [ 'jquery' ], '1.0.0', true );
         wp_enqueue_script( 'imao-edit-basic-info', $url . 'assets/js/edit-basic-info.js', [ 'jquery', 'imao-select2' ], '1.0.0', true );
         wp_localize_script( 'imao-edit-basic-info', 'IMAOSD', [
-            'degreeOptions' => SelfDeclarationData::degree_options(),
+            'degreeOptions'   => SelfDeclarationData::degree_options(),
+            'championAgeMap'  => SelfDeclarationData::champion_age_map(),
         ] );
         wp_localize_script( 'imao-edit-basic-info', 'CBIF_CITIES', CityMap::get_map() );
         wp_enqueue_script( 'imao-identity-professional', $url . 'assets/js/identity-professional.js', [], '1.0.0', true );

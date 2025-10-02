@@ -17,4 +17,16 @@ class SelfDeclarationDataTest extends TestCase {
         $label = SelfDeclarationData::degree_label(1, '');
         $this->assertSame('—', $label);
     }
+
+    public function test_degree_options_for_type_one_matches_list(): void {
+        $this->assertSame(SelfDeclarationData::list_degrees(), SelfDeclarationData::degree_options()[1]);
+    }
+
+    public function test_champion_age_map_returns_terms(): void {
+        require_once __DIR__ . '/../Services/stubs.php';
+        $map = SelfDeclarationData::champion_age_map();
+        $this->assertArrayHasKey(1, $map);
+        $this->assertSame('Parent Age', $map[1]['label']);
+        $this->assertArrayHasKey(2, $map[1]['weights']);
+    }
 }

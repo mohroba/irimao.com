@@ -73,7 +73,7 @@ class Ranking {
         global $wpdb;
         if ( isset( $_POST['save_settings'] ) ) {
             check_admin_referer( 'crm_points_settings' );
-            $days = max( 0, intval( $_POST['expiry_days'] ) );
+            $days = $this->sanitize_expiry_days( $_POST['expiry_days'] ?? '' );
             $wpdb->replace( $wpdb->prefix . 'crm_settings', [ 'opt_key' => 'points_expiry_days', 'opt_val' => (string) $days ], [ '%s', '%s' ] );
             echo '<div class="updated"><p>ذخیره شد.</p></div>';
         }
@@ -90,6 +90,33 @@ class Ranking {
             <?php submit_button( 'ذخیره', 'primary', 'save_settings' ); ?>
         </form>
         <?php
+    }
+
+    private function sanitize_expiry_days( $value ): int {
+        if ( is_array( $value ) ) {
+            $value = reset( $value );
+        }
+        if ( ! is_scalar( $value ) ) {
+            return 0;
+        }
+        $value = (string) $value;
+        if ( function_exists( 'wp_unslash' ) ) {
+            $value = wp_unslash( $value );
+        }
+        $value = strtr(
+            $value,
+            [
+                '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
+                '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+                '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
+                '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+            ]
+        );
+        $value = preg_replace( '/[^0-9]/u', '', $value );
+        if ( $value === '' ) {
+            return 0;
+        }
+        return max( 0, (int) $value );
     }
 
     private function render_assign_tab(): void {
