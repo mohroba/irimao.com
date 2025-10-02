@@ -12,7 +12,6 @@ class SelfDeclarationsList {
         }
         $user_id = get_current_user_id();
         $types   = SelfDeclarationData::course_types();
-        $degrees = SelfDeclarationData::list_degrees();
         $view_map = SelfDeclarationData::view_map();
 
         $q = new WP_Query([
@@ -37,6 +36,9 @@ class SelfDeclarationsList {
                     <th class="text-center" style="font-size:12px;text-align:center">درجه</th>
                     <th class="text-center" style="font-size:12px;text-align:center">تاریخ حکم</th>
                     <th class="text-center" style="font-size:12px;text-align:center">شماره حکم</th>
+                    <th class="text-center" style="font-size:12px;text-align:center">رده سنی</th>
+                    <th class="text-center" style="font-size:12px;text-align:center">کلاس وزنی</th>
+                    <th class="text-center" style="font-size:12px;text-align:center">استایل مسابقاتی</th>
                     <th class="text-center" style="font-size:12px;text-align:center">نحوه ثبت حکم</th>
                     <th class="text-center" style="font-size:12px;text-align:center">اقدام</th>
                 </tr>
@@ -45,9 +47,27 @@ class SelfDeclarationsList {
             <?php $i = 1; while ( $q->have_posts() ): $q->the_post();
                 $pid    = get_the_ID();
                 $type   = get_post_meta( $pid, 'coursetype', true );
-                $deg    = get_post_meta( $pid, 'degree', true );
+                $deg    = (string) get_post_meta( $pid, 'degree', true );
                 $date   = get_post_meta( $pid, 'getdate', true );
                 $num    = get_post_meta( $pid, 'hokm_number', true );
+                $age_id = (int) get_post_meta( $pid, 'age_category', true );
+                $weight_id = (int) get_post_meta( $pid, 'weight_class', true );
+                $style  = (string) get_post_meta( $pid, 'competition_style', true );
+                $err_cb = function_exists( 'is_wp_error' ) ? 'is_wp_error' : null;
+                $age_label = '—';
+                if ( $age_id ) {
+                    $term = get_term( $age_id, 'age_category' );
+                    if ( ! ( $err_cb && $err_cb( $term ) ) && $term && isset( $term->name ) ) {
+                        $age_label = $term->name;
+                    }
+                }
+                $weight_label = '—';
+                if ( $weight_id ) {
+                    $term = get_term( $weight_id, 'age_category' );
+                    if ( ! ( $err_cb && $err_cb( $term ) ) && $term && isset( $term->name ) ) {
+                        $weight_label = $term->name;
+                    }
+                }
                 $method = get_post_meta( $pid, 'registration_method', true ) ?: 'خوداظهاری';
                 $view_base = $view_map[ $type ] ?? $view_map[1];
                 $view_url  = esc_url( $view_base . $pid );
@@ -56,9 +76,12 @@ class SelfDeclarationsList {
                 <tr>
                     <td class="text-center" style="font-size:12px;text-align:center"><?php echo $i; ?></td>
                     <td class="text-center" style="font-size:12px;text-align:center"><?php echo esc_html( $types[ $type ] ?? '' ); ?></td>
-                    <td class="text-center" style="font-size:12px;text-align:center"><?php echo esc_html( $degrees[ $deg ] ?? '' ); ?></td>
+                    <td class="text-center" style="font-size:12px;text-align:center"><?php echo esc_html( SelfDeclarationData::degree_label( (int) $type, $deg ) ); ?></td>
                     <td class="text-center" style="font-size:12px;text-align:center"><?php echo esc_html( $date ); ?></td>
                     <td class="text-center" style="font-size:12px;text-align:center"><?php echo esc_html( $num ); ?></td>
+                    <td class="text-center" style="font-size:12px;text-align:center"><?php echo esc_html( $age_label ); ?></td>
+                    <td class="text-center" style="font-size:12px;text-align:center"><?php echo esc_html( $weight_label ); ?></td>
+                    <td class="text-center" style="font-size:12px;text-align:center"><?php echo esc_html( $style ?: '—' ); ?></td>
                     <td class="text-center" style="font-size:12px;text-align:center"><?php echo esc_html( $method ); ?></td>
                     <td class="text-center" style="font-size:12px;">
                         <a href="<?php echo $view_url; ?>" target="_blank" title="مشاهده حکم" style="margin-left:5px;"><i class="fas fa-award fa-lg text-danger"></i></a>
