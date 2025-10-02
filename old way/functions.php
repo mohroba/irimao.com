@@ -3320,7 +3320,7 @@ function crm_register_shared_taxonomies(){
   $tax( 'level',         'سطح',           'سطوح',         true , $objs );
 
   // weight_class only for competition
-  $tax( 'weight_class',  'کلاس وزنی',     'کلاس‌های وزنی', true, [ 'competition' ] );
+  $tax( 'weight_class',  'دسته وزنی',     'کلاس‌های وزنی', true, [ 'competition' ] );
 }
 
 // Ensure taxonomies are attached to course CPT even if course was
@@ -3530,7 +3530,7 @@ function crm_competitions_list_cb(){
   ]);
   if(!$q->have_posts()) return '<p>مسابقه‌ای موجود نیست.</p>';
 
-  $tax_cols = ['weight_class'=>'کلاس وزنی','gender'=>'جنسیت','board'=>'هیئت','level'=>'سطح'];
+  $tax_cols = ['weight_class'=>'دسته وزنی','gender'=>'جنسیت','board'=>'هیئت','level'=>'سطح'];
   ob_start();
   echo '<table class="shop_table shop_table_responsive"><thead><tr><th>#</th><th>عنوان</th>';
   foreach($tax_cols as $lbl) echo "<th>{$lbl}</th>";
@@ -3573,7 +3573,7 @@ function crm_competition_details_cb( $atts ){
       <tr><th>قیمت</th><td><?php echo wc_price($price); ?></td></tr>
       <?php if($conditions = get_post_meta($cid,'special_conditions',true) )
         echo '<tr><th>شرایط خاص</th><td>'.nl2br(esc_html($conditions)).'</td></tr>'; ?>
-      <tr><th>کلاس وزنی</th><td>
+      <tr><th>دسته وزنی</th><td>
         <select name="weight_class_term" required>
           <option value="">— انتخاب کنید —</option>
           <?php foreach($weights as $t) echo '<option value="'.$t->term_id.'">'.esc_html($t->name).'</option>'; ?>
@@ -3607,14 +3607,14 @@ add_filter('woocommerce_add_cart_item_data', function($data,$prod_id){
 add_filter('woocommerce_get_item_data', function($data,$cart_item){
   if( ! empty($cart_item['weight_class_term']) ){
     $term = get_term($cart_item['weight_class_term'],'weight_class');
-    if($term) $data[]=[ 'name'=>'کلاس وزنی','value'=>$term->name ];
+    if($term) $data[]=[ 'name'=>'دسته وزنی','value'=>$term->name ];
   }
   return $data;
 },10,2);
 
 add_action('woocommerce_checkout_create_order_line_item', function($item,$cart_item){
   if( ! empty($cart_item['weight_class_term']) )
-    $item->add_meta_data( 'کلاس وزنی', get_term($cart_item['weight_class_term'])->name, true );
+    $item->add_meta_data( 'دسته وزنی', get_term($cart_item['weight_class_term'])->name, true );
 },10,2);
 
 add_action('admin_enqueue_scripts','crm_admin_local_assets');
@@ -3795,7 +3795,7 @@ function crm_points_assign_tab() {
 			</tr>
 
 			<tr>
-				<th>کلاس وزنی<span style="color:#d00">*</span></th>
+				<th>دسته وزنی<span style="color:#d00">*</span></th>
 				<td>
 				<?php
                     echo str_replace(
@@ -4065,7 +4065,7 @@ function crm_my_rankings_sc() {
 
 		<h3>جزئیات امتیازات</h3>
 		<table>
-			<thead><tr><th>#</th><th>مسابقه</th><th>کلاس وزنی</th><th>امتیاز</th></tr></thead><tbody>
+			<thead><tr><th>#</th><th>مسابقه</th><th>دسته وزنی</th><th>امتیاز</th></tr></thead><tbody>
 			<?php $i=1; foreach ( $my as $row ) :
 				$title = get_the_title( $row->competition_id );
 				$term  = get_term( $row->weight_class, 'weight_class' );

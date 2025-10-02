@@ -137,7 +137,7 @@ class Ranking {
                     </td>
                 </tr>
                 <tr>
-                    <th>کلاس وزنی<span style="color:#d00">*</span></th>
+                    <th>دسته وزنی<span style="color:#d00">*</span></th>
                     <td>
                         <?php
                         $terms = get_terms([
@@ -323,7 +323,7 @@ class Ranking {
             <p style="margin-bottom: 20px"><strong>امتیاز کل:</strong> <?php echo $overall_pts; ?> ‖ <strong>رتبه:</strong> <?php echo $overall_rank; ?></p>
             <h3>جزئیات امتیازات</h3>
             <table class="shop_table shop_table_responsive striped">
-                <thead><tr><th>#</th><th>مسابقه</th><th>کلاس وزنی</th><th>امتیاز</th></tr></thead><tbody>
+                <thead><tr><th>#</th><th>مسابقه</th><th>دسته وزنی</th><th>امتیاز</th></tr></thead><tbody>
                 <?php $i = 1; foreach ( $my as $row ) :
                     $title = get_the_title( $row->competition_id );
                     $term  = get_term( $row->weight_class, 'age_category' ); ?>

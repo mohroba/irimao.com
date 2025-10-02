@@ -70,7 +70,7 @@ class BasicInfoForm extends BaseForm {
                 update_user_meta( $uid, $k, $data[ $k ] ?? '' );
             }
             $this->saved  = true;
-            $this->errors[] = 'ویرایش سایر اطلاعات پس از تأیید امکان‌پذیر نیست.';
+            $this->errors[] = 'یادآوری : ویرایش سایر اطلاعات (به غیر از نام باشگاه و مربی) پس از تأیید امکان‌پذیر نیست.';
             return;
         }
 

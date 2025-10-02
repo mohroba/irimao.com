@@ -746,7 +746,7 @@ class Competitions
         if (!empty($cart_item['weight_class_term'])) {
             $term = get_term($cart_item['weight_class_term'], 'age_category');
             if ($term) {
-                $data[] = ['name' => 'کلاس وزنی', 'value' => $term->name];
+                $data[] = ['name' => 'دسته وزنی', 'value' => $term->name];
             }
         }
         if (!empty($cart_item['age_category_term'])) {
@@ -769,7 +769,7 @@ class Competitions
         if (!empty($cart_item['weight_class_term'])) {
             $term = get_term($cart_item['weight_class_term'], 'age_category');
             if ($term) {
-                $item->add_meta_data('کلاس وزنی', $term->name, true);
+                $item->add_meta_data('دسته وزنی', $term->name, true);
             }
         }
         if (!empty($cart_item['age_category_term'])) {
@@ -1105,7 +1105,7 @@ class Competitions
                         </tr>
                     <?php endif; ?>
                     <tr>
-                        <th>کلاس وزنی</th>
+                        <th>دسته وزنی</th>
                         <td>
                             <select name="weight_class_term" required>
                                 <option value="">— انتخاب کنید —</option>
@@ -1150,7 +1150,7 @@ class Competitions
                     continue;
                 }
 
-                $rows[] = ['competition_id' => $comp_id, 'order_id' => $order->get_id(), 'order_date' => $order->get_date_created()->date_i18n('Y/m/d'), 'amount' => $item->get_total(), 'status' => wc_get_order_status_name($order->get_status()), 'weight_class' => $item->get_meta('کلاس وزنی', true), 'age_category' => $item->get_meta('رده سنی', true),];
+                $rows[] = ['competition_id' => $comp_id, 'order_id' => $order->get_id(), 'order_date' => $order->get_date_created()->date_i18n('Y/m/d'), 'amount' => $item->get_total(), 'status' => wc_get_order_status_name($order->get_status()), 'weight_class' => $item->get_meta('دسته وزنی', true), 'age_category' => $item->get_meta('رده سنی', true),];
             }
         }
 
@@ -1168,7 +1168,7 @@ class Competitions
                     <th>#</th>
                     <th>نام مسابقه</th>
                     <th>کد مسابقه</th>
-                    <th>کلاس وزنی</th>
+                    <th>دسته وزنی</th>
                     <th>رده سنی</th>
                     <th>شماره سفارش</th>
                     <th>تاریخ سفارش</th>
