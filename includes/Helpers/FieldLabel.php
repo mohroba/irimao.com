@@ -24,6 +24,8 @@ class FieldLabel {
                 $map = [
                     'student_primary'    => 'محصل - ابتدایی',
                     'student_highschool' => 'محصل - دبیرستان',
+                    'student_middle_school' => 'محصل - راهنمایی',
+                    'diploma'            => 'دیپلم',
                     'student_college'    => 'دانشجوی کاردانی',
                     'bachelor'           => 'کارشناسی',
                     'master'             => 'کارشناسی ارشد',
