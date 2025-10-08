@@ -16,7 +16,10 @@ if ( ! function_exists( 'get_user_meta' ) ) {
         if ( isset( $GLOBALS['test_user_meta'][ $id ][ $key ] ) ) {
             return $GLOBALS['test_user_meta'][ $id ][ $key ];
         }
-        return $defaults[ $key ] ?? '';
+        if ( array_key_exists( $key, $defaults ) ) {
+            return $defaults[ $key ];
+        }
+        return $key . '_' . $id;
     }
 }
 if ( ! function_exists( 'update_user_meta' ) ) {
@@ -40,26 +43,35 @@ if ( ! class_exists( 'Test_Item' ) ) {
     class Test_Item {
         private int $pid;
         private float $total;
-        private string $weight;
-        public function __construct( int $pid, float $total, string $weight = '' ) {
+        /** @var array<string,string> */
+        private array $meta;
+
+        /**
+         * @param array<string,string> $meta
+         */
+        public function __construct( int $pid, float $total, array $meta = [] ) {
             $this->pid   = $pid;
             $this->total = $total;
-            $this->weight = $weight;
+            $this->meta  = $meta;
         }
         public function get_product_id() { return $this->pid; }
         public function get_total() { return $this->total; }
-        public function get_meta( $key, $single = true ) { return $this->weight; }
+        public function get_meta( $key, $single = true ) { return $this->meta[ $key ] ?? ''; }
     }
 }
 if ( ! class_exists( 'Test_Order' ) ) {
     class Test_Order {
         /** @return array<int,Test_Item> */
         public function get_items() {
-            return [ new Test_Item( 100, 1000, 'Light' ), new Test_Item( 200, 2000, 'Heavy' ) ];
+            return [
+                new Test_Item( 100, 1000, [ 'دسته وزنی' => 'Light', 'رده سنی' => 'Senior' ] ),
+                new Test_Item( 200, 2000, [ 'دسته وزنی' => 'Heavy', 'رده سنی' => 'Junior' ] ),
+            ];
         }
         public function get_id() { return 1; }
         public function get_date_created() { return new Test_Date(); }
         public function get_status() { return 'completed'; }
+        public function get_user_id() { return 1; }
     }
 }
 if ( ! function_exists( 'wc_get_orders' ) ) {

@@ -251,12 +251,14 @@ class Courses
         }
 
         $fields = $this->attendee_fields();
+        $meta_map = $this->get_registration_meta_map($post->ID, $users);
         echo '<div style="max-width:100%;overflow:auto">';
         echo '<table id="crm-attendees-table" class="wp-list-table widefat striped"><thead><tr>';
         foreach ($fields as $lbl) { echo '<th>' . esc_html($lbl) . '</th>'; }
         echo '</tr></thead><tbody>';
         foreach ($users as $u) {
-            $row = $this->attendee_row($u);
+            $extra = $meta_map[$u->ID] ?? [];
+            $row = $this->attendee_row($u, $extra);
             echo '<tr>';
             foreach ($fields as $key => $lbl) {
                 echo '<td>' . esc_html( (string) ($row[$key] ?? '') ) . '</td>';
@@ -313,7 +315,35 @@ class Courses
      */
     private function attendee_fields(): array
     {
-        return ['ID' => 'ID', 'display_name' => 'نام', 'billing_email' => 'ایمیل', 'billing_phone' => 'شماره موبایل', 'national_id' => 'کد ملی', 'gender' => 'جنسیت', 'first_name_fa' => 'نام (فا)', 'last_name_fa' => 'نام خانوادگی (فا)', 'first_name_en' => 'نام (En)', 'last_name_en' => 'نام خانوادگی (En)', 'father_name' => 'نام پدر', 'birth_date' => 'تاریخ تولد', 'birth_province' => 'استان محل تولد', 'birth_city' => 'شهرستان محل تولد', 'marital_status' => 'وضعیت تأهل', 'education_status' => 'وضعیت تحصیلی', 'military_status' => 'وضعیت خدمت', 'residence_province' => 'استان محل سکونت', 'residence_city' => 'شهرستان محل سکونت', 'postal_code' => 'کدپستی', 'residence_address' => 'آدرس', 'iban' => 'شماره شبا', 'card_number' => 'شماره کارت', 'coach_id' => 'مربی', 'club_id' => 'باشگاه',];
+        return [
+            'ID'                => 'ID',
+            'display_name'      => 'نام',
+            'billing_email'     => 'ایمیل',
+            'billing_phone'     => 'شماره موبایل',
+            'national_id'       => 'کد ملی',
+            'gender'            => 'جنسیت',
+            'first_name_fa'     => 'نام (فا)',
+            'last_name_fa'      => 'نام خانوادگی (فا)',
+            'first_name_en'     => 'نام (En)',
+            'last_name_en'      => 'نام خانوادگی (En)',
+            'father_name'       => 'نام پدر',
+            'birth_date'        => 'تاریخ تولد',
+            'birth_province'    => 'استان محل تولد',
+            'birth_city'        => 'شهرستان محل تولد',
+            'marital_status'    => 'وضعیت تأهل',
+            'education_status'  => 'وضعیت تحصیلی',
+            'military_status'   => 'وضعیت خدمت',
+            'residence_province'=> 'استان محل سکونت',
+            'residence_city'    => 'شهرستان محل سکونت',
+            'postal_code'       => 'کدپستی',
+            'residence_address' => 'آدرس',
+            'iban'              => 'شماره شبا',
+            'card_number'       => 'شماره کارت',
+            'coach_id'          => 'مربی',
+            'club_id'           => 'باشگاه',
+            'weight_class'      => 'دسته وزنی',
+            'age_category'      => 'رده سنی',
+        ];
     }
 
     /**
@@ -321,7 +351,7 @@ class Courses
      *
      * @return array<string,string|int>
      */
-    private function attendee_row(WP_User $u): array
+    private function attendee_row(WP_User $u, array $extra = []): array
     {
         $row = [];
         foreach ($this->attendee_fields() as $key => $lbl) {
@@ -352,6 +382,10 @@ class Courses
                     $target = get_user_by('id', $id);
                     $row[$key] = $target ? $target->display_name : $id;
                     break;
+                case 'weight_class':
+                case 'age_category':
+                    $row[$key] = isset($extra[$key]) ? (string)$extra[$key] : '';
+                    break;
                 default:
                     $meta = get_user_meta($u->ID, $key, true);
                     $row[$key] = FieldLabel::get($key, $meta);
@@ -363,20 +397,128 @@ class Courses
     /**
      * Generate XLSX content for attendees.
      */
-    protected function build_xlsx(array $users): string
+    protected function build_xlsx(array $users, int $course_id = 0): string
     {
         $sheet = new Spreadsheet();
         $active = $sheet->getActiveSheet();
         $active->fromArray([array_values($this->attendee_fields())]);
         $row = 2;
+        $meta_map = $course_id ? $this->get_registration_meta_map($course_id, $users) : [];
         foreach ($users as $u) {
-            $active->fromArray([array_values($this->attendee_row($u))], null, 'A' . $row);
+            $extra = $meta_map[$u->ID] ?? [];
+            $active->fromArray([array_values($this->attendee_row($u, $extra))], null, 'A' . $row);
             $row++;
         }
         $writer = new Xlsx($sheet);
         ob_start();
         $writer->save('php://output');
         return (string)ob_get_clean();
+    }
+
+    /**
+     * Collect registration metadata (weight class / age category) for attendees.
+     *
+     * @param WP_User[] $users
+     * @return array<int,array<string,string>>
+     */
+    protected function get_registration_meta_map(int $course_id, array $users): array
+    {
+        if (!function_exists('wc_get_orders')) {
+            return [];
+        }
+        $product_id = (int) get_post_meta($course_id, self::META_LINKED_PRODUCT, true);
+        if (!$product_id) {
+            return [];
+        }
+
+        $meta_map = [];
+        $order_ids = $this->get_order_ids_for_product($product_id);
+        if ($order_ids) {
+            $orders = wc_get_orders([
+                'limit'  => -1,
+                'status' => ['processing', 'completed'],
+                'include'=> $order_ids,
+            ]);
+            $this->extract_registration_meta_from_orders($orders, $product_id, $meta_map);
+            return $meta_map;
+        }
+
+        foreach ($users as $user) {
+            $uid = $user instanceof WP_User ? (int) $user->ID : 0;
+            if (!$uid) {
+                continue;
+            }
+            $orders = wc_get_orders([
+                'limit'       => -1,
+                'status'      => ['processing', 'completed'],
+                'customer_id' => $uid,
+            ]);
+            $this->extract_registration_meta_from_orders($orders, $product_id, $meta_map);
+        }
+
+        return $meta_map;
+    }
+
+    /**
+     * @return int[]
+     */
+    private function get_order_ids_for_product(int $product_id): array
+    {
+        global $wpdb;
+        if (!isset($wpdb) || !is_object($wpdb) || !method_exists($wpdb, 'prepare') || !method_exists($wpdb, 'get_col')) {
+            return [];
+        }
+        $sql = $wpdb->prepare(
+            "SELECT DISTINCT order_id FROM {$wpdb->prefix}woocommerce_order_items oi
+             JOIN {$wpdb->prefix}woocommerce_order_itemmeta oim ON oi.order_item_id = oim.order_item_id
+             WHERE oi.order_item_type = 'line_item' AND oim.meta_key = '_product_id' AND oim.meta_value = %d",
+            $product_id
+        );
+        $results = $wpdb->get_col($sql);
+        if (!$results) {
+            return [];
+        }
+        return array_map('intval', $results);
+    }
+
+    /**
+     * Populate the registration metadata map using order items.
+     *
+     * @param iterable<int,\WC_Order|object> $orders
+     * @param int $product_id
+     * @param array<int,array<string,string>> $meta_map
+     */
+    private function extract_registration_meta_from_orders(iterable $orders, int $product_id, array &$meta_map): void
+    {
+        foreach ($orders as $order) {
+            if (!is_object($order) || !method_exists($order, 'get_user_id') || !method_exists($order, 'get_items')) {
+                continue;
+            }
+            $uid = (int) $order->get_user_id();
+            if (!$uid) {
+                continue;
+            }
+            foreach ($order->get_items() as $item) {
+                if (!is_object($item) || !method_exists($item, 'get_product_id')) {
+                    continue;
+                }
+                if ((int) $item->get_product_id() !== $product_id) {
+                    continue;
+                }
+                $weight = trim((string) $item->get_meta('دسته وزنی', true));
+                $age    = trim((string) $item->get_meta('رده سنی', true));
+                if (!isset($meta_map[$uid])) {
+                    $meta_map[$uid] = ['weight_class' => $weight, 'age_category' => $age];
+                    continue;
+                }
+                if ($weight !== '' && ($meta_map[$uid]['weight_class'] ?? '') === '') {
+                    $meta_map[$uid]['weight_class'] = $weight;
+                }
+                if ($age !== '' && ($meta_map[$uid]['age_category'] ?? '') === '') {
+                    $meta_map[$uid]['age_category'] = $age;
+                }
+            }
+        }
     }
 
     public function add_export_column(array $cols): array
@@ -437,7 +579,7 @@ class Courses
 
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment; filename="course-' . $course_id . '-attendees.xlsx"');
-        echo $this->build_xlsx($users);
+        echo $this->build_xlsx($users, $course_id);
         exit;
     }
 
