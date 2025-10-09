@@ -38,6 +38,7 @@ class Competitions
         add_shortcode('crm_competition_details', [$this, 'competition_details_shortcode']);
         add_shortcode('crm_user_competitions', [$this, 'user_competitions_shortcode']);
         add_filter('woocommerce_add_cart_item_data', [$this, 'add_cart_item_data'], 10, 2);
+        add_filter('woocommerce_get_cart_item_from_session', [$this, 'restore_cart_item_from_session'], 10, 2);
         add_filter('woocommerce_get_item_data', [$this, 'add_item_data'], 10, 2);
         add_action('woocommerce_checkout_create_order_line_item', [$this, 'add_order_line_item_meta'], 10, 4);
     }
@@ -881,6 +882,20 @@ class Competitions
             $data['competition_type_term'] = (int)$_REQUEST['competition_type_term'];
         }
         return $data;
+    }
+
+    public function restore_cart_item_from_session($cart_item, $values)
+    {
+        $cart = is_array($cart_item) ? $cart_item : (array)$cart_item;
+        if (!is_array($values)) {
+            return $cart;
+        }
+        foreach (['weight_class_term', 'age_category_term', 'competition_type_term'] as $key) {
+            if (isset($values[$key])) {
+                $cart[$key] = (int)$values[$key];
+            }
+        }
+        return $cart;
     }
 
     public function add_item_data($data, $cart_item)
