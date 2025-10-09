@@ -24,16 +24,48 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 if (!class_exists('WP_User')) { class WP_User { public $ID; public $display_name; public $user_email; } }
 
 class CoursesExportStub extends Courses {
+    private const META_LINKED_PRODUCT = '_linked_product_id';
     public function xlsx(array $users, int $course_id): string { return $this->build_xlsx($users, $course_id); }
+    public function registrationMetaMap(int $course_id, array $users): array { return $this->get_registration_meta_map($course_id, $users); }
     protected function get_registration_meta_map(int $course_id, array $users): array {
-        $map = [];
-        foreach ($users as $user) {
-            if (!($user instanceof WP_User)) {
+        if (!function_exists('wc_get_orders')) {
+            return [];
+        }
+        $product_id = (int) get_post_meta($course_id, self::META_LINKED_PRODUCT, true);
+        if (!$product_id) {
+            return [];
+        }
+        $meta_map = [];
+        foreach (wc_get_orders(['limit' => -1, 'status' => ['processing', 'completed']]) as $order) {
+            if (!is_object($order) || !method_exists($order, 'get_user_id') || !method_exists($order, 'get_items')) {
                 continue;
             }
-            $map[$user->ID] = ['weight_class' => 'Light', 'age_category' => 'Senior'];
+            $uid = (int) $order->get_user_id();
+            if (!$uid) {
+                continue;
+            }
+            foreach ($order->get_items() as $item) {
+                if (!is_object($item) || !method_exists($item, 'get_product_id')) {
+                    continue;
+                }
+                if ((int) $item->get_product_id() !== $product_id) {
+                    continue;
+                }
+                $weight = trim((string) $item->get_meta('دسته وزنی', true));
+                $age    = trim((string) $item->get_meta('رده سنی', true));
+                if (!isset($meta_map[$uid])) {
+                    $meta_map[$uid] = ['weight_class' => $weight, 'age_category' => $age];
+                    continue;
+                }
+                if ($weight !== '' && ($meta_map[$uid]['weight_class'] ?? '') === '') {
+                    $meta_map[$uid]['weight_class'] = $weight;
+                }
+                if ($age !== '' && ($meta_map[$uid]['age_category'] ?? '') === '') {
+                    $meta_map[$uid]['age_category'] = $age;
+                }
+            }
         }
-        return $map;
+        return $meta_map;
     }
 }
 
@@ -48,7 +80,10 @@ class CourseAttendeeExportTest extends TestCase {
         $GLOBALS['test_user_meta'][$u->ID]['coach_id'] = 101;
         $GLOBALS['test_user_meta'][$u->ID]['club_id'] = 102;
         $GLOBALS['test_user_meta'][102]['club_name'] = 'ClubName102';
-        $xlsx = (new CoursesExportStub())->xlsx([$u], 10);
+        $svc = new CoursesExportStub();
+        $meta_map = $svc->registrationMetaMap(10, [$u]);
+        $this->assertSame(['weight_class' => 'Light', 'age_category' => 'Senior'], $meta_map[$u->ID] ?? []);
+        $xlsx = $svc->xlsx([$u], 10);
         $tmp = tmpfile();
         fwrite($tmp, $xlsx);
         fflush($tmp);
