@@ -39,7 +39,7 @@ class Competitions
         add_shortcode('crm_user_competitions', [$this, 'user_competitions_shortcode']);
         add_filter('woocommerce_add_cart_item_data', [$this, 'add_cart_item_data'], 10, 2);
         add_filter('woocommerce_get_item_data', [$this, 'add_item_data'], 10, 2);
-        add_action('woocommerce_checkout_create_order_line_item', [$this, 'add_order_line_item_meta'], 10, 2);
+        add_action('woocommerce_checkout_create_order_line_item', [$this, 'add_order_line_item_meta'], 10, 4);
     }
 
     public function register_taxonomies(): void
@@ -873,7 +873,7 @@ class Competitions
             $weight = (int)$_REQUEST['weight_class_term'];
             $data['weight_class_term'] = $weight;
             $term = get_term($weight, 'age_category');
-            if ($term && $term->parent) {
+            if ($term && (!function_exists('is_wp_error') || !is_wp_error($term)) && $term->parent) {
                 $data['age_category_term'] = (int)$term->parent;
             }
         }
@@ -887,42 +887,43 @@ class Competitions
     {
         if (!empty($cart_item['weight_class_term'])) {
             $term = get_term($cart_item['weight_class_term'], 'age_category');
-            if ($term) {
+            if ($term && (!function_exists('is_wp_error') || !is_wp_error($term))) {
                 $data[] = ['name' => 'دسته وزنی', 'value' => $term->name];
             }
         }
         if (!empty($cart_item['age_category_term'])) {
             $term = get_term($cart_item['age_category_term'], 'age_category');
-            if ($term) {
+            if ($term && (!function_exists('is_wp_error') || !is_wp_error($term))) {
                 $data[] = ['name' => 'رده سنی', 'value' => $term->name];
             }
         }
         if (!empty($cart_item['competition_type_term'])) {
             $term = get_term($cart_item['competition_type_term'], 'competition_type');
-            if ($term) {
+            if ($term && (!function_exists('is_wp_error') || !is_wp_error($term))) {
                 $data[] = ['name' => 'نوع مسابقه', 'value' => $term->name];
             }
         }
         return $data;
     }
 
-    public function add_order_line_item_meta($item, $cart_item)
+    public function add_order_line_item_meta($item, $cart_item_key, $values, $order)
     {
+        $cart_item = is_array($values) ? $values : [];
         if (!empty($cart_item['weight_class_term'])) {
             $term = get_term($cart_item['weight_class_term'], 'age_category');
-            if ($term) {
+            if ($term && (!function_exists('is_wp_error') || !is_wp_error($term))) {
                 $item->add_meta_data('دسته وزنی', $term->name, true);
             }
         }
         if (!empty($cart_item['age_category_term'])) {
             $term = get_term($cart_item['age_category_term'], 'age_category');
-            if ($term) {
+            if ($term && (!function_exists('is_wp_error') || !is_wp_error($term))) {
                 $item->add_meta_data('رده سنی', $term->name, true);
             }
         }
         if (!empty($cart_item['competition_type_term'])) {
             $term = get_term($cart_item['competition_type_term'], 'competition_type');
-            if ($term) {
+            if ($term && (!function_exists('is_wp_error') || !is_wp_error($term))) {
                 $item->add_meta_data('نوع مسابقه', $term->name, true);
             }
         }

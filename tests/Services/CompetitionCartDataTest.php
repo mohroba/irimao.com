@@ -8,22 +8,44 @@ class CompetitionCartDataTest extends TestCase {
             $this->markTestSkipped( 'Plugin not loaded.' );
         }
         $_REQUEST['competition_type_term'] = '5';
+        $_REQUEST['weight_class_term']     = '10';
+        $GLOBALS['mock_terms'] = [
+            5  => ['term_id' => 5, 'name' => 'TypeName', 'slug' => 'type', 'parent' => 0],
+            10 => ['term_id' => 10, 'name' => 'WeightName', 'slug' => 'weight', 'parent' => 20],
+            20 => ['term_id' => 20, 'name' => 'AgeName', 'slug' => 'age', 'parent' => 0],
+        ];
         $svc  = new Competitions();
         $data = $svc->add_cart_item_data( [], 0 );
         $this->assertSame( 5, $data['competition_type_term'] );
+        $this->assertSame( 10, $data['weight_class_term'] );
+        $this->assertSame( 20, $data['age_category_term'] );
 
-        if ( ! function_exists( 'get_term' ) ) {
-            function get_term( $id, $tax ) { return (object) [ 'name' => 'TypeName' ]; }
-        }
-        $itemData = $svc->add_item_data( [], [ 'competition_type_term' => 5 ] );
-        $this->assertSame( [ [ 'name' => 'نوع مسابقه', 'value' => 'TypeName' ] ], $itemData );
+        $itemData = $svc->add_item_data( [], [
+            'weight_class_term'      => 10,
+            'age_category_term'      => 20,
+            'competition_type_term'  => 5,
+        ] );
+        $this->assertSame(
+            [
+                [ 'name' => 'دسته وزنی', 'value' => 'WeightName' ],
+                [ 'name' => 'رده سنی', 'value' => 'AgeName' ],
+                [ 'name' => 'نوع مسابقه', 'value' => 'TypeName' ],
+            ],
+            $itemData
+        );
 
         $item = new class {
             public array $meta = [];
             public function add_meta_data( $key, $value, $unique ) { $this->meta[ $key ] = $value; }
         };
-        $svc->add_order_line_item_meta( $item, [ 'competition_type_term' => 5 ] );
+        $svc->add_order_line_item_meta( $item, 'abc', [
+            'weight_class_term'     => 10,
+            'age_category_term'     => 20,
+            'competition_type_term' => 5,
+        ], null );
+        $this->assertSame( 'WeightName', $item->meta['دسته وزنی'] );
+        $this->assertSame( 'AgeName', $item->meta['رده سنی'] );
         $this->assertSame( 'TypeName', $item->meta['نوع مسابقه'] );
-        unset( $_REQUEST['competition_type_term'] );
+        unset( $_REQUEST['competition_type_term'], $_REQUEST['weight_class_term'], $GLOBALS['mock_terms'] );
     }
 }
