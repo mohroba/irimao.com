@@ -43,6 +43,7 @@ class Assets {
         wp_localize_script( 'imao-edit-basic-info', 'CBIF_CITIES', CityMap::get_map() );
         wp_enqueue_script( 'imao-identity-professional', $url . 'assets/js/identity-professional.js', [], '1.0.0', true );
         wp_enqueue_script( 'imao-club-register', $url . 'assets/js/club-register.js', [ 'jquery' ], '1.0.0', true );
+        wp_enqueue_script( 'imao-vip-subscription', $url . 'assets/js/vip-subscription.js', [ 'jquery' ], '1.0.0', true );
     }
 }
 
