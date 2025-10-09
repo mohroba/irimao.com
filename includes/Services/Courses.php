@@ -60,6 +60,9 @@ class Courses
         add_filter('manage_course_posts_columns', [$this, 'add_export_column']);
         add_action('manage_course_posts_custom_column', [$this, 'render_export_column'], 10, 2);
         add_action('admin_post_export_course_attendees', [$this, 'export_attendees']);
+        add_filter('woocommerce_add_cart_item_data', [$this, 'add_cart_item_data'], 10, 2);
+        add_filter('woocommerce_get_item_data', [$this, 'add_item_data'], 10, 2);
+        add_action('woocommerce_checkout_create_order_line_item', [$this, 'add_order_line_item_meta'], 10, 4);
     }
 
     public function register_taxonomies(): void
@@ -687,5 +690,74 @@ class Courses
         wp_enqueue_script('imao-dt', $url . 'assets/js/jquery.dataTables.min.js', ['jquery'], '1.0.0', true);
         wp_add_inline_script('imao-jdp', 'jQuery(function($){$(".crm-select2").select2({dir:"rtl",width:"resolve"});jalaliDatepicker.startWatch();});');
         wp_add_inline_script('imao-dt', 'jQuery(function($){$("#crm-attendees-table").DataTable({language:{url:"https://cdn.datatables.net/plug-ins/1.13.8/i18n/fa.json"},pageLength:20});});');
+    }
+
+    public function add_cart_item_data($data, $prod_id)
+    {
+        $cart_data = is_array($data) ? $data : [];
+
+        if (isset($_REQUEST['weight_class_term'])) {
+            $weight = (int) $_REQUEST['weight_class_term'];
+            if ($weight > 0) {
+                $cart_data['weight_class_term'] = $weight;
+                $term = get_term($weight, 'age_category');
+                if ($term && (!function_exists('is_wp_error') || !is_wp_error($term))) {
+                    $parent = (int) ($term->parent ?? 0);
+                    if ($parent > 0 && empty($cart_data['age_category_term'])) {
+                        $cart_data['age_category_term'] = $parent;
+                    }
+                }
+            }
+        }
+
+        if (isset($_REQUEST['age_category_term'])) {
+            $age = (int) $_REQUEST['age_category_term'];
+            if ($age > 0) {
+                $cart_data['age_category_term'] = $age;
+            }
+        }
+
+        return $cart_data;
+    }
+
+    public function add_item_data($data, $cart_item)
+    {
+        $item_data = is_array($data) ? $data : [];
+        $cart      = is_array($cart_item) ? $cart_item : [];
+
+        if (!empty($cart['weight_class_term'])) {
+            $term = get_term((int) $cart['weight_class_term'], 'age_category');
+            if ($term && (!function_exists('is_wp_error') || !is_wp_error($term))) {
+                $item_data[] = ['name' => 'دسته وزنی', 'value' => $term->name];
+            }
+        }
+
+        if (!empty($cart['age_category_term'])) {
+            $term = get_term((int) $cart['age_category_term'], 'age_category');
+            if ($term && (!function_exists('is_wp_error') || !is_wp_error($term))) {
+                $item_data[] = ['name' => 'رده سنی', 'value' => $term->name];
+            }
+        }
+
+        return $item_data;
+    }
+
+    public function add_order_line_item_meta($item, $cart_item_key, $values, $order)
+    {
+        $cart_item = is_array($values) ? $values : [];
+
+        if (!empty($cart_item['weight_class_term'])) {
+            $term = get_term((int) $cart_item['weight_class_term'], 'age_category');
+            if ($term && (!function_exists('is_wp_error') || !is_wp_error($term))) {
+                $item->add_meta_data('دسته وزنی', $term->name, true);
+            }
+        }
+
+        if (!empty($cart_item['age_category_term'])) {
+            $term = get_term((int) $cart_item['age_category_term'], 'age_category');
+            if ($term && (!function_exists('is_wp_error') || !is_wp_error($term))) {
+                $item->add_meta_data('رده سنی', $term->name, true);
+            }
+        }
     }
 }
