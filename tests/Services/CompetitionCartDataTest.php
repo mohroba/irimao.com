@@ -48,4 +48,23 @@ class CompetitionCartDataTest extends TestCase {
         $this->assertSame( 'TypeName', $item->meta['نوع مسابقه'] );
         unset( $_REQUEST['competition_type_term'], $_REQUEST['weight_class_term'], $GLOBALS['mock_terms'] );
     }
+
+    public function test_restore_cart_item_from_session(): void {
+        if ( ! class_exists( Competitions::class ) ) {
+            $this->markTestSkipped( 'Plugin not loaded.' );
+        }
+        $svc      = new Competitions();
+        $restored = $svc->restore_cart_item_from_session(
+            [ 'existing' => 'value' ],
+            [
+                'weight_class_term'     => '44',
+                'age_category_term'     => '22',
+                'competition_type_term' => '11',
+            ]
+        );
+        $this->assertSame( 'value', $restored['existing'] );
+        $this->assertSame( 44, $restored['weight_class_term'] );
+        $this->assertSame( 22, $restored['age_category_term'] );
+        $this->assertSame( 11, $restored['competition_type_term'] );
+    }
 }
