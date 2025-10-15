@@ -126,11 +126,11 @@ class ClubRegisterForm extends BaseForm {
                         <input type="text" name="club_name" value="<?= esc_attr( $f['club_name'] ); ?>" required>
                     </div>
                     <div class="cf-field">
-                        <label>صاحب امتیاز <span style="color:#d00">*</span></label>
+                        <label>صاحب امتیاز (دولتی یا خصوصی) <span style="color:#d00">*</span></label>
                         <input type="text" name="club_owner" value="<?= esc_attr( $f['club_owner'] ); ?>" required>
                     </div>
                     <div class="cf-field">
-                        <label>کد پستی</label>
+                        <label>کد پستی (اختیاری)</label>
                         <input type="text" name="club_postal" pattern="[0-9]{10}" value="<?= esc_attr( $f['club_postal'] ); ?>" >
                     </div>
                     <div class="cf-field">
@@ -160,7 +160,7 @@ class ClubRegisterForm extends BaseForm {
                         <textarea name="club_address" rows="3" required><?= esc_textarea( $f['club_address'] ); ?></textarea>
                     </div>
                     <div class="cf-field cf-wide">
-                        <label>تصویر مجوز / قرارداد</label>
+                        <label>تصویر مجوز / قرارداد (اختیاری)</label>
                         <input type="file" name="club_license_image" accept="image/*">
                     </div>
                     <div class="cf-submit">
