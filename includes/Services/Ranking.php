@@ -1,7 +1,13 @@
 <?php
 namespace IMAOCustom\Services;
 
+use WP_Term;
+use WP_User;
+
 class Ranking {
+    private const META_LINKED_PRODUCT = '_linked_product_id';
+    private const META_MANUAL_ATTENDEES = '_manual_attendees';
+    private const AJAX_ACTION = 'crm_assign_points_ajax';
     private static bool $install_checked = false;
 
     public function register(): void {
@@ -14,6 +20,8 @@ class Ranking {
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
         add_action( 'woocommerce_account_my-rankings_endpoint', fn() => print do_shortcode( '[crm_my_rankings]' ) );
         add_action( 'plugins_loaded', [ $this, 'maybe_install' ] );
+        add_action( 'wp_ajax_crm_competition_weight_classes', [ $this, 'ajax_competition_weight_classes' ] );
+        add_action( 'wp_ajax_crm_competition_attendees', [ $this, 'ajax_competition_attendees' ] );
     }
 
     public function activate(): void {
@@ -189,6 +197,11 @@ class Ranking {
 
     private function render_assign_tab(): void {
         global $wpdb;
+        $selected_competition = intval( $_POST['competition_id'] ?? 0 );
+        $selected_weight      = intval( $_POST['weight_class'] ?? 0 );
+        $selected_user        = intval( $_POST['user_id'] ?? 0 );
+        $show_all_attendees   = ! empty( $_POST['crm_show_all_attendees'] );
+
         if ( isset( $_POST['crm_assign_points'] ) ) {
             check_admin_referer( 'crm_assign_points' );
             $user_id        = intval( $_POST['user_id'] ?? 0 );
@@ -225,7 +238,12 @@ class Ranking {
                                 'orderby' => 'date',
                                 'order' => 'DESC',
                             ] ) as $c ) {
-                                printf( '<option value="%d">%s</option>', $c->ID, esc_html( $c->post_title ) );
+                                printf(
+                                    '<option value="%d"%s>%s</option>',
+                                    $c->ID,
+                                    selected( $selected_competition, $c->ID, false ),
+                                    esc_html( $c->post_title )
+                                );
                             }
                             ?>
                         </select>
@@ -235,31 +253,73 @@ class Ranking {
                     <th>دسته وزنی<span style="color:#d00">*</span></th>
                     <td>
                         <?php
-                        $terms = get_terms([
-                            'taxonomy'   => 'age_category',
-                            'hide_empty' => false,
-                        ]);
-                        echo '<select name="weight_class" class="crm-select2" required>'; 
-                        echo '<option value="">— انتخاب —</option>';
-                        foreach ($terms as $t) {
-                            if ($t->parent) {
-                                $parent = get_term($t->parent, 'age_category');
-                                $label  = ($parent ? $parent->name . ' - ' : '') . $t->name;
-                                printf('<option value="%d">%s</option>', $t->term_id, esc_html($label));
-                            }
-                        }
-                        echo '</select>';
+                        $weight_options = $selected_competition
+                            ? $this->get_competition_weight_options( $selected_competition )
+                            : [];
                         ?>
+                        <select
+                            name="weight_class"
+                            class="crm-select2"
+                            data-selected="<?php echo esc_attr( $selected_weight ?: '' ); ?>"
+                            data-placeholder="<?php esc_attr_e( '— انتخاب —', 'imao-custom-plugin' ); ?>"
+                            required
+                        >
+                            <?php
+                            if ( $weight_options ) {
+                                echo '<option value="">' . esc_html__( '— انتخاب —', 'imao-custom-plugin' ) . '</option>';
+                                foreach ( $weight_options as $option ) {
+                                    printf(
+                                        '<option value="%d"%s>%s</option>',
+                                        $option['id'],
+                                        selected( $selected_weight, $option['id'], false ),
+                                        esc_html( $option['label'] )
+                                    );
+                                }
+                            } else {
+                                echo '<option value="">' . esc_html( '— ابتدا مسابقه را انتخاب کنید —' ) . '</option>';
+                            }
+                            ?>
+                        </select>
+                        <p>
+                            <label>
+                                <input type="checkbox" name="crm_show_all_attendees" id="crm-show-all-attendees" value="1" <?php checked( $show_all_attendees ); ?>>
+                                نمایش تمام شرکت‌کنندگان این مسابقه
+                            </label>
+                            <span class="description">در صورت فعال‌سازی، همهٔ شرکت‌کنندگان صرف‌نظر از دسته وزنی نمایش داده می‌شوند.</span>
+                        </p>
                     </td>
                 </tr>
                 <tr>
                     <th>کاربر<span style="color:#d00">*</span></th>
                     <td>
-                        <select name="user_id" class="crm-select2" required>
-                            <option value="">— انتخاب —</option>
-                            <?php foreach ( get_users() as $u ) {
-                                printf( '<option value="%d">%s</option>', $u->ID, esc_html( $u->display_name ) );
-                            } ?>
+                        <?php
+                        $attendee_options = [];
+                        if ( $selected_competition && ( $selected_weight || $show_all_attendees ) ) {
+                            $attendee_options = $this->get_competition_attendees( $selected_competition, $selected_weight, $show_all_attendees );
+                        }
+                        ?>
+                        <select
+                            name="user_id"
+                            class="crm-select2"
+                            data-selected="<?php echo esc_attr( $selected_user ?: '' ); ?>"
+                            data-placeholder="<?php esc_attr_e( '— انتخاب —', 'imao-custom-plugin' ); ?>"
+                            required
+                        >
+                            <?php
+                            if ( $attendee_options ) {
+                                echo '<option value="">' . esc_html__( '— انتخاب —', 'imao-custom-plugin' ) . '</option>';
+                                foreach ( $attendee_options as $option ) {
+                                    printf(
+                                        '<option value="%d"%s>%s</option>',
+                                        $option['id'],
+                                        selected( $selected_user, $option['id'], false ),
+                                        esc_html( $option['label'] )
+                                    );
+                                }
+                            } else {
+                                echo '<option value="">' . esc_html( '— ابتدا دسته وزنی را انتخاب کنید —' ) . '</option>';
+                            }
+                            ?>
                         </select>
                     </td>
                 </tr>
@@ -278,13 +338,347 @@ class Ranking {
         if ( ! $screen || $screen->id !== 'users_page_crm-points-manager' ) {
             return;
         }
-        $url = plugin_dir_url( IMAO_PLUGIN_FILE );
+        $url       = plugin_dir_url( IMAO_PLUGIN_FILE );
+        $path      = plugin_dir_path( IMAO_PLUGIN_FILE );
+        $script    = 'assets/js/ranking-assign.js';
+        $version   = is_file( $path . $script ) ? (string) filemtime( $path . $script ) : '1.0.0';
         wp_enqueue_style( 'imao-select2', $url . 'assets/css/select2.min.css', [], '4.0.13' );
         wp_enqueue_script( 'imao-select2', $url . 'assets/js/select2.min.js', [ 'jquery' ], '4.0.13', true );
         wp_add_inline_script(
             'imao-select2',
             'jQuery(function($){$("select.crm-select2").select2({dir:"rtl",width:"resolve"});});'
         );
+        wp_enqueue_script( 'imao-ranking-assign', $url . $script, [ 'jquery', 'imao-select2' ], $version, true );
+        wp_localize_script(
+            'imao-ranking-assign',
+            'crmAssignPoints',
+            [
+                'ajax_url' => admin_url( 'admin-ajax.php' ),
+                'nonce'    => wp_create_nonce( self::AJAX_ACTION ),
+                'actions'  => [
+                    'weights'   => 'crm_competition_weight_classes',
+                    'attendees' => 'crm_competition_attendees',
+                ],
+                'i18n'     => [
+                    'loading'             => 'در حال بارگذاری…',
+                    'select_competition'  => '— ابتدا مسابقه را انتخاب کنید —',
+                    'select_weight'       => '— ابتدا دسته وزنی را انتخاب کنید —',
+                    'no_weights'          => 'دستهٔ وزنی برای این مسابقه ثبت نشده است.',
+                    'no_attendees'        => 'شرکت‌کننده‌ای یافت نشد.',
+                    'user_placeholder'    => '— انتخاب —',
+                    'weight_placeholder'  => '— انتخاب —',
+                    'error_generic'       => 'بروز خطا. لطفاً دوباره تلاش کنید.',
+                ],
+            ]
+        );
+    }
+
+    public function ajax_competition_weight_classes(): void {
+        $this->verify_ajax_request();
+        $competition_id = intval( $_POST['competition_id'] ?? 0 );
+        if ( ! $competition_id ) {
+            wp_send_json_success( [ 'weights' => [] ] );
+        }
+        $weights = $this->get_competition_weight_options( $competition_id );
+        wp_send_json_success( [ 'weights' => $weights ] );
+    }
+
+    public function ajax_competition_attendees(): void {
+        $this->verify_ajax_request();
+        $competition_id = intval( $_POST['competition_id'] ?? 0 );
+        $weight_class   = intval( $_POST['weight_class'] ?? 0 );
+        $include_all    = ! empty( $_POST['include_all'] );
+        if ( ! $competition_id || ( ! $include_all && ! $weight_class ) ) {
+            wp_send_json_success( [ 'attendees' => [] ] );
+        }
+        $attendees = $this->get_competition_attendees( $competition_id, $weight_class, $include_all );
+        wp_send_json_success( [ 'attendees' => $attendees ] );
+    }
+
+    private function verify_ajax_request(): void {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( [ 'message' => 'Unauthorized' ], 403 );
+        }
+        $nonce = $_POST['nonce'] ?? '';
+        if ( ! is_string( $nonce ) || ! wp_verify_nonce( $nonce, self::AJAX_ACTION ) ) {
+            wp_send_json_error( [ 'message' => 'Invalid nonce' ], 400 );
+        }
+    }
+
+    /**
+     * @return array<int,array{id:int,label:string}>
+     */
+    private function get_competition_weight_options( int $competition_id ): array {
+        if ( ! $competition_id ) {
+            return [];
+        }
+        $terms = wp_get_post_terms( $competition_id, 'age_category', [ 'hide_empty' => false ] );
+        if ( ! is_array( $terms ) || ( function_exists( 'is_wp_error' ) && is_wp_error( $terms ) ) ) {
+            return [];
+        }
+        $parents  = [];
+        $children = [];
+        foreach ( $terms as $term ) {
+            if ( ! $term instanceof WP_Term ) {
+                continue;
+            }
+            $term_id   = (int) $term->term_id;
+            $parent_id = (int) $term->parent;
+            if ( ! $term_id ) {
+                continue;
+            }
+            if ( $parent_id ) {
+                $children[ $parent_id ][ $term_id ] = $term;
+            } else {
+                $parents[ $term_id ] = $term;
+            }
+        }
+        $options = [];
+        foreach ( $children as $parent_id => $child_terms ) {
+            $parent_name = '';
+            if ( isset( $parents[ $parent_id ] ) ) {
+                $parent_name = (string) $parents[ $parent_id ]->name;
+            } else {
+                $parent_term = get_term( $parent_id, 'age_category' );
+                if ( $parent_term && ( ! function_exists( 'is_wp_error' ) || ! is_wp_error( $parent_term ) ) ) {
+                    $parent_name = (string) $parent_term->name;
+                }
+            }
+            foreach ( $child_terms as $term_id => $term ) {
+                $label = trim( $parent_name !== '' ? $parent_name . ' - ' . $term->name : $term->name );
+                $options[] = [
+                    'id'    => $term_id,
+                    'label' => $label,
+                ];
+            }
+        }
+        if ( ! $options && $parents ) {
+            foreach ( $parents as $term_id => $term ) {
+                $options[] = [
+                    'id'    => $term_id,
+                    'label' => (string) $term->name,
+                ];
+            }
+        }
+        usort(
+            $options,
+            static fn( array $a, array $b ): int => strcasecmp( $a['label'], $b['label'] )
+        );
+        return $options;
+    }
+
+    /**
+     * @return array<int,array{id:int,label:string,weight:string}>
+     */
+    private function get_competition_attendees( int $competition_id, int $weight_class, bool $include_all ): array {
+        if ( ! $competition_id ) {
+            return [];
+        }
+        $users = $this->load_competition_users( $competition_id );
+        if ( ! $users ) {
+            return [];
+        }
+        $meta_map      = $this->get_registration_meta_map( $competition_id, $users );
+        $target_weight = '';
+        if ( $weight_class ) {
+            $weight_term = get_term( $weight_class, 'age_category' );
+            if ( $weight_term && ( ! function_exists( 'is_wp_error' ) || ! is_wp_error( $weight_term ) ) ) {
+                $target_weight = (string) $weight_term->name;
+            }
+        }
+        $target_normalized = $this->normalize_string( $target_weight );
+        $rows              = [];
+        foreach ( $users as $user ) {
+            if ( ! $user instanceof WP_User ) {
+                continue;
+            }
+            $uid         = (int) $user->ID;
+            $weight_name = '';
+            if ( isset( $meta_map[ $uid ]['weight_class'] ) ) {
+                $weight_name = trim( (string) $meta_map[ $uid ]['weight_class'] );
+            }
+            $weight_normalized = $this->normalize_string( $weight_name );
+            if ( $target_normalized !== '' && ! $include_all && $weight_normalized !== $target_normalized ) {
+                continue;
+            }
+            if ( $target_normalized !== '' && ! $include_all && $weight_normalized === '' ) {
+                continue;
+            }
+            if ( ! $include_all && $target_normalized === '' ) {
+                continue;
+            }
+            $label = $user->display_name;
+            if ( $weight_name !== '' ) {
+                $label .= ' (' . $weight_name . ')';
+            }
+            $rows[] = [
+                'id'     => $uid,
+                'label'  => $label,
+                'weight' => $weight_name,
+            ];
+        }
+        usort(
+            $rows,
+            static fn( array $a, array $b ): int => strcasecmp( $a['label'], $b['label'] )
+        );
+        return $rows;
+    }
+
+    /**
+     * @return array<int,WP_User>
+     */
+    private function load_competition_users( int $competition_id ): array {
+        $user_map  = [];
+        $product_id = (int) get_post_meta( $competition_id, self::META_LINKED_PRODUCT, true );
+        if ( $product_id && function_exists( 'wc_get_orders' ) ) {
+            $order_ids = $this->get_order_ids_for_product( $product_id );
+            if ( $order_ids ) {
+                $orders = wc_get_orders( [
+                    'limit'  => -1,
+                    'status' => [ 'processing', 'completed' ],
+                    'include'=> $order_ids,
+                ] );
+                foreach ( $orders as $order ) {
+                    if ( ! is_object( $order ) || ! method_exists( $order, 'get_user_id' ) ) {
+                        continue;
+                    }
+                    $uid = (int) $order->get_user_id();
+                    if ( $uid > 0 ) {
+                        $user_map[ $uid ] = true;
+                    }
+                }
+            }
+        }
+        $manual = get_post_meta( $competition_id, self::META_MANUAL_ATTENDEES, true );
+        if ( is_array( $manual ) ) {
+            foreach ( $manual as $uid ) {
+                $uid = (int) $uid;
+                if ( $uid > 0 ) {
+                    $user_map[ $uid ] = true;
+                }
+            }
+        }
+        $users = [];
+        foreach ( array_keys( $user_map ) as $uid ) {
+            $user = get_user_by( 'id', $uid );
+            if ( $user instanceof WP_User ) {
+                $users[ $uid ] = $user;
+            }
+        }
+        return array_values( $users );
+    }
+
+    /**
+     * @param array<int,WP_User> $users
+     * @return array<int,array<string,string>>
+     */
+    private function get_registration_meta_map( int $competition_id, array $users ): array {
+        if ( ! function_exists( 'wc_get_orders' ) ) {
+            return [];
+        }
+        $product_id = (int) get_post_meta( $competition_id, self::META_LINKED_PRODUCT, true );
+        if ( ! $product_id ) {
+            return [];
+        }
+        $meta_map  = [];
+        $order_ids = $this->get_order_ids_for_product( $product_id );
+        if ( $order_ids ) {
+            $orders = wc_get_orders( [
+                'limit'  => -1,
+                'status' => [ 'processing', 'completed' ],
+                'include'=> $order_ids,
+            ] );
+            $this->extract_registration_meta_from_orders( $orders, $product_id, $meta_map );
+            return $meta_map;
+        }
+        foreach ( $users as $user ) {
+            if ( ! $user instanceof WP_User ) {
+                continue;
+            }
+            $uid = (int) $user->ID;
+            if ( ! $uid ) {
+                continue;
+            }
+            $orders = wc_get_orders( [
+                'limit'       => -1,
+                'status'      => [ 'processing', 'completed' ],
+                'customer_id' => $uid,
+            ] );
+            $this->extract_registration_meta_from_orders( $orders, $product_id, $meta_map );
+        }
+        return $meta_map;
+    }
+
+    /**
+     * @return int[]
+     */
+    private function get_order_ids_for_product( int $product_id ): array {
+        global $wpdb;
+        if ( ! isset( $wpdb ) || ! is_object( $wpdb ) || ! method_exists( $wpdb, 'prepare' ) || ! method_exists( $wpdb, 'get_col' ) ) {
+            return [];
+        }
+        $sql = $wpdb->prepare(
+            "SELECT DISTINCT order_id FROM {$wpdb->prefix}woocommerce_order_items oi
+             JOIN {$wpdb->prefix}woocommerce_order_itemmeta oim ON oi.order_item_id = oim.order_item_id
+             WHERE oi.order_item_type = 'line_item' AND oim.meta_key = '_product_id' AND oim.meta_value = %d",
+            $product_id
+        );
+        $results = $wpdb->get_col( $sql );
+        if ( ! $results ) {
+            return [];
+        }
+        return array_map( 'intval', $results );
+    }
+
+    /**
+     * @param iterable<int,object> $orders
+     * @param int $product_id
+     * @param array<int,array<string,string>> $meta_map
+     */
+    private function extract_registration_meta_from_orders( iterable $orders, int $product_id, array &$meta_map ): void {
+        foreach ( $orders as $order ) {
+            if ( ! is_object( $order ) || ! method_exists( $order, 'get_user_id' ) || ! method_exists( $order, 'get_items' ) ) {
+                continue;
+            }
+            $uid = (int) $order->get_user_id();
+            if ( ! $uid ) {
+                continue;
+            }
+            foreach ( $order->get_items() as $item ) {
+                if ( ! is_object( $item ) || ! method_exists( $item, 'get_product_id' ) ) {
+                    continue;
+                }
+                if ( (int) $item->get_product_id() !== $product_id ) {
+                    continue;
+                }
+                $weight = trim( (string) $item->get_meta( 'دسته وزنی', true ) );
+                $age    = trim( (string) $item->get_meta( 'رده سنی', true ) );
+                if ( ! isset( $meta_map[ $uid ] ) ) {
+                    $meta_map[ $uid ] = [ 'weight_class' => $weight, 'age_category' => $age ];
+                    continue;
+                }
+                if ( $weight !== '' && ( $meta_map[ $uid ]['weight_class'] ?? '' ) === '' ) {
+                    $meta_map[ $uid ]['weight_class'] = $weight;
+                }
+                if ( $age !== '' && ( $meta_map[ $uid ]['age_category'] ?? '' ) === '' ) {
+                    $meta_map[ $uid ]['age_category'] = $age;
+                }
+            }
+        }
+    }
+
+    private function normalize_string( string $value ): string {
+        $value = trim( $value );
+        if ( $value === '' ) {
+            return '';
+        }
+        $value = preg_replace( '/\s+/u', ' ', $value );
+        if ( function_exists( 'mb_strtolower' ) ) {
+            $value = mb_strtolower( $value, 'UTF-8' );
+        } else {
+            $value = strtolower( $value );
+        }
+        return $value;
     }
 
     private function get_ranking_rows( int $competition_id = 0, int $weight_class = 0 ): array {
