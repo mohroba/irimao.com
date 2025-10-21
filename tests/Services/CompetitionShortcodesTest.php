@@ -7,6 +7,11 @@ namespace IMAOCustom\Services {
     if ( ! function_exists( __NAMESPACE__ . '\\get_current_user_id' ) ) {
         function get_current_user_id() { return 1; }
     }
+    if ( ! function_exists( __NAMESPACE__ . '\\get_user_meta' ) ) {
+        function get_user_meta( $uid, $key, $single = true ) {
+            return \get_user_meta( $uid, $key, $single );
+        }
+    }
 }
 
 namespace {
