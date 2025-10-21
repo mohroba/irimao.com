@@ -1,10 +1,18 @@
 <?php
+namespace {
 error_reporting(E_ALL & ~E_DEPRECATED);
 if ( ! function_exists( 'is_user_logged_in' ) ) {
-    function is_user_logged_in() { return true; }
+    function is_user_logged_in() {
+        if ( array_key_exists( 'test_is_user_logged_in', $GLOBALS ) ) {
+            return (bool) $GLOBALS['test_is_user_logged_in'];
+        }
+        return true;
+    }
 }
 if ( ! function_exists( 'get_current_user_id' ) ) {
-    function get_current_user_id() { return 1; }
+    function get_current_user_id() {
+        return isset( $GLOBALS['test_current_user_id'] ) ? (int) $GLOBALS['test_current_user_id'] : 1;
+    }
 }
 if ( ! function_exists( 'get_user_meta' ) ) {
     function get_user_meta( $id, $key, $single = true ) {
@@ -20,6 +28,41 @@ if ( ! function_exists( 'get_user_meta' ) ) {
             return $defaults[ $key ];
         }
         return $key . '_' . $id;
+    }
+}
+if ( ! function_exists( 'get_users' ) ) {
+    function get_users( $args = [] ) {
+        if ( isset( $GLOBALS['get_users_return'] ) ) {
+            return $GLOBALS['get_users_return'];
+        }
+        if ( isset( $GLOBALS['test_users_callable'] ) && is_callable( $GLOBALS['test_users_callable'] ) ) {
+            return call_user_func( $GLOBALS['test_users_callable'], $args );
+        }
+        $users = $GLOBALS['test_users'] ?? [];
+        if ( isset( $args['meta_key'], $args['meta_value'] ) ) {
+            $meta_key   = $args['meta_key'];
+            $meta_value = (string) $args['meta_value'];
+            $users      = array_filter(
+                $users,
+                static function ( $user ) use ( $meta_key, $meta_value ) {
+                    $uid  = (int) ( $user->ID ?? 0 );
+                    $meta = $GLOBALS['test_user_meta'][ $uid ][ $meta_key ] ?? null;
+                    return (string) $meta === $meta_value;
+                }
+            );
+        }
+        if ( isset( $args['orderby'] ) && $args['orderby'] === 'display_name' ) {
+            usort(
+                $users,
+                static function ( $a, $b ) {
+                    return strcmp( (string) ( $a->display_name ?? '' ), (string) ( $b->display_name ?? '' ) );
+                }
+            );
+        }
+        if ( isset( $args['fields'] ) && $args['fields'] === 'ID' ) {
+            return array_map( static fn( $user ) => $user->ID ?? 0, $users );
+        }
+        return array_values( $users );
     }
 }
 if ( ! function_exists( 'update_user_meta' ) ) {
@@ -198,6 +241,7 @@ if ( ! function_exists( 'get_terms' ) ) {
         return $all;
     }
 }
+
 if ( ! function_exists( 'get_term_meta' ) ) {
     function get_term_meta( $term_id, $key, $single = true ) {
         $map = [
@@ -306,5 +350,14 @@ if ( ! function_exists( 'wp_set_post_terms' ) ) {
     function wp_set_post_terms( $post_id, $terms, $tax ) {
         $GLOBALS['wp_set_post_terms_last'] = [ $post_id, $terms, $tax ];
         return true;
+    }
+}
+}
+
+namespace IMAOCustom\Helpers {
+    if ( ! function_exists( __NAMESPACE__ . '\\get_option' ) ) {
+        function get_option( $name, $default = false ) {
+            return $GLOBALS['test_options'][ $name ] ?? $default;
+        }
     }
 }
