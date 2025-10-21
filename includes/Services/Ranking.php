@@ -205,28 +205,39 @@ class Ranking {
 
     private function render_assign_tab(): void {
         global $wpdb;
-        $selected_competition = intval( $_POST['competition_id'] ?? 0 );
-        $selected_weight      = intval( $_POST['weight_class'] ?? 0 );
-        $selected_user        = intval( $_POST['user_id'] ?? 0 );
-        $show_all_attendees   = ! empty( $_POST['crm_show_all_attendees'] );
+        $selected_competition    = max( 0, intval( $_POST['competition_id'] ?? 0 ) );
+        $selected_weight         = max( 0, intval( $_POST['weight_class'] ?? 0 ) );
+        $selected_user           = max( 0, intval( $_POST['user_id'] ?? 0 ) );
+        $show_all_attendees      = ! empty( $_POST['crm_show_all_attendees'] );
+        $assignment_weight_input = max( 0, intval( $_POST['assigned_weight_class'] ?? 0 ) );
 
         if ( isset( $_POST['crm_assign_points'] ) ) {
             check_admin_referer( 'crm_assign_points' );
-            $user_id        = intval( $_POST['user_id'] ?? 0 );
-            $competition_id = intval( $_POST['competition_id'] ?? 0 );
-            $weight_class   = intval( $_POST['weight_class'] ?? 0 );
+            $user_id        = max( 0, intval( $_POST['user_id'] ?? 0 ) );
+            $competition_id = max( 0, intval( $_POST['competition_id'] ?? 0 ) );
             $points         = intval( $_POST['points'] ?? 0 );
-            if ( ! $competition_id || ! $user_id || ! $weight_class ) {
+            $resolved_weight = $assignment_weight_input;
+
+            if ( ! $competition_id || ! $user_id ) {
                 echo '<div class="error"><p>تمام فیلدها الزامی است.</p></div>';
             } else {
-                $wpdb->insert( $wpdb->prefix . 'crm_points', [
-                    'user_id'        => $user_id,
-                    'competition_id' => $competition_id,
-                    'weight_class'   => $weight_class,
-                    'points'         => $points,
-                    'assigned_date'  => current_time( 'mysql' ),
-                ], [ '%d', '%d', '%d', '%d', '%s' ] );
-                echo '<div class="updated"><p>امتیاز ثبت شد.</p></div>';
+                if ( ! $resolved_weight ) {
+                    $resolved_weight = $this->resolve_user_weight_term_id( $competition_id, $user_id );
+                }
+
+                if ( ! $resolved_weight ) {
+                    echo '<div class="error"><p>دسته وزنی شرکت‌کننده یافت نشد. لطفاً ابتدا وزن ثبت‌شده او را بررسی کنید.</p></div>';
+                } else {
+                    $wpdb->insert( $wpdb->prefix . 'crm_points', [
+                        'user_id'        => $user_id,
+                        'competition_id' => $competition_id,
+                        'weight_class'   => $resolved_weight,
+                        'points'         => $points,
+                        'assigned_date'  => current_time( 'mysql' ),
+                    ], [ '%d', '%d', '%d', '%d', '%s' ] );
+                    $assignment_weight_input = $resolved_weight;
+                    echo '<div class="updated"><p>امتیاز ثبت شد.</p></div>';
+                }
             }
         }
         ?>
@@ -329,6 +340,7 @@ class Ranking {
                             }
                             ?>
                         </select>
+                        <input type="hidden" name="assigned_weight_class" id="crm-assigned-weight-class" value="<?php echo esc_attr( $assignment_weight_input ?: '' ); ?>">
                     </td>
                 </tr>
                 <tr>
@@ -420,10 +432,12 @@ class Ranking {
         if ( ! $competition_id ) {
             return [];
         }
+
         $terms = wp_get_post_terms( $competition_id, 'age_category', [ 'hide_empty' => false ] );
         if ( ! is_array( $terms ) || ( function_exists( 'is_wp_error' ) && is_wp_error( $terms ) ) ) {
             return [];
         }
+
         $parents  = [];
         $children = [];
         foreach ( $terms as $term ) {
@@ -441,6 +455,7 @@ class Ranking {
                 $parents[ $term_id ] = $term;
             }
         }
+
         $options = [];
         foreach ( $children as $parent_id => $child_terms ) {
             $parent_name = '';
@@ -452,84 +467,231 @@ class Ranking {
                     $parent_name = (string) $parent_term->name;
                 }
             }
+            $normalized_parent = $this->normalize_string( $parent_name );
             foreach ( $child_terms as $term_id => $term ) {
-                $label = trim( $parent_name !== '' ? $parent_name . ' - ' . $term->name : $term->name );
-                $options[] = [
-                    'id'    => $term_id,
-                    'label' => $label,
+                $label             = trim( $parent_name !== '' ? $parent_name . ' - ' . $term->name : $term->name );
+                $term_name         = (string) $term->name;
+                $options[]         = [
+                    'id'                => $term_id,
+                    'label'             => $label,
+                    'term_name'         => $term_name,
+                    'parent_id'         => $parent_id,
+                    'parent_name'       => $parent_name,
+                    'normalized_label'  => $this->normalize_string( $label ),
+                    'normalized_term'   => $this->normalize_string( $term_name ),
+                    'normalized_parent' => $normalized_parent,
                 ];
             }
         }
+
         if ( ! $options && $parents ) {
             foreach ( $parents as $term_id => $term ) {
+                $term_name = (string) $term->name;
                 $options[] = [
-                    'id'    => $term_id,
-                    'label' => (string) $term->name,
+                    'id'                => $term_id,
+                    'label'             => $term_name,
+                    'term_name'         => $term_name,
+                    'parent_id'         => (int) $term->parent,
+                    'parent_name'       => '',
+                    'normalized_label'  => $this->normalize_string( $term_name ),
+                    'normalized_term'   => $this->normalize_string( $term_name ),
+                    'normalized_parent' => '',
                 ];
             }
         }
+
         usort(
             $options,
-            static fn( array $a, array $b ): int => strcasecmp( $a['label'], $b['label'] )
+            static fn( array $a, array $b ): int => strcasecmp( (string) ( $a['label'] ?? '' ), (string) ( $b['label'] ?? '' ) )
         );
+
         return $options;
     }
 
     /**
-     * @return array<int,array{id:int,label:string,weight:string}>
+     * @param array<int,array<string,mixed>> $options
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    private function index_weight_options( array $options ): array {
+        $indexed = [];
+        foreach ( $options as $option ) {
+            $id = isset( $option['id'] ) ? (int) $option['id'] : 0;
+            if ( $id > 0 ) {
+                $indexed[ $id ] = $option;
+            }
+        }
+
+        return $indexed;
+    }
+
+    /**
+     * Attempt to resolve the registered weight option for a given attendee meta row.
+     *
+     * @param array<int,array<string,mixed>> $options
+     * @param array<string,mixed>            $meta
+     */
+    private function match_weight_option( array $options, array $meta ): int {
+        $requested_id = isset( $meta['weight_class_term'] ) ? (int) $meta['weight_class_term'] : 0;
+        if ( $requested_id > 0 ) {
+            foreach ( $options as $option ) {
+                if ( (int) ( $option['id'] ?? 0 ) === $requested_id ) {
+                    return $requested_id;
+                }
+            }
+        }
+
+        $weight_name = $this->normalize_string( (string) ( $meta['weight_class'] ?? '' ) );
+        if ( $weight_name === '' ) {
+            return 0;
+        }
+
+        $age_name    = $this->normalize_string( (string) ( $meta['age_category'] ?? '' ) );
+        $age_term_id = isset( $meta['age_category_term'] ) ? (int) $meta['age_category_term'] : 0;
+
+        foreach ( $options as $option ) {
+            $option_id = isset( $option['id'] ) ? (int) $option['id'] : 0;
+            if ( $option_id <= 0 ) {
+                continue;
+            }
+
+            $normalized_term   = (string) ( $option['normalized_term'] ?? '' );
+            $normalized_label  = (string) ( $option['normalized_label'] ?? $normalized_term );
+            $normalized_parent = (string) ( $option['normalized_parent'] ?? '' );
+            $parent_id         = isset( $option['parent_id'] ) ? (int) $option['parent_id'] : 0;
+
+            $weight_matches = $this->strings_overlap( $weight_name, $normalized_term )
+                || $this->strings_overlap( $weight_name, $normalized_label );
+
+            if ( ! $weight_matches ) {
+                continue;
+            }
+
+            if ( $age_term_id && $parent_id && $age_term_id !== $parent_id ) {
+                continue;
+            }
+
+            if ( $age_name !== '' && $normalized_parent !== '' && ! $this->strings_overlap( $age_name, $normalized_parent ) ) {
+                continue;
+            }
+
+            return $option_id;
+        }
+
+        return 0;
+    }
+
+    private function strings_overlap( string $a, string $b ): bool {
+        if ( $a === '' || $b === '' ) {
+            return false;
+        }
+
+        if ( $a === $b ) {
+            return true;
+        }
+
+        if ( strpos( $a, $b ) !== false ) {
+            return true;
+        }
+
+        return strpos( $b, $a ) !== false;
+    }
+
+    /**
+     * @return array<int,array{id:int,label:string,weight:string,weight_term_id:int}>
      */
     private function get_competition_attendees( int $competition_id, int $weight_class, bool $include_all ): array {
         if ( ! $competition_id ) {
             return [];
         }
+
         $users = $this->load_competition_users( $competition_id );
         if ( ! $users ) {
             return [];
         }
-        $meta_map      = $this->get_registration_meta_map( $competition_id, $users );
-        $target_weight = '';
-        if ( $weight_class ) {
+
+        $meta_map       = $this->get_registration_meta_map( $competition_id, $users );
+        $weight_options = $this->get_competition_weight_options( $competition_id );
+        $weight_index   = $this->index_weight_options( $weight_options );
+
+        $target_label = '';
+        if ( $weight_class && isset( $weight_index[ $weight_class ] ) ) {
+            $target_label = (string) ( $weight_index[ $weight_class ]['label'] ?? '' );
+        } elseif ( $weight_class ) {
             $weight_term = get_term( $weight_class, 'age_category' );
             if ( $weight_term && ( ! function_exists( 'is_wp_error' ) || ! is_wp_error( $weight_term ) ) ) {
-                $target_weight = (string) $weight_term->name;
+                $target_label = (string) $weight_term->name;
             }
         }
-        $target_normalized = $this->normalize_string( $target_weight );
-        $rows              = [];
+        $target_normalized = $this->normalize_string( $target_label );
+
+        $rows = [];
         foreach ( $users as $user ) {
             if ( ! $user instanceof WP_User ) {
                 continue;
             }
-            $uid         = (int) $user->ID;
-            $weight_name = '';
-            if ( isset( $meta_map[ $uid ]['weight_class'] ) ) {
-                $weight_name = trim( (string) $meta_map[ $uid ]['weight_class'] );
+
+            $uid  = (int) $user->ID;
+            $meta = $meta_map[ $uid ] ?? [];
+
+            $weight_name     = trim( (string) ( $meta['weight_class'] ?? '' ) );
+            $weight_term_id  = $this->match_weight_option( $weight_options, $meta );
+            $weight_label    = $weight_name;
+            $weight_option   = $weight_term_id && isset( $weight_index[ $weight_term_id ] ) ? $weight_index[ $weight_term_id ] : null;
+            if ( is_array( $weight_option ) ) {
+                $weight_label = (string) ( $weight_option['label'] ?? $weight_label );
             }
-            $weight_normalized = $this->normalize_string( $weight_name );
-            if ( $target_normalized !== '' && ! $include_all && $weight_normalized !== $target_normalized ) {
-                continue;
+
+            $weight_normalized = $this->normalize_string( $weight_label ?: $weight_name );
+
+            if ( ! $include_all && $weight_class ) {
+                if ( $weight_term_id ) {
+                    if ( $weight_term_id !== $weight_class ) {
+                        continue;
+                    }
+                } elseif ( $target_normalized !== '' ) {
+                    if ( $weight_normalized === '' || ! $this->strings_overlap( $weight_normalized, $target_normalized ) ) {
+                        continue;
+                    }
+                } else {
+                    continue;
+                }
             }
-            if ( $target_normalized !== '' && ! $include_all && $weight_normalized === '' ) {
-                continue;
-            }
-            if ( ! $include_all && $target_normalized === '' ) {
-                continue;
-            }
+
             $label = $user->display_name;
-            if ( $weight_name !== '' ) {
-                $label .= ' (' . $weight_name . ')';
+            if ( $weight_label !== '' ) {
+                $label .= ' (' . $weight_label . ')';
             }
+
             $rows[] = [
-                'id'     => $uid,
-                'label'  => $label,
-                'weight' => $weight_name,
+                'id'             => $uid,
+                'label'          => $label,
+                'weight'         => $weight_label,
+                'weight_term_id' => $weight_term_id,
             ];
         }
+
         usort(
             $rows,
-            static fn( array $a, array $b ): int => strcasecmp( $a['label'], $b['label'] )
+            static fn( array $a, array $b ): int => strcasecmp( (string) $a['label'], (string) $b['label'] )
         );
+
         return $rows;
+    }
+
+    private function resolve_user_weight_term_id( int $competition_id, int $user_id ): int {
+        if ( ! $competition_id || ! $user_id ) {
+            return 0;
+        }
+
+        $attendees = $this->get_competition_attendees( $competition_id, 0, true );
+        foreach ( $attendees as $attendee ) {
+            if ( (int) ( $attendee['id'] ?? 0 ) === $user_id ) {
+                return max( 0, (int) ( $attendee['weight_term_id'] ?? 0 ) );
+            }
+        }
+
+        return 0;
     }
 
     /**
@@ -659,17 +821,28 @@ class Ranking {
                 if ( (int) $item->get_product_id() !== $product_id ) {
                     continue;
                 }
-                $weight = trim( (string) $item->get_meta( 'دسته وزنی', true ) );
-                $age    = trim( (string) $item->get_meta( 'رده سنی', true ) );
+                $weight          = trim( (string) $item->get_meta( 'دسته وزنی', true ) );
+                $age             = trim( (string) $item->get_meta( 'رده سنی', true ) );
+                $weight_term_raw = $item->get_meta( 'weight_class_term', true );
+                $age_term_raw    = $item->get_meta( 'age_category_term', true );
+                $weight_term_id  = is_numeric( $weight_term_raw ) ? (int) $weight_term_raw : 0;
+                $age_term_id     = is_numeric( $age_term_raw ) ? (int) $age_term_raw : 0;
+
                 if ( ! isset( $meta_map[ $uid ] ) ) {
-                    $meta_map[ $uid ] = [ 'weight_class' => $weight, 'age_category' => $age ];
-                    continue;
+                    $meta_map[ $uid ] = [];
                 }
+
                 if ( $weight !== '' && ( $meta_map[ $uid ]['weight_class'] ?? '' ) === '' ) {
                     $meta_map[ $uid ]['weight_class'] = $weight;
                 }
                 if ( $age !== '' && ( $meta_map[ $uid ]['age_category'] ?? '' ) === '' ) {
                     $meta_map[ $uid ]['age_category'] = $age;
+                }
+                if ( $weight_term_id > 0 && (int) ( $meta_map[ $uid ]['weight_class_term'] ?? 0 ) === 0 ) {
+                    $meta_map[ $uid ]['weight_class_term'] = $weight_term_id;
+                }
+                if ( $age_term_id > 0 && (int) ( $meta_map[ $uid ]['age_category_term'] ?? 0 ) === 0 ) {
+                    $meta_map[ $uid ]['age_category_term'] = $age_term_id;
                 }
             }
         }
