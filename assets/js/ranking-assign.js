@@ -11,6 +11,7 @@
   const $weight = $('select[name="weight_class"]');
   const $user = $('select[name="user_id"]');
   const $showAll = $('#crm-show-all-attendees');
+  const $assignedWeight = $('#crm-assigned-weight-class');
 
   let pendingWeight = String($weight.data('selected') || '');
   let pendingUser = String($user.data('selected') || '');
@@ -49,12 +50,31 @@
       const label = escapeHtml(opt && opt.label !== undefined ? opt.label : '');
       const shouldSelect = selected !== undefined && selected !== null && String(selected) === value;
       const selectedAttr = shouldSelect ? ' selected' : '';
-      items.push('<option value="' + escapeHtml(value) + '"' + selectedAttr + '>' + label + '</option>');
+      const weightId = opt && opt.weight_term_id !== undefined && opt.weight_term_id !== null ? String(opt.weight_term_id) : '';
+      const weightAttr = weightId !== '' ? ' data-weight-id="' + escapeHtml(weightId) + '"' : '';
+      items.push('<option value="' + escapeHtml(value) + '"' + selectedAttr + weightAttr + '>' + label + '</option>');
     });
     $select.html(items.join(''));
     const targetValue = selected !== undefined && selected !== null ? String(selected) : '';
     $select.val(targetValue);
     $select.prop('disabled', false).trigger('change.select2');
+  }
+
+  function updateAssignedWeight() {
+    if (!$assignedWeight.length) {
+      return;
+    }
+    const selectedOption = $user.find('option:selected');
+    if (!selectedOption.length) {
+      $assignedWeight.val('');
+      return;
+    }
+    const weightIdAttr = selectedOption.attr('data-weight-id');
+    if (weightIdAttr && weightIdAttr !== '0') {
+      $assignedWeight.val(weightIdAttr);
+    } else {
+      $assignedWeight.val('');
+    }
   }
 
   function getCompetitionId() {
@@ -71,6 +91,7 @@
     if (!competitionId) {
       showPlaceholder($weight, needCompetitionText || weightPlaceholder, true);
       showPlaceholder($user, needWeightText || userPlaceholder, true);
+      updateAssignedWeight();
       return;
     }
     showPlaceholder($weight, loadingText, true);
@@ -92,14 +113,17 @@
           fetchAttendees(chosen && parseInt(chosen, 10));
         } else {
           showPlaceholder($user, needWeightText || userPlaceholder, true);
+          updateAssignedWeight();
         }
       } else {
         showPlaceholder($weight, noWeightsText || weightPlaceholder, true);
         showPlaceholder($user, needWeightText || userPlaceholder, true);
+        updateAssignedWeight();
       }
     }).fail(function () {
       showPlaceholder($weight, errorText, true);
       showPlaceholder($user, errorText, true);
+      updateAssignedWeight();
     });
   }
 
@@ -110,10 +134,12 @@
 
     if (!competitionId) {
       showPlaceholder($user, needCompetitionText || userPlaceholder, true);
+      updateAssignedWeight();
       return;
     }
     if (!includeAll && !weightId) {
       showPlaceholder($user, needWeightText || userPlaceholder, true);
+      updateAssignedWeight();
       return;
     }
 
@@ -135,11 +161,14 @@
         const selected = pendingUser || $user.val();
         setOptions($user, userPlaceholder, res.data.attendees, selected);
         pendingUser = '';
+        updateAssignedWeight();
       } else {
         showPlaceholder($user, noAttendeesText || userPlaceholder, true);
+        updateAssignedWeight();
       }
     }).fail(function () {
       showPlaceholder($user, errorText, true);
+      updateAssignedWeight();
     });
   }
 
@@ -157,10 +186,15 @@
     fetchAttendees();
   });
 
+  $user.on('change', function () {
+    updateAssignedWeight();
+  });
+
   if (getCompetitionId()) {
     fetchWeights(pendingWeight);
   } else {
     showPlaceholder($weight, needCompetitionText || weightPlaceholder, true);
     showPlaceholder($user, needCompetitionText || userPlaceholder, true);
+    updateAssignedWeight();
   }
 })(jQuery);

@@ -1,6 +1,7 @@
 <?php
 use PHPUnit\Framework\TestCase;
 use IMAOCustom\Services\Ranking;
+use ReflectionMethod;
 
 if ( ! class_exists( 'RankingTestWpdb' ) ) {
     class RankingTestWpdb {
@@ -178,5 +179,62 @@ class RankingTest extends TestCase {
         $GLOBALS['flush_rewrite_rules_called'] = false;
         $service->deactivate();
         $this->assertTrue( $GLOBALS['flush_rewrite_rules_called'] );
+    }
+
+    public function test_match_weight_option_prefers_explicit_term_id(): void {
+        $service = new Ranking();
+        $method  = new ReflectionMethod( Ranking::class, 'match_weight_option' );
+        $method->setAccessible( true );
+
+        $options = [
+            [
+                'id'                => 10,
+                'label'             => 'Cadet - 40-45',
+                'normalized_term'   => '40-45',
+                'normalized_label'  => 'cadet - 40-45',
+                'normalized_parent' => 'cadet',
+                'parent_id'         => 5,
+            ],
+        ];
+
+        $meta = [
+            'weight_class_term' => 10,
+            'weight_class'      => '40-45',
+            'age_category'      => 'Cadet',
+        ];
+
+        $this->assertSame( 10, $method->invoke( $service, $options, $meta ) );
+    }
+
+    public function test_match_weight_option_uses_age_category_to_disambiguate(): void {
+        $service = new Ranking();
+        $method  = new ReflectionMethod( Ranking::class, 'match_weight_option' );
+        $method->setAccessible( true );
+
+        $options = [
+            [
+                'id'                => 10,
+                'label'             => 'Cadet - 40-45',
+                'normalized_term'   => '40-45',
+                'normalized_label'  => 'cadet - 40-45',
+                'normalized_parent' => 'cadet',
+                'parent_id'         => 5,
+            ],
+            [
+                'id'                => 11,
+                'label'             => 'Junior - 40-45',
+                'normalized_term'   => '40-45',
+                'normalized_label'  => 'junior - 40-45',
+                'normalized_parent' => 'junior',
+                'parent_id'         => 6,
+            ],
+        ];
+
+        $meta = [
+            'weight_class' => '40-45',
+            'age_category' => 'Junior',
+        ];
+
+        $this->assertSame( 11, $method->invoke( $service, $options, $meta ) );
     }
 }
