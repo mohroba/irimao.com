@@ -49,6 +49,8 @@ class RankingTest extends TestCase {
             public function get_var( $query ) { return 0; }
             public function get_charset_collate() { return ''; }
             public function replace( $table, $data, $format ) {}
+            public function insert( $table, $data, $format ) {}
+            public function esc_like( $text ) { return addcslashes( (string) $text, '%_' ); }
         };
     }
 

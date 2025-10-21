@@ -2,6 +2,8 @@
 namespace IMAOCustom\Services;
 
 class Ranking {
+    private static bool $install_checked = false;
+
     public function register(): void {
         register_activation_hook( IMAO_PLUGIN_FILE, [ $this, 'activate' ] );
         register_deactivation_hook( IMAO_PLUGIN_FILE, [ $this, 'deactivate' ] );
@@ -11,6 +13,7 @@ class Ranking {
         add_action( 'init', [ $this, 'register_endpoint' ] );
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
         add_action( 'woocommerce_account_my-rankings_endpoint', fn() => print do_shortcode( '[crm_my_rankings]' ) );
+        add_action( 'plugins_loaded', [ $this, 'maybe_install' ] );
     }
 
     public function activate(): void {
@@ -37,6 +40,71 @@ class Ranking {
         $wpdb->replace( $wpdb->prefix . 'crm_settings', [ 'opt_key' => 'points_expiry_days', 'opt_val' => '365' ], [ '%s', '%s' ] );
         $this->register_endpoint();
         flush_rewrite_rules();
+    }
+
+    public function maybe_install(): void {
+        if ( self::$install_checked ) {
+            return;
+        }
+        self::$install_checked = true;
+
+        global $wpdb;
+        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+
+        $charset        = $wpdb->get_charset_collate();
+        $points_table   = $wpdb->prefix . 'crm_points';
+        $settings_table = $wpdb->prefix . 'crm_settings';
+
+        $sql_points = "CREATE TABLE {$points_table} (
+                id bigint unsigned NOT NULL AUTO_INCREMENT,
+                user_id bigint unsigned NOT NULL,
+                competition_id bigint unsigned NOT NULL,
+                weight_class bigint unsigned NOT NULL,
+                points int NOT NULL DEFAULT 0,
+                assigned_date datetime NOT NULL,
+                PRIMARY KEY (id),
+                KEY idx_comp (competition_id),
+                KEY idx_user (user_id)
+        ) {$charset};";
+
+        $sql_settings = "CREATE TABLE {$settings_table} (
+                opt_key varchar(60) NOT NULL PRIMARY KEY,
+                opt_val varchar(191) NOT NULL
+        ) {$charset};";
+
+        if ( ! $this->table_exists( $points_table ) || ! $this->table_exists( $settings_table ) ) {
+            dbDelta( $sql_points );
+            dbDelta( $sql_settings );
+        }
+
+        $existing = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT opt_val FROM {$settings_table} WHERE opt_key = %s LIMIT 1",
+                'points_expiry_days'
+            )
+        );
+
+        if ( $existing === null ) {
+            $wpdb->insert(
+                $settings_table,
+                [ 'opt_key' => 'points_expiry_days', 'opt_val' => '365' ],
+                [ '%s', '%s' ]
+            );
+        }
+    }
+
+    private function table_exists( string $table_name ): bool {
+        global $wpdb;
+
+        $pattern = $wpdb->esc_like( $table_name );
+        $found   = $wpdb->get_var(
+            $wpdb->prepare(
+                'SHOW TABLES LIKE %s',
+                $pattern
+            )
+        );
+
+        return is_string( $found ) && strcasecmp( $found, $table_name ) === 0;
     }
 
     public function register_endpoint(): void {
