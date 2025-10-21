@@ -1,14 +1,21 @@
 <?php
 namespace IMAOCustom\Services;
 
+use IMAOCustom\Helpers\UserMeta;
 use WP_Term;
-use WP_User;
 
 class Ranking {
     private const META_LINKED_PRODUCT = '_linked_product_id';
     private const META_MANUAL_ATTENDEES = '_manual_attendees';
     private const AJAX_ACTION = 'crm_assign_points_ajax';
     private static bool $install_checked = false;
+    private static bool $overview_style_printed = false;
+
+    /** @var array<string,string> */
+    private array $gender_label_cache = [
+        'men'   => 'مردان',
+        'women' => 'زنان',
+    ];
 
     public function register(): void {
         register_activation_hook( IMAO_PLUGIN_FILE, [ $this, 'activate' ] );
@@ -16,6 +23,7 @@ class Ranking {
         add_action( 'admin_menu', [ $this, 'add_admin_menu' ] );
         add_shortcode( 'crm_competition_rankings', [ $this, 'competition_rankings_shortcode' ] );
         add_shortcode( 'crm_my_rankings', [ $this, 'my_rankings_shortcode' ] );
+        add_shortcode( 'crm_rankings_overview', [ $this, 'rankings_overview_shortcode' ] );
         add_action( 'init', [ $this, 'register_endpoint' ] );
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
         add_action( 'woocommerce_account_my-rankings_endpoint', fn() => print do_shortcode( '[crm_my_rankings]' ) );
@@ -697,6 +705,194 @@ class Ranking {
         return $wpdb->get_results( "SELECT user_id, SUM(points) AS pts FROM {$wpdb->prefix}crm_points $where GROUP BY user_id ORDER BY pts DESC" );
     }
 
+    /**
+     * Display rankings grouped by gender, age category, and weight class.
+     *
+     * @param array<string,mixed> $atts Shortcode attributes.
+     */
+    public function rankings_overview_shortcode( $atts = [] ): string {
+        $atts = shortcode_atts(
+            [
+                'competition' => 0,
+                'gender'      => '',
+                'age'         => '',
+                'weight'      => '',
+                'limit'       => 0,
+                'show_style'  => 'yes',
+            ],
+            $atts,
+            'crm_rankings_overview'
+        );
+
+        $competition_id = intval( $atts['competition'] );
+        $gender_filter  = $this->parse_filter_list( $atts['gender'] );
+        $age_filter     = $this->parse_filter_list( $atts['age'] );
+        $weight_filter  = $this->parse_filter_list( $atts['weight'] );
+        $limit          = max( 0, intval( $atts['limit'] ) );
+
+        $rows = $this->get_weight_class_rankings( $competition_id );
+        if ( ! $rows ) {
+            return '<p>' . esc_html( $this->translate( 'امتیازی ثبت نشده است.' ) ) . '</p>';
+        }
+
+        $groups = [];
+
+        foreach ( $rows as $row ) {
+            $weight_id = (int) ( $row->weight_class ?? 0 );
+            $user_id   = (int) ( $row->user_id ?? 0 );
+            if ( $weight_id <= 0 || $user_id <= 0 ) {
+                continue;
+            }
+
+            $weight_term = get_term( $weight_id, 'age_category' );
+            if ( ! $weight_term || is_wp_error( $weight_term ) ) {
+                continue;
+            }
+
+            $age_term = null;
+            if ( $weight_term->parent ) {
+                $parent = get_term( (int) $weight_term->parent, 'age_category' );
+                if ( $parent && ! is_wp_error( $parent ) ) {
+                    $age_term = $parent;
+                }
+            }
+
+            if ( $age_filter && ! $this->term_matches_filter( $age_term, $age_filter ) ) {
+                continue;
+            }
+
+            if ( $weight_filter && ! $this->term_matches_filter( $weight_term, $weight_filter ) ) {
+                continue;
+            }
+
+            $gender_slug = $this->normalize_slug( UserMeta::gender_slug( $user_id ) );
+            if ( $gender_filter && ! in_array( $gender_slug, $gender_filter, true ) ) {
+                continue;
+            }
+
+            $gender_key = $gender_slug ?: 'unknown';
+            if ( ! isset( $groups[ $gender_key ] ) ) {
+                $groups[ $gender_key ] = [
+                    'label' => $this->gender_label( $gender_key ),
+                    'ages'  => [],
+                ];
+            }
+
+            $age_key   = $age_term instanceof WP_Term ? (string) $age_term->term_id : 'unassigned';
+            $age_label = $age_term instanceof WP_Term ? (string) $age_term->name : $this->translate( 'رده سنی نامشخص' );
+            if ( ! isset( $groups[ $gender_key ]['ages'][ $age_key ] ) ) {
+                $groups[ $gender_key ]['ages'][ $age_key ] = [
+                    'label'   => $age_label,
+                    'term'    => $age_term,
+                    'weights' => [],
+                ];
+            }
+
+            $weight_key   = (string) $weight_term->term_id;
+            $weight_label = (string) $weight_term->name;
+            if ( ! isset( $groups[ $gender_key ]['ages'][ $age_key ]['weights'][ $weight_key ] ) ) {
+                $groups[ $gender_key ]['ages'][ $age_key ]['weights'][ $weight_key ] = [
+                    'label' => $weight_label,
+                    'rows'  => [],
+                ];
+            }
+
+            $groups[ $gender_key ]['ages'][ $age_key ]['weights'][ $weight_key ]['rows'][] = [
+                'user_id' => $user_id,
+                'points'  => (int) ( $row->pts ?? 0 ),
+            ];
+        }
+
+        if ( ! $groups ) {
+            return '<p>' . esc_html( $this->translate( 'امتیازی ثبت نشده است.' ) ) . '</p>';
+        }
+
+        foreach ( $groups as &$gender_group ) {
+            foreach ( $gender_group['ages'] as &$age_group ) {
+                foreach ( $age_group['weights'] as &$weight_group ) {
+                    usort(
+                        $weight_group['rows'],
+                        static fn( array $a, array $b ): int => $b['points'] <=> $a['points'] ?: $a['user_id'] <=> $b['user_id']
+                    );
+                    if ( $limit > 0 && count( $weight_group['rows'] ) > $limit ) {
+                        $weight_group['rows'] = array_slice( $weight_group['rows'], 0, $limit );
+                    }
+                }
+                unset( $weight_group );
+                uasort(
+                    $age_group['weights'],
+                    static fn( array $a, array $b ): int => strnatcasecmp( $a['label'], $b['label'] )
+                );
+            }
+            unset( $age_group );
+            uasort(
+                $gender_group['ages'],
+                static fn( array $a, array $b ): int => strnatcasecmp( $a['label'], $b['label'] )
+            );
+        }
+        unset( $gender_group );
+
+        uasort(
+            $groups,
+            static fn( array $a, array $b ): int => strnatcasecmp( $a['label'], $b['label'] )
+        );
+
+        ob_start();
+        if ( $this->is_truthy( $atts['show_style'] ) ) {
+            $this->maybe_print_overview_style();
+        }
+
+        echo '<div class="crm-rankings-overview" data-competition="' . esc_attr( (string) $competition_id ) . '">';
+        foreach ( $groups as $gender_slug => $gender_group ) {
+            echo '<section class="crm-rankings-overview__gender" data-gender="' . esc_attr( $gender_slug ) . '">';
+            echo '<header class="crm-rankings-overview__gender-header">';
+            echo '<h2 class="crm-rankings-overview__gender-title">' . esc_html( $gender_group['label'] ) . '</h2>';
+            echo '</header>';
+
+            foreach ( $gender_group['ages'] as $age_key => $age_group ) {
+                echo '<section class="crm-rankings-overview__age" data-age="' . esc_attr( (string) $age_key ) . '">';
+                echo '<h3 class="crm-rankings-overview__age-title">' . esc_html( $age_group['label'] ) . '</h3>';
+
+                foreach ( $age_group['weights'] as $weight_key => $weight_group ) {
+                    echo '<div class="crm-rankings-overview__weight" data-weight="' . esc_attr( (string) $weight_key ) . '">';
+                    echo '<h4 class="crm-rankings-overview__weight-title">' . esc_html( $weight_group['label'] ) . '</h4>';
+                    echo '<table class="crm-rankings-overview__table">';
+                    echo '<thead><tr><th scope="col">#</th><th scope="col">' . esc_html( $this->translate( 'ورزشکار' ) ) . '</th><th scope="col">' . esc_html( $this->translate( 'امتیاز' ) ) . '</th></tr></thead>';
+                    echo '<tbody>';
+
+                    $position = 1;
+                    foreach ( $weight_group['rows'] as $entry ) {
+                        $uid  = (int) $entry['user_id'];
+                        $user = get_userdata( $uid );
+                        $name = '—';
+                        if ( is_object( $user ) && isset( $user->display_name ) && $user->display_name !== '' ) {
+                            $name = (string) $user->display_name;
+                        }
+                        $img  = get_user_meta( $uid, 'personal_photo', true ) ?: get_avatar_url( $uid );
+
+                        echo '<tr class="crm-rankings-overview__row">';
+                        echo '<td class="crm-rankings-overview__cell crm-rankings-overview__cell--position">' . esc_html( (string) $position ) . '</td>';
+                        echo '<td class="crm-rankings-overview__cell crm-rankings-overview__cell--athlete">';
+                        echo '<span class="crm-rankings-overview__avatar"><img src="' . esc_url( (string) $img ) . '" alt="" loading="lazy"></span>';
+                        echo '<span class="crm-rankings-overview__name">' . esc_html( $name ) . '</span>';
+                        echo '</td>';
+                        echo '<td class="crm-rankings-overview__cell crm-rankings-overview__cell--points">' . esc_html( (string) $entry['points'] ) . '</td>';
+                        echo '</tr>';
+                        ++$position;
+                    }
+
+                    echo '</tbody></table>';
+                    echo '</div>';
+                }
+                echo '</section>';
+            }
+            echo '</section>';
+        }
+        echo '</div>';
+
+        return ob_get_clean();
+    }
+
     public function competition_rankings_shortcode( $atts = [] ): string {
         $a   = shortcode_atts( [ 'id' => 0, 'weight' => 0 ], $atts, 'crm_competition_rankings' );
         $cid = intval( $a['id'] ?: ( $_GET['competition_id'] ?? 0 ) );
@@ -725,6 +921,180 @@ class Ranking {
         </table>
         <?php
         return ob_get_clean();
+    }
+
+    /**
+     * Retrieve ranking rows grouped by weight class.
+     *
+     * @return array<int,object>
+     */
+    private function get_weight_class_rankings( int $competition_id = 0 ): array {
+        global $wpdb;
+
+        $where = 'WHERE weight_class > 0';
+        if ( $competition_id ) {
+            $where .= $wpdb->prepare( ' AND competition_id=%d', $competition_id );
+        }
+
+        $expiry_days = (int) $wpdb->get_var( "SELECT opt_val FROM {$wpdb->prefix}crm_settings WHERE opt_key='points_expiry_days' LIMIT 1" );
+        if ( $expiry_days ) {
+            $where .= $wpdb->prepare( ' AND assigned_date >= DATE_SUB(NOW(), INTERVAL %d DAY)', $expiry_days );
+        }
+
+        $sql = "SELECT weight_class, user_id, SUM(points) AS pts FROM {$wpdb->prefix}crm_points $where GROUP BY weight_class, user_id ORDER BY weight_class ASC, pts DESC";
+
+        return $wpdb->get_results( $sql );
+    }
+
+    /**
+     * Determine if a term matches any value from the provided filter list.
+     *
+     * @param array<int,int|string> $filters
+     */
+    private function term_matches_filter( ?WP_Term $term, array $filters ): bool {
+        if ( ! $term ) {
+            return in_array( 'unassigned', $filters, true );
+        }
+
+        foreach ( $filters as $filter ) {
+            if ( is_int( $filter ) && (int) $term->term_id === $filter ) {
+                return true;
+            }
+            if ( is_string( $filter ) ) {
+                $slug = $this->normalize_slug( (string) $term->slug );
+                if ( $slug === $filter ) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Parse a CSV list attribute into normalized identifiers.
+     *
+     * @return array<int,int|string>
+     */
+    private function parse_filter_list( $value ): array {
+        if ( is_array( $value ) ) {
+            $value = implode( ',', $value );
+        }
+
+        $value = trim( (string) $value );
+        if ( $value === '' ) {
+            return [];
+        }
+
+        $parts   = array_filter( array_map( 'trim', explode( ',', $value ) ), 'strlen' );
+        $filters = [];
+        foreach ( $parts as $part ) {
+            if ( ctype_digit( $part ) ) {
+                $filters[] = (int) $part;
+                continue;
+            }
+
+            $filters[] = $this->normalize_slug( $part );
+        }
+
+        return array_values( array_unique( $filters, SORT_REGULAR ) );
+    }
+
+    /**
+     * Normalize a slug value.
+     */
+    private function normalize_slug( string $value ): string {
+        $value = strtolower( trim( $value ) );
+        if ( $value === '' ) {
+            return '';
+        }
+
+        $value = preg_replace( '/[^\p{L}0-9_-]+/u', '-', $value );
+        return trim( (string) $value, '-' );
+    }
+
+    /**
+     * Fetch a label for the provided gender slug.
+     */
+    private function gender_label( string $slug ): string {
+        $slug = $slug ?: 'unknown';
+        if ( isset( $this->gender_label_cache[ $slug ] ) ) {
+            return $this->gender_label_cache[ $slug ];
+        }
+
+        $label = '';
+        $term  = get_term_by( 'slug', $slug, 'gender' );
+        if ( $term && ! is_wp_error( $term ) ) {
+            $label = (string) $term->name;
+        }
+
+        if ( $label === '' ) {
+            switch ( $slug ) {
+                case 'men':
+                    $label = 'مردان';
+                    break;
+                case 'women':
+                    $label = 'زنان';
+                    break;
+                case 'unknown':
+                    $label = $this->translate( 'نامشخص' );
+                    break;
+                default:
+                    $label = ucfirst( $slug );
+                    break;
+            }
+        }
+
+        return $this->gender_label_cache[ $slug ] = $label;
+    }
+
+    private function maybe_print_overview_style(): void {
+        if ( self::$overview_style_printed ) {
+            return;
+        }
+        self::$overview_style_printed = true;
+
+        echo '<style class="crm-rankings-overview-style">'
+            . '.crm-rankings-overview{display:grid;gap:2rem;margin:2rem 0;}'
+            . '.crm-rankings-overview__gender{background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:1.5rem;box-shadow:0 12px 24px rgba(15,23,42,.06);}'
+            . '.crm-rankings-overview__gender-title{margin:0 0 1rem;font-size:1.5rem;font-weight:700;}'
+            . '.crm-rankings-overview__age{margin-bottom:1.5rem;}'
+            . '.crm-rankings-overview__age:last-child{margin-bottom:0;}'
+            . '.crm-rankings-overview__age-title{margin:0 0 1rem;font-size:1.125rem;font-weight:600;}'
+            . '.crm-rankings-overview__weight{margin-bottom:1rem;border:1px solid rgba(15,23,42,.08);border-radius:10px;padding:1rem;background:rgba(248,250,252,.9);}'
+            . '.crm-rankings-overview__weight:last-child{margin-bottom:0;}'
+            . '.crm-rankings-overview__weight-title{margin:0 0 .75rem;font-size:1rem;font-weight:600;}'
+            . '.crm-rankings-overview__table{width:100%;border-collapse:collapse;font-size:.9375rem;}'
+            . '.crm-rankings-overview__table thead{background:rgba(15,23,42,.05);}'
+            . '.crm-rankings-overview__table th,.crm-rankings-overview__table td{padding:.6rem .75rem;text-align:start;border-bottom:1px solid rgba(15,23,42,.08);}'
+            . '.crm-rankings-overview__row:last-child td{border-bottom:none;}'
+            . '.crm-rankings-overview__cell--position{width:3rem;font-weight:600;text-align:center;}'
+            . '.crm-rankings-overview__cell--athlete{display:flex;align-items:center;gap:.75rem;}'
+            . '.crm-rankings-overview__avatar img{width:42px;height:42px;border-radius:50%;object-fit:cover;box-shadow:0 4px 10px rgba(15,23,42,.12);}'
+            . '.crm-rankings-overview__cell--points{font-weight:600;text-align:center;}'
+            . '@media (min-width:768px){.crm-rankings-overview{grid-template-columns:repeat(auto-fit,minmax(280px,1fr));}}'
+            . '</style>';
+    }
+
+    private function is_truthy( $value ): bool {
+        if ( is_bool( $value ) ) {
+            return $value;
+        }
+
+        $value = strtolower( trim( (string) $value ) );
+        if ( $value === '' ) {
+            return false;
+        }
+
+        return in_array( $value, [ '1', 'true', 'yes', 'on' ], true );
+    }
+
+    private function translate( string $text ): string {
+        if ( function_exists( '__' ) ) {
+            return __( $text, 'imao-custom-plugin' );
+        }
+
+        return $text;
     }
 
     private function render_rank_tab(): void {
