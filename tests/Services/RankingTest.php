@@ -2,7 +2,34 @@
 use PHPUnit\Framework\TestCase;
 use IMAOCustom\Services\Ranking;
 
+if ( ! class_exists( 'RankingTestWpdb' ) ) {
+    class RankingTestWpdb {
+        public $prefix = 'wp_';
+        public function prepare( $query, ...$args ) { return vsprintf( $query, $args ); }
+        public function get_results( $query ) {
+            if ( strpos( $query, 'GROUP BY weight_class, user_id' ) !== false ) {
+                return [
+                    (object) [ 'weight_class' => 10, 'user_id' => 1, 'pts' => 30 ],
+                    (object) [ 'weight_class' => 10, 'user_id' => 2, 'pts' => 20 ],
+                    (object) [ 'weight_class' => 11, 'user_id' => 3, 'pts' => 15 ],
+                ];
+            }
+            if ( strpos( $query, 'GROUP BY user_id' ) !== false ) {
+                return [ (object) [ 'user_id' => 1, 'pts' => 10 ], (object) [ 'user_id' => 2, 'pts' => 5 ] ];
+            }
+            return [];
+        }
+        public function get_var( $query ) { return 0; }
+        public function get_charset_collate() { return ''; }
+        public function replace( $table, $data, $format ) {}
+        public function insert( $table, $data, $format ) {}
+        public function esc_like( $text ) { return addcslashes( (string) $text, '%_' ); }
+    }
+}
+
 class RankingTest extends TestCase {
+    protected $backupGlobals = false;
+
     protected function setUp(): void {
         if ( ! defined( 'ABSPATH' ) ) {
             $dir = sys_get_temp_dir() . '/wp/';
@@ -13,17 +40,52 @@ class RankingTest extends TestCase {
             define( 'ABSPATH', $dir );
         }
         if ( ! function_exists( 'get_userdata' ) ) {
-            function get_userdata( $user_id ) { return (object) [ 'display_name' => "User $user_id" ]; }
-            function get_user_meta( $user_id, $key, $single = true ) { return ''; }
-            function get_avatar_url( $id ) { return 'avatar'; }
+            function get_userdata( $user_id ) {
+                $name = $GLOBALS['test_user_names'][ $user_id ] ?? "User $user_id";
+                return (object) [ 'display_name' => $name ];
+            }
+        }
+        if ( ! function_exists( 'get_avatar_url' ) ) {
+            function get_avatar_url( $id ) { return 'avatar-' . $id; }
+        }
+        if ( ! function_exists( 'get_the_title' ) ) {
             function get_the_title( $id ) { return "Title $id"; }
-            function get_term( $id, $taxonomy ) { return (object) [ 'name' => 'Class' ]; }
-            function is_user_logged_in() { return true; }
-            function get_current_user_id() { return 1; }
+        }
+        if ( ! function_exists( 'get_term' ) ) {
+            function get_term( $id, $taxonomy ) {
+                if ( isset( $GLOBALS['test_terms'][ $taxonomy ][ $id ] ) ) {
+                    return (object) $GLOBALS['test_terms'][ $taxonomy ][ $id ];
+                }
+                return (object) [ 'term_id' => $id, 'name' => "Term $id", 'slug' => "term-$id", 'parent' => 0 ];
+            }
+        }
+        if ( ! function_exists( 'get_term_by' ) ) {
+            function get_term_by( $field, $value, $taxonomy ) {
+                foreach ( $GLOBALS['test_terms'][ $taxonomy ] ?? [] as $term ) {
+                    if ( isset( $term[ $field ] ) && $term[ $field ] === $value ) {
+                        return (object) $term;
+                    }
+                }
+                return false;
+            }
+        }
+        if ( ! function_exists( 'wp_list_pluck' ) ) {
             function wp_list_pluck( $list, $field ) { return array_map( fn( $o ) => $o->$field, $list ); }
+        }
+        if ( ! function_exists( 'shortcode_atts' ) ) {
             function shortcode_atts( $pairs, $atts, $shortcode = '' ) { return array_merge( $pairs, (array) $atts ); }
+        }
+        if ( ! function_exists( 'esc_url' ) ) {
             function esc_url( $url ) { return $url; }
+        }
+        if ( ! function_exists( 'esc_html' ) ) {
             function esc_html( $str ) { return $str; }
+        }
+        if ( ! function_exists( 'esc_attr' ) ) {
+            function esc_attr( $str ) { return $str; }
+        }
+        if ( ! function_exists( 'is_wp_error' ) ) {
+            function is_wp_error( $thing ) { return false; }
         }
         if ( ! function_exists( 'add_rewrite_endpoint' ) ) {
             function add_rewrite_endpoint( $name, $places ) { $GLOBALS['add_rewrite_endpoint_called'] = true; }
@@ -37,21 +99,28 @@ class RankingTest extends TestCase {
         if ( ! defined( 'EP_PAGES' ) ) {
             define( 'EP_PAGES', 2 );
         }
-        $GLOBALS['wpdb'] = new class {
-            public $prefix = 'wp_';
-            public function prepare( $query, ...$args ) { return vsprintf( $query, $args ); }
-            public function get_results( $query ) {
-                if ( strpos( $query, 'GROUP BY user_id' ) !== false ) {
-                    return [ (object) [ 'user_id' => 1, 'pts' => 10 ], (object) [ 'user_id' => 2, 'pts' => 5 ] ];
-                }
-                return [];
-            }
-            public function get_var( $query ) { return 0; }
-            public function get_charset_collate() { return ''; }
-            public function replace( $table, $data, $format ) {}
-            public function insert( $table, $data, $format ) {}
-            public function esc_like( $text ) { return addcslashes( (string) $text, '%_' ); }
-        };
+        $GLOBALS['wpdb'] = new RankingTestWpdb();
+        $GLOBALS['test_user_meta']  = [
+            1 => [ 'gender' => 'male', 'personal_photo' => 'photo-1' ],
+            2 => [ 'gender' => 'female', 'personal_photo' => 'photo-2' ],
+            3 => [ 'gender' => 'male', 'personal_photo' => 'photo-3' ],
+        ];
+        $GLOBALS['test_user_names'] = [
+            1 => 'Alpha',
+            2 => 'Bravo',
+            3 => 'Charlie',
+        ];
+        $GLOBALS['test_terms']      = [
+            'age_category' => [
+                5  => [ 'term_id' => 5, 'name' => 'نونهالان', 'slug' => 'youth', 'parent' => 0 ],
+                10 => [ 'term_id' => 10, 'name' => '۴۰-۴۵', 'slug' => '40-45', 'parent' => 5 ],
+                11 => [ 'term_id' => 11, 'name' => '۴۵-۵۰', 'slug' => '45-50', 'parent' => 5 ],
+            ],
+            'gender'       => [
+                1 => [ 'term_id' => 1, 'name' => 'مردان', 'slug' => 'men' ],
+                2 => [ 'term_id' => 2, 'name' => 'زنان', 'slug' => 'women' ],
+            ],
+        ];
     }
 
     public function test_competition_rankings_shortcode_outputs_table(): void {
@@ -73,6 +142,26 @@ class RankingTest extends TestCase {
         $this->assertStringContainsString( 'sd-container', $html );
         $this->assertStringContainsString( 'sd-header', $html );
         $this->assertStringContainsString( 'shop_table', $html );
+    }
+
+    public function test_rankings_overview_shortcode_outputs_grouped_tables(): void {
+        $service = new Ranking();
+        $html    = $service->rankings_overview_shortcode();
+
+        $this->assertStringContainsString( 'crm-rankings-overview', $html );
+        $this->assertStringContainsString( 'crm-rankings-overview__gender-title', $html );
+        $this->assertStringContainsString( 'crm-rankings-overview__weight-title', $html );
+        $this->assertStringContainsString( 'Alpha', $html );
+    }
+
+    public function test_rankings_overview_shortcode_applies_filters(): void {
+        $service = new Ranking();
+        $html    = $service->rankings_overview_shortcode( [ 'gender' => 'women', 'limit' => 1 ] );
+
+        $this->assertStringContainsString( 'زنان', $html );
+        $this->assertStringNotContainsString( 'Alpha', $html );
+        $this->assertStringContainsString( 'Bravo', $html );
+        $this->assertStringNotContainsString( 'Charlie', $html );
     }
 
     public function test_activate_registers_endpoint_and_flushes_rules(): void {
