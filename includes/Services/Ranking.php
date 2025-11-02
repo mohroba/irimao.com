@@ -703,11 +703,15 @@ class Ranking {
         if ( $product_id && function_exists( 'wc_get_orders' ) ) {
             $order_ids = $this->get_order_ids_for_product( $product_id );
             if ( $order_ids ) {
-                $orders = wc_get_orders( [
-                    'limit'  => -1,
-                    'status' => [ 'processing', 'completed' ],
-                    'include'=> $order_ids,
-                ] );
+                $query_args = [
+                    'limit'   => -1,
+                    'include' => $order_ids,
+                ];
+                $statuses  = $this->get_relevant_order_statuses();
+                if ( $statuses ) {
+                    $query_args['status'] = $statuses;
+                }
+                $orders = wc_get_orders( $query_args );
                 foreach ( $orders as $order ) {
                     if ( ! is_object( $order ) || ! method_exists( $order, 'get_user_id' ) ) {
                         continue;
@@ -753,11 +757,15 @@ class Ranking {
         $meta_map  = [];
         $order_ids = $this->get_order_ids_for_product( $product_id );
         if ( $order_ids ) {
-            $orders = wc_get_orders( [
-                'limit'  => -1,
-                'status' => [ 'processing', 'completed' ],
-                'include'=> $order_ids,
-            ] );
+            $query_args = [
+                'limit'   => -1,
+                'include' => $order_ids,
+            ];
+            $statuses  = $this->get_relevant_order_statuses();
+            if ( $statuses ) {
+                $query_args['status'] = $statuses;
+            }
+            $orders = wc_get_orders( $query_args );
             $this->extract_registration_meta_from_orders( $orders, $product_id, $meta_map );
             return $meta_map;
         }
@@ -769,14 +777,53 @@ class Ranking {
             if ( ! $uid ) {
                 continue;
             }
-            $orders = wc_get_orders( [
+            $query_args = [
                 'limit'       => -1,
-                'status'      => [ 'processing', 'completed' ],
                 'customer_id' => $uid,
-            ] );
+            ];
+            $statuses   = $this->get_relevant_order_statuses();
+            if ( $statuses ) {
+                $query_args['status'] = $statuses;
+            }
+            $orders = wc_get_orders( $query_args );
             $this->extract_registration_meta_from_orders( $orders, $product_id, $meta_map );
         }
         return $meta_map;
+    }
+
+    /**
+     * Build the list of WooCommerce order statuses that should be considered valid registrations.
+     *
+     * @return string[]
+     */
+    private function get_relevant_order_statuses(): array {
+        $statuses = [ 'pending', 'processing', 'completed', 'on-hold' ];
+
+        if ( function_exists( 'wc_get_is_paid_statuses' ) ) {
+            foreach ( (array) wc_get_is_paid_statuses() as $status ) {
+                $statuses[] = is_string( $status ) ? $status : '';
+            }
+        }
+
+        $normalized = [];
+        foreach ( $statuses as $status ) {
+            $status = trim( (string) $status );
+            if ( $status === '' ) {
+                continue;
+            }
+            $normalized[] = $status;
+            if ( strpos( $status, 'wc-' ) === 0 ) {
+                $normalized[] = substr( $status, 3 );
+            } else {
+                $normalized[] = 'wc-' . $status;
+            }
+        }
+
+        $normalized = array_values( array_unique( array_filter( $normalized, static function ( $value ) {
+            return $value !== '';
+        } ) ) );
+
+        return $normalized;
     }
 
     /**
