@@ -85,6 +85,11 @@ class RankingTest extends TestCase {
         if ( ! function_exists( 'esc_attr' ) ) {
             function esc_attr( $str ) { return $str; }
         }
+        if ( ! function_exists( 'wc_get_is_paid_statuses' ) ) {
+            function wc_get_is_paid_statuses() {
+                return [ 'wc-processing', 'wc-completed' ];
+            }
+        }
         if ( ! function_exists( 'is_wp_error' ) ) {
             function is_wp_error( $thing ) { return false; }
         }
@@ -163,6 +168,23 @@ class RankingTest extends TestCase {
         $this->assertStringNotContainsString( 'Alpha', $html );
         $this->assertStringContainsString( 'Bravo', $html );
         $this->assertStringNotContainsString( 'Charlie', $html );
+    }
+
+    public function test_relevant_order_statuses_include_pending_and_paid(): void {
+        $service = new Ranking();
+        $method  = new ReflectionMethod( Ranking::class, 'get_relevant_order_statuses' );
+        $method->setAccessible( true );
+
+        $statuses = $method->invoke( $service );
+
+        $this->assertContains( 'pending', $statuses );
+        $this->assertContains( 'wc-pending', $statuses );
+        $this->assertContains( 'processing', $statuses );
+        $this->assertContains( 'wc-processing', $statuses );
+        $this->assertContains( 'completed', $statuses );
+        $this->assertContains( 'wc-completed', $statuses );
+        $this->assertContains( 'on-hold', $statuses );
+        $this->assertContains( 'wc-on-hold', $statuses );
     }
 
     public function test_activate_registers_endpoint_and_flushes_rules(): void {
