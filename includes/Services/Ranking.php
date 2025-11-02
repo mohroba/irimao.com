@@ -3,6 +3,7 @@ namespace IMAOCustom\Services;
 
 use IMAOCustom\Helpers\UserMeta;
 use WP_Term;
+use WP_User;
 
 class Ranking {
     private const META_LINKED_PRODUCT = '_linked_product_id';
@@ -10,6 +11,25 @@ class Ranking {
     private const AJAX_ACTION = 'crm_assign_points_ajax';
     private static bool $install_checked = false;
     private static bool $overview_style_printed = false;
+
+    /**
+     * Write an entry to the PHP error log to aid with production debugging.
+     *
+     * @param array<string,mixed> $context
+     */
+    private function log_debug( string $message, array $context = [] ): void {
+        $prefix = '[IMAOCustom\\Ranking] ';
+        if ( $context ) {
+            $encoded = function_exists( 'wp_json_encode' )
+                ? wp_json_encode( $context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR )
+                : json_encode( $context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR );
+            if ( is_string( $encoded ) && $encoded !== '' ) {
+                $message .= ' ' . $encoded;
+            }
+        }
+
+        error_log( $prefix . $message );
+    }
 
     /** @var array<string,string> */
     private array $gender_label_cache = [
@@ -602,17 +622,38 @@ class Ranking {
      */
     private function get_competition_attendees( int $competition_id, int $weight_class, bool $include_all ): array {
         if ( ! $competition_id ) {
+            $this->log_debug( 'Skipping attendees lookup: empty competition ID.' );
             return [];
         }
 
+        $this->log_debug(
+            'Fetching competition attendees.',
+            [
+                'competition_id' => $competition_id,
+                'weight_class'   => $weight_class,
+                'include_all'    => $include_all,
+            ]
+        );
+
         $users = $this->load_competition_users( $competition_id );
         if ( ! $users ) {
+            $this->log_debug( 'No users resolved for competition.', [ 'competition_id' => $competition_id ] );
             return [];
         }
 
         $meta_map       = $this->get_registration_meta_map( $competition_id, $users );
         $weight_options = $this->get_competition_weight_options( $competition_id );
         $weight_index   = $this->index_weight_options( $weight_options );
+
+        $this->log_debug(
+            'Prepared attendee context.',
+            [
+                'competition_id'    => $competition_id,
+                'resolved_users'    => count( $users ),
+                'meta_map_count'    => count( $meta_map ),
+                'weight_option_cnt' => count( $weight_options ),
+            ]
+        );
 
         $target_label = '';
         if ( $weight_class && isset( $weight_index[ $weight_class ] ) ) {
@@ -676,6 +717,16 @@ class Ranking {
             static fn( array $a, array $b ): int => strcasecmp( (string) $a['label'], (string) $b['label'] )
         );
 
+        $this->log_debug(
+            'Completed attendees lookup.',
+            [
+                'competition_id' => $competition_id,
+                'weight_class'   => $weight_class,
+                'include_all'    => $include_all,
+                'result_count'   => count( $rows ),
+            ]
+        );
+
         return $rows;
     }
 
@@ -698,11 +749,22 @@ class Ranking {
      * @return array<int,WP_User>
      */
     private function load_competition_users( int $competition_id ): array {
+        $this->log_debug( 'Resolving competition users.', [ 'competition_id' => $competition_id ] );
+
         $user_map  = [];
         $product_id = (int) get_post_meta( $competition_id, self::META_LINKED_PRODUCT, true );
         if ( $product_id && function_exists( 'wc_get_orders' ) ) {
+            $this->log_debug( 'Competition linked to product.', [ 'competition_id' => $competition_id, 'product_id' => $product_id ] );
             $order_ids = $this->get_order_ids_for_product( $product_id );
             if ( $order_ids ) {
+                $this->log_debug(
+                    'Order IDs found for product.',
+                    [
+                        'competition_id' => $competition_id,
+                        'product_id'     => $product_id,
+                        'order_count'    => count( $order_ids ),
+                    ]
+                );
                 $query_args = [
                     'limit'   => -1,
                     'include' => $order_ids,
@@ -725,6 +787,13 @@ class Ranking {
         }
         $manual = get_post_meta( $competition_id, self::META_MANUAL_ATTENDEES, true );
         if ( is_array( $manual ) ) {
+            $this->log_debug(
+                'Merging manually assigned attendees.',
+                [
+                    'competition_id' => $competition_id,
+                    'manual_count'   => count( $manual ),
+                ]
+            );
             foreach ( $manual as $uid ) {
                 $uid = (int) $uid;
                 if ( $uid > 0 ) {
@@ -739,6 +808,13 @@ class Ranking {
                 $users[ $uid ] = $user;
             }
         }
+        $this->log_debug(
+            'Resolved competition user list.',
+            [
+                'competition_id' => $competition_id,
+                'user_count'     => count( $users ),
+            ]
+        );
         return array_values( $users );
     }
 
@@ -748,10 +824,12 @@ class Ranking {
      */
     private function get_registration_meta_map( int $competition_id, array $users ): array {
         if ( ! function_exists( 'wc_get_orders' ) ) {
+            $this->log_debug( 'Skipping registration meta map: WooCommerce unavailable.' );
             return [];
         }
         $product_id = (int) get_post_meta( $competition_id, self::META_LINKED_PRODUCT, true );
         if ( ! $product_id ) {
+            $this->log_debug( 'Skipping registration meta map: no linked product.', [ 'competition_id' => $competition_id ] );
             return [];
         }
         $meta_map  = [];
@@ -767,6 +845,15 @@ class Ranking {
             }
             $orders = wc_get_orders( $query_args );
             $this->extract_registration_meta_from_orders( $orders, $product_id, $meta_map );
+            $this->log_debug(
+                'Registration meta map populated from direct order lookup.',
+                [
+                    'competition_id' => $competition_id,
+                    'product_id'     => $product_id,
+                    'order_count'    => count( $order_ids ),
+                    'meta_count'     => count( $meta_map ),
+                ]
+            );
             return $meta_map;
         }
         foreach ( $users as $user ) {
@@ -788,6 +875,14 @@ class Ranking {
             $orders = wc_get_orders( $query_args );
             $this->extract_registration_meta_from_orders( $orders, $product_id, $meta_map );
         }
+        $this->log_debug(
+            'Registration meta map populated from customer orders.',
+            [
+                'competition_id' => $competition_id,
+                'product_id'     => $product_id,
+                'meta_count'     => count( $meta_map ),
+            ]
+        );
         return $meta_map;
     }
 
@@ -832,6 +927,7 @@ class Ranking {
     private function get_order_ids_for_product( int $product_id ): array {
         global $wpdb;
         if ( ! isset( $wpdb ) || ! is_object( $wpdb ) || ! method_exists( $wpdb, 'prepare' ) || ! method_exists( $wpdb, 'get_col' ) ) {
+            $this->log_debug( 'Cannot fetch order IDs: invalid $wpdb instance.' );
             return [];
         }
         $sql = $wpdb->prepare(
@@ -842,9 +938,12 @@ class Ranking {
         );
         $results = $wpdb->get_col( $sql );
         if ( ! $results ) {
+            $this->log_debug( 'No order IDs found for product.', [ 'product_id' => $product_id ] );
             return [];
         }
-        return array_map( 'intval', $results );
+        $order_ids = array_map( 'intval', $results );
+        $this->log_debug( 'Order IDs retrieved for product.', [ 'product_id' => $product_id, 'order_count' => count( $order_ids ) ] );
+        return $order_ids;
     }
 
     /**
