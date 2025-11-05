@@ -80,6 +80,7 @@ if ( ! function_exists( 'update_user_meta' ) ) {
 if ( ! class_exists( 'Test_Date' ) ) {
     class Test_Date {
         public function date_i18n( $format ) { return '2024/01/01'; }
+        public function getTimestamp() { return time(); }
     }
 }
 if ( ! class_exists( 'Test_Item' ) ) {
@@ -119,7 +120,12 @@ if ( ! class_exists( 'Test_Order' ) ) {
 }
 if ( ! function_exists( 'wc_get_orders' ) ) {
     /** @return array<int,Test_Order> */
-    function wc_get_orders( $args ) { return [ new Test_Order() ]; }
+    function wc_get_orders( $args ) {
+        if ( isset( $GLOBALS['wc_get_orders_return'] ) ) {
+            return $GLOBALS['wc_get_orders_return'];
+        }
+        return [ new Test_Order() ];
+    }
 }
 if ( ! isset( $GLOBALS['test_post_meta'] ) ) {
     $GLOBALS['test_post_meta'] = [];
@@ -198,6 +204,9 @@ if ( ! function_exists( 'wc_price' ) ) {
 }
 if ( ! function_exists( 'esc_html' ) ) {
     function esc_html( $s ) { return $s; }
+}
+if ( ! function_exists( 'current_time' ) ) {
+    function current_time( $type = '' ) { return 'now'; }
 }
 if ( ! function_exists( 'esc_url' ) ) {
     function esc_url( $s ) { return $s; }

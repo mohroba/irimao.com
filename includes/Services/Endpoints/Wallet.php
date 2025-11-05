@@ -4,14 +4,15 @@ namespace IMAOCustom\Services\Endpoints;
 
 use IMAOCustom\Helpers\Price;
 use IMAOCustom\Helpers\Wallet as WalletHelper;
-use WC_Order;
 use WC_Order_Item_Fee;
 
 class Wallet {
-    private const META_LOG     = 'crm_wallet_log';
-    private const META_USED    = 'crm_used_wallet';
-    private const META_LINKED  = '_linked_post_id';
-    private const CRON_HOOK    = 'crm_cancel_unpaid_wallet_orders';
+    private const META_LOG            = 'crm_wallet_log';
+    private const META_USED           = 'crm_used_wallet';
+    private const META_ORIGINAL_TOTAL = 'crm_wallet_original_total';
+    private const META_PROCESSED      = 'crm_wallet_processed';
+    private const META_LINKED         = '_linked_post_id';
+    private const CRON_HOOK           = 'crm_cancel_unpaid_wallet_orders';
 
     public function register(): void {
         add_action( 'init', [ $this, 'add_endpoint' ] );
@@ -133,7 +134,12 @@ class Wallet {
     }
 
     public function store_wallet_flag(): void {
-        WC()->session->set( 'crm_use_wallet', ! empty( $_POST['crm_use_wallet'] ) );
+        $use_wallet = ! empty( $_POST['crm_use_wallet'] );
+        WC()->session->set( 'crm_use_wallet', $use_wallet );
+        if ( ! $use_wallet ) {
+            WC()->session->set( 'crm_wallet_use_amount', 0 );
+            WC()->session->set( 'crm_wallet_cart_total', 0 );
+        }
     }
 
     public function apply_wallet_discount( $cart ): void {
@@ -145,20 +151,40 @@ class Wallet {
         }
         $balance = self::get_balance();
         if ( $balance <= 0 ) {
+            WC()->session->set( 'crm_wallet_use_amount', 0 );
+            WC()->session->set( 'crm_wallet_cart_total', 0 );
             return;
         }
-        $total = $cart->get_total( 'edit' );
-        $use   = min( $balance, $total );
-        if ( $use > 0 ) {
-            $cart->add_fee( 'کیف پول', -$use, false );
-            WC()->session->set( 'crm_wallet_use_amount', $use );
+        $total = (float) $cart->get_total( 'edit' );
+        if ( $total <= 0 ) {
+            WC()->session->set( 'crm_wallet_use_amount', 0 );
+            WC()->session->set( 'crm_wallet_cart_total', 0 );
+            return;
         }
+        $use = min( $balance, $total );
+        if ( $use <= 0 ) {
+            WC()->session->set( 'crm_wallet_use_amount', 0 );
+            WC()->session->set( 'crm_wallet_cart_total', 0 );
+            return;
+        }
+        $cart->add_fee( 'کیف پول', -$use, false );
+        WC()->session->set( 'crm_wallet_use_amount', $use );
+        WC()->session->set( 'crm_wallet_cart_total', $total );
     }
 
     public function save_used_wallet( $order, $data ): void {
         $use = (float) WC()->session->get( 'crm_wallet_use_amount' );
-        if ( $use > 0 ) {
+        if ( $use <= 0 ) {
+            return;
+        }
+        $original = (float) WC()->session->get( 'crm_wallet_cart_total' );
+        if ( $original <= 0 && method_exists( $order, 'get_total' ) ) {
+            $original = (float) $order->get_total() + $use;
+        }
+        if ( method_exists( $order, 'update_meta_data' ) ) {
             $order->update_meta_data( self::META_USED, $use );
+            $order->update_meta_data( self::META_ORIGINAL_TOTAL, $original );
+            $order->update_meta_data( self::META_PROCESSED, 'pending' );
         }
     }
 
@@ -167,11 +193,16 @@ class Wallet {
         if ( ! $order ) {
             return;
         }
-        $user_id = $order->get_customer_id();
-        $used    = (float) $order->get_meta( self::META_USED );
-        if ( $used > 0 ) {
-            self::deduct_balance( $user_id, $used );
-            self::add_log( $user_id, -$used, 'استفاده در سفارش #' . $order_id );
+        $user_id = method_exists( $order, 'get_customer_id' ) ? (int) $order->get_customer_id() : 0;
+        $used    = method_exists( $order, 'get_meta' ) ? (float) $order->get_meta( self::META_USED ) : 0.0;
+        if ( $user_id > 0 && $used > 0 ) {
+            $settled = $this->settle_wallet_payment( $order, $user_id, $used );
+            if ( $settled === false ) {
+                return;
+            }
+        }
+        if ( ! method_exists( $order, 'get_items' ) ) {
+            return;
         }
         foreach ( $order->get_items() as $item ) {
             $post_id = (int) get_post_meta( $item->get_product_id(), self::META_LINKED, true );
@@ -226,6 +257,91 @@ class Wallet {
                 }
             }
         }
+    }
+
+    /**
+     * Settle wallet usage after a successful gateway payment.
+     *
+     * @param object $order    WooCommerce order instance.
+     * @param int    $user_id  Customer identifier.
+     * @param float  $requested Wallet amount reserved during checkout.
+     *
+     * @return float|false Returns the deducted wallet amount or false when the order should halt further processing.
+     */
+    private function settle_wallet_payment( $order, int $user_id, float $requested ) {
+        $order_id = method_exists( $order, 'get_id' ) ? (int) $order->get_id() : 0;
+        $status   = '';
+        if ( method_exists( $order, 'get_meta' ) ) {
+            $status = (string) $order->get_meta( self::META_PROCESSED );
+        }
+        if ( $status === 'completed' ) {
+            return method_exists( $order, 'get_meta' ) ? (float) $order->get_meta( self::META_USED ) : $requested;
+        }
+        if ( $status === 'failed' ) {
+            return false;
+        }
+
+        $original_total = method_exists( $order, 'get_meta' ) ? (float) $order->get_meta( self::META_ORIGINAL_TOTAL ) : 0.0;
+        if ( $original_total <= 0 ) {
+            $fallback_total = method_exists( $order, 'get_total' ) ? (float) $order->get_total() + $requested : $requested;
+            $original_total = max( $requested, $fallback_total );
+        }
+
+        $paid_amount = 0.0;
+        if ( method_exists( $order, 'get_total_paid' ) ) {
+            $paid_amount = (float) $order->get_total_paid();
+        }
+        if ( $paid_amount <= 0 && method_exists( $order, 'get_total' ) ) {
+            $paid_amount = (float) $order->get_total();
+        }
+
+        $wallet_balance = self::get_balance( $user_id );
+        $epsilon        = 0.01;
+        if ( $wallet_balance + $paid_amount + $epsilon < $original_total ) {
+            if ( $paid_amount > 0 ) {
+                self::add_balance( $user_id, $paid_amount );
+                $note = 'افزایش اعتبار به دلیل پرداخت ناکافی سفارش' . ( $order_id ? ' #' . $order_id : '' );
+                self::add_log( $user_id, $paid_amount, $note );
+            }
+            $status_note = 'پرداخت ناکافی: مبلغ پرداخت شده به کیف پول اضافه شد.';
+            if ( method_exists( $order, 'update_status' ) ) {
+                $order->update_status( 'failed', $status_note );
+            } elseif ( method_exists( $order, 'add_order_note' ) ) {
+                $order->add_order_note( $status_note );
+            }
+            if ( method_exists( $order, 'delete_meta_data' ) ) {
+                $order->delete_meta_data( self::META_USED );
+            }
+            if ( method_exists( $order, 'update_meta_data' ) ) {
+                $order->update_meta_data( self::META_PROCESSED, 'failed' );
+                $order->update_meta_data( self::META_ORIGINAL_TOTAL, $original_total );
+            }
+            if ( method_exists( $order, 'save' ) ) {
+                $order->save();
+            }
+            return false;
+        }
+
+        $required = max( 0.0, $original_total - $paid_amount );
+        $required = min( $required, $requested );
+        $deduct   = min( $wallet_balance, $required );
+
+        if ( $deduct > 0 ) {
+            self::deduct_balance( $user_id, $deduct );
+            $note = 'استفاده در سفارش' . ( $order_id ? ' #' . $order_id : '' );
+            self::add_log( $user_id, -$deduct, $note );
+        }
+
+        if ( method_exists( $order, 'update_meta_data' ) ) {
+            $order->update_meta_data( self::META_USED, $deduct );
+            $order->update_meta_data( self::META_PROCESSED, 'completed' );
+            $order->update_meta_data( self::META_ORIGINAL_TOTAL, $original_total );
+        }
+        if ( method_exists( $order, 'save' ) ) {
+            $order->save();
+        }
+
+        return $deduct;
     }
 
     public function refund_wallet( int $order_id ): void {
