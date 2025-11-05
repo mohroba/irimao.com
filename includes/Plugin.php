@@ -38,6 +38,7 @@ use IMAOCustom\Services\LoginTracking;
 use IMAOCustom\Services\RoleCleanup;
 use IMAOCustom\Services\StyleCommitteeRequests;
 use IMAOCustom\Services\CheckoutPrefill;
+use IMAOCustom\Services\OrderStatus;
 use IMAOCustom\ServiceManager;
 
 
@@ -62,6 +63,7 @@ class Plugin {
         ChangePassword::class,
         Wallet::class,
         CheckoutPrefill::class,
+        OrderStatus::class,
         UserManagement::class,
         SmartcardIssue::class,
         SelfDeclaration::class,
