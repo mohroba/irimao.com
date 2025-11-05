@@ -17,6 +17,7 @@ class OrderStatus {
      */
     public function register(): void {
         \add_action( 'woocommerce_payment_complete', [ $this, 'mark_order_paid' ], 20 );
+        \add_filter( 'woocommerce_order_statuses', [ $this, 'rename_processing_label' ], 20 );
     }
 
     /**
@@ -41,8 +42,23 @@ class OrderStatus {
         }
 
         if ( \method_exists( $order, 'update_status' ) ) {
-            $order->update_status( 'completed', $this->get_completion_note() );
+            $order->update_status( 'processing', $this->get_processing_note() );
         }
+    }
+
+    /**
+     * Replace the default label for the processing status with a paid label.
+     *
+     * @param array<string,string> $statuses List of statuses keyed by status ID.
+     *
+     * @return array<string,string>
+     */
+    public function rename_processing_label( array $statuses ): array {
+        if ( isset( $statuses['wc-processing'] ) ) {
+            $statuses['wc-processing'] = $this->get_processing_label();
+        }
+
+        return $statuses;
     }
 
     /**
@@ -83,8 +99,14 @@ class OrderStatus {
         return $has_relevant_item;
     }
 
-    private function get_completion_note(): string {
-        $message = 'Order auto-completed after successful course or competition payment.';
+    private function get_processing_note(): string {
+        $message = 'Order marked as paid after successful course or competition payment.';
         return \function_exists( '__' ) ? \__( $message, 'imao-custom-plugin' ) : $message;
     }
+
+    private function get_processing_label(): string {
+        $label = 'پرداخت شده';
+        return \function_exists( '__' ) ? \__( $label, 'imao-custom-plugin' ) : $label;
+    }
+
 }

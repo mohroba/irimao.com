@@ -13,6 +13,7 @@ class OrderStatusTest extends TestCase {
 
         $GLOBALS['actions']      = [];
         $GLOBALS['test_orders']  = [];
+        $GLOBALS['filters']      = [];
         $GLOBALS['post_meta']    = [];
         $GLOBALS['post_types']   = [];
         $this->originalTestPostMeta = $GLOBALS['test_post_meta'] ?? [];
@@ -20,6 +21,12 @@ class OrderStatusTest extends TestCase {
         if ( ! function_exists( 'add_action' ) ) {
             function add_action( $hook, $callback, $priority = 10, $accepted_args = 1 ) {
                 $GLOBALS['actions'][ $hook ][] = [ $callback, $priority, $accepted_args ];
+            }
+        }
+
+        if ( ! function_exists( 'add_filter' ) ) {
+            function add_filter( $hook, $callback, $priority = 10, $accepted_args = 1 ) {
+                $GLOBALS['filters'][ $hook ][] = [ $callback, $priority, $accepted_args ];
             }
         }
 
@@ -52,6 +59,7 @@ class OrderStatusTest extends TestCase {
         unset(
             $GLOBALS['actions'],
             $GLOBALS['test_orders'],
+            $GLOBALS['filters'],
             $GLOBALS['post_meta'],
             $GLOBALS['post_types']
         );
@@ -65,6 +73,7 @@ class OrderStatusTest extends TestCase {
         $service->register();
 
         $this->assertArrayHasKey( 'woocommerce_payment_complete', $GLOBALS['actions'] );
+        $this->assertArrayHasKey( 'woocommerce_order_statuses', $GLOBALS['filters'] );
     }
 
     public function test_order_marked_paid_for_course_and_competition_items(): void {
@@ -84,8 +93,22 @@ class OrderStatusTest extends TestCase {
         $this->assertTrue( $method->invoke( $service, $order ) );
         $service->mark_order_paid( 1 );
 
-        $this->assertSame( 'completed', $order->get_status() );
+        $this->assertSame( 'processing', $order->get_status() );
         $this->assertCount( 1, $order->status_log );
+    }
+
+    public function test_processing_status_label_is_renamed(): void {
+        $service  = new OrderStatus();
+        $statuses = [
+            'wc-pending'    => 'در انتظار',
+            'wc-processing' => 'در حال انجام',
+            'wc-completed'  => 'تکمیل شده',
+        ];
+
+        $updated = $service->rename_processing_label( $statuses );
+
+        $this->assertSame( 'پرداخت شده', $updated['wc-processing'] );
+        $this->assertSame( 'تکمیل شده', $updated['wc-completed'] );
     }
 
     public function test_order_not_marked_paid_when_irrelevant_items_present(): void {
