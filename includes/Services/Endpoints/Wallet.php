@@ -134,7 +134,20 @@ class Wallet {
     }
 
     public function store_wallet_flag(): void {
-        $use_wallet = ! empty( $_POST['crm_use_wallet'] );
+        $use_wallet = false;
+
+        $post_data = $_POST['post_data'] ?? null;
+        if ( is_string( $post_data ) && $post_data !== '' ) {
+            if ( function_exists( 'wp_unslash' ) ) {
+                $post_data = wp_unslash( $post_data );
+            }
+            $parsed = [];
+            parse_str( $post_data, $parsed );
+            $use_wallet = ! empty( $parsed['crm_use_wallet'] );
+        } elseif ( isset( $_POST['crm_use_wallet'] ) ) {
+            $use_wallet = ! empty( $_POST['crm_use_wallet'] );
+        }
+
         WC()->session->set( 'crm_use_wallet', $use_wallet );
         if ( ! $use_wallet ) {
             WC()->session->set( 'crm_wallet_use_amount', 0 );
