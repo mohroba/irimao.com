@@ -35,6 +35,7 @@ class Wallet {
 
         add_action( 'admin_menu', [ $this, 'register_admin_page' ] );
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
+        add_action( 'wp_ajax_crm_wallet_manager_table', [ $this, 'ajax_wallet_manager_table' ] );
     }
 
     public function add_endpoint(): void {
@@ -382,51 +383,151 @@ class Wallet {
         }
         $url = plugin_dir_url( dirname( __DIR__, 2 ) );
         wp_enqueue_style( 'dt-css', $url . 'assets/css/jquery.dataTables.min.css' );
+        wp_enqueue_style( 'dt-buttons-css', 'https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css', [ 'dt-css' ], '2.4.2' );
+
         wp_enqueue_script( 'dt-js', $url . 'assets/js/jquery.dataTables.min.js', [ 'jquery' ], null, true );
-        wp_add_inline_script( 'dt-js', 'jQuery(function($){$("#crm-wallet-table").DataTable({language:{url:"https://cdn.datatables.net/plug-ins/1.13.8/i18n/fa.json"},pageLength:50,order:[[1,"desc"]]});});' );
+        wp_enqueue_script( 'dt-buttons', 'https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js', [ 'dt-js' ], '2.4.2', true );
+        wp_enqueue_script( 'dt-jszip', 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js', [ 'dt-buttons' ], '3.10.1', true );
+        wp_enqueue_script( 'dt-buttons-html5', 'https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js', [ 'dt-jszip' ], '2.4.2', true );
+        wp_enqueue_script( 'dt-buttons-print', 'https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js', [ 'dt-buttons' ], '2.4.2', true );
+
+        $ajax_url   = admin_url( 'admin-ajax.php' );
+        $ajax_nonce = wp_create_nonce( 'crm_wallet_manager_table' );
+        $init_js    = 'jQuery(function($){$("#crm-wallet-table").DataTable({'
+            . 'language:{url:"https://cdn.datatables.net/plug-ins/1.13.8/i18n/fa.json"},'
+            . 'pageLength:50,'
+            . 'processing:true,'
+            . 'serverSide:true,'
+            . 'serverMethod:"POST",'
+            . 'ajax:{url:"' . esc_url_raw( $ajax_url ) . '",data:function(d){d.action="crm_wallet_manager_table";d._ajax_nonce="' . esc_js( $ajax_nonce ) . '";}},'
+            . 'order:[[1,"desc"]],'
+            . 'dom:"Bfrtip",'
+            . 'deferRender:true,'
+            . 'columns:['
+                . '{data:"user",orderable:true},'
+                . '{data:"balance",orderable:true},'
+                . '{data:"amount",orderable:false,searchable:false},'
+                . '{data:"memo",orderable:false,searchable:false},'
+                . '{data:"actions",orderable:false,searchable:false}'
+            . '],'
+            . 'buttons:['
+                . '{extend:"excelHtml5",text:"خروجی اکسل",exportOptions:{columns:[0,1]}},'
+                . '{extend:"print",text:"چاپ",exportOptions:{columns:[0,1]},customize:function(win){$(win.document.body).css("direction","rtl");$(win.document.body).find("table").addClass("rtl-table");}}'
+            . '],'
+            . 'columnDefs:[{targets:[2,3,4],className:"dt-nowrap"}],'
+            . 'drawCallback:function(){ $(".crm-wallet-amount").attr({min:0,step:0.01}); }'
+        . '});});';
+
+        wp_add_inline_script( 'dt-buttons-print', $init_js );
     }
 
     public function wallet_manager_page(): void {
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( 'Access denied' );
         }
-        $users = get_users( [ 'fields' => [ 'ID', 'display_name', 'user_email' ] ] );
         if ( isset( $_POST['crm_wallet_adj'] ) ) {
             check_admin_referer( 'crm_wallet_adj_nonce' );
             $uid  = (int) $_POST['user'];
             $amt  = (float) $_POST['amount'];
             $note = sanitize_text_field( $_POST['memo'] );
             $act  = sanitize_text_field( $_POST['action'] );
-            if ( $act === 'set' ) {
-                self::set_balance( $uid, $amt );
-            } elseif ( $act === 'add' ) {
-                self::add_balance( $uid, $amt );
-            } elseif ( $act === 'sub' ) {
-                self::deduct_balance( $uid, $amt );
+            $user = get_user_by( 'id', $uid );
+            if ( ! $user ) {
+                echo '<div class="notice notice-error"><p>کاربر یافت نشد.</p></div>';
+            } else {
+                if ( $act === 'set' ) {
+                    self::set_balance( $uid, $amt );
+                } elseif ( $act === 'add' ) {
+                    self::add_balance( $uid, $amt );
+                } elseif ( $act === 'sub' ) {
+                    self::deduct_balance( $uid, $amt );
+                }
+                self::add_log( $uid, $act === 'sub' ? -abs( $amt ) : $amt, 'مدیریت: ' . $note );
+                echo '<div class="updated"><p>تغییر ذخیره شد.</p></div>';
             }
-            self::add_log( $uid, $act === 'sub' ? -abs( $amt ) : $amt, 'مدیریت: ' . $note );
-            echo '<div class="updated"><p>تغییر ذخیره شد.</p></div>';
         }
         echo '<div class="wrap"><h1>مدیریت کیف پول کاربران</h1>';
-        echo '<table id="crm-wallet-table" class="widefat striped nowrap" style="width:100%"><thead><tr><th>کاربر</th><th>موجودی</th><th>مبلغ</th><th>پرداخت بابت</th><th>عملیات</th></tr></thead><tbody>';
-        foreach ( $users as $u ) {
-            $bal         = self::get_balance( $u->ID );
-            $nonce_field = wp_nonce_field( 'crm_wallet_adj_nonce', '_wpnonce', true, false );
-            echo '<tr><form method="post">'
-                . $nonce_field
-                . '<td>' . esc_html( $u->display_name ) . ' (' . esc_html( $u->user_email ) . ')</td>'
-                . '<td>' . wc_price( $bal ) . '</td>'
-                . '<td><input type="number" step="0.01" name="amount" required style="width:100px"></td>'
-                . '<td><input type="text" name="memo" style="width:100%"></td>'
-                . '<td>'
-                . '<input type="hidden" name="user" value="' . $u->ID . '">'
-                . '<button class="button" name="action" value="add">افزایش</button> '
-                . '<button class="button" name="action" value="sub">کاهش</button> '
-                . '<button class="button" name="action" value="set">تنظیم موجودی</button>'
-                . '<input type="hidden" name="crm_wallet_adj" value="1">'
-                . '</td></form></tr>';
+        echo '<table id="crm-wallet-table" class="widefat striped nowrap" style="width:100%">'
+            . '<thead><tr><th>کاربر</th><th>موجودی</th><th>مبلغ</th><th>پرداخت بابت</th><th>عملیات</th></tr></thead>'
+            . '<tbody></tbody>'
+            . '</table></div>';
+    }
+
+    public function ajax_wallet_manager_table(): void {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( [ 'message' => 'Unauthorized' ], 403 );
         }
-        echo '</tbody></table></div>';
+
+        check_ajax_referer( 'crm_wallet_manager_table' );
+
+        $draw   = isset( $_POST['draw'] ) ? (int) $_POST['draw'] : 0;
+        $start  = isset( $_POST['start'] ) ? max( 0, (int) $_POST['start'] ) : 0;
+        $length = isset( $_POST['length'] ) ? (int) $_POST['length'] : 50;
+        $length = $length > 0 ? $length : 50;
+
+        $search_value = isset( $_POST['search']['value'] ) ? sanitize_text_field( wp_unslash( $_POST['search']['value'] ) ) : '';
+        $order        = $_POST['order'][0] ?? [ 'column' => 1, 'dir' => 'desc' ];
+        $order_col    = isset( $order['column'] ) ? (int) $order['column'] : 1;
+        $order_dir    = ( isset( $order['dir'] ) && strtolower( $order['dir'] ) === 'asc' ) ? 'ASC' : 'DESC';
+
+        $args = [
+            'number'      => $length,
+            'offset'      => $start,
+            'count_total' => true,
+            'fields'      => [ 'ID', 'display_name', 'user_email' ],
+            'orderby'     => 'display_name',
+            'order'       => $order_dir,
+        ];
+
+        if ( $search_value !== '' ) {
+            $args['search']          = '*' . $search_value . '*';
+            $args['search_columns']  = [ 'user_email', 'user_nicename', 'display_name' ];
+        }
+
+        if ( $order_col === 1 ) {
+            $args['orderby']  = 'meta_value_num';
+            $args['meta_key'] = WalletHelper::get_meta_key();
+            $args['meta_type'] = 'NUMERIC';
+        }
+
+        $query           = new \WP_User_Query( $args );
+        $total_users     = function_exists( 'count_users' ) ? (int) ( count_users()['total_users'] ?? 0 ) : 0;
+        $filtered_total  = (int) $query->get_total();
+        $users           = $query->get_results();
+        $nonce_field_tpl = function (): string {
+            return wp_nonce_field( 'crm_wallet_adj_nonce', '_wpnonce', true, false );
+        };
+
+        $rows = [];
+        foreach ( $users as $user ) {
+            $balance   = self::get_balance( $user->ID );
+            $form_id   = 'crm-wallet-form-' . $user->ID;
+            $amount    = '<input type="number" class="crm-wallet-amount" name="amount" form="' . esc_attr( $form_id ) . '" step="0.01" required style="width:120px">';
+            $memo      = '<input type="text" class="crm-wallet-memo" name="memo" form="' . esc_attr( $form_id ) . '" style="width:100%">';
+            $actions   = '<form method="post" id="' . esc_attr( $form_id ) . '" class="crm-wallet-form">'
+                        . $nonce_field_tpl()
+                        . '<input type="hidden" name="user" value="' . absint( $user->ID ) . '">'
+                        . '<input type="hidden" name="crm_wallet_adj" value="1">'
+                        . '<button class="button" name="action" value="add">افزایش</button> '
+                        . '<button class="button" name="action" value="sub">کاهش</button> '
+                        . '<button class="button" name="action" value="set">تنظیم موجودی</button>'
+                        . '</form>';
+
+            $rows[] = [
+                'user'    => esc_html( $user->display_name ) . ' (' . esc_html( $user->user_email ) . ')',
+                'balance' => wc_price( $balance ),
+                'amount'  => $amount,
+                'memo'    => $memo,
+                'actions' => $actions,
+            ];
+        }
+
+        wp_send_json( [
+            'draw'            => $draw,
+            'recordsTotal'    => $total_users,
+            'recordsFiltered' => $filtered_total,
+            'data'            => $rows,
+        ] );
     }
 
     private function render_wallet_page(): string {

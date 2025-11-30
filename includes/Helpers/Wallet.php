@@ -5,6 +5,10 @@ namespace IMAOCustom\Helpers;
 class Wallet {
     private const META_KEY = '_wallet_balance';
 
+    public static function get_meta_key(): string {
+        return self::META_KEY;
+    }
+
     public static function get( int $user_id = 0 ): float {
         $user_id = $user_id ?: get_current_user_id();
         return (float) get_user_meta( $user_id, self::META_KEY, true );
