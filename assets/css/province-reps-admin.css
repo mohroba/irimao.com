@@ -1,0 +1,13 @@
+.imao-rep-form .crm-select2 {
+    min-width: 260px;
+}
+
+.imao-reps-table {
+    width: 100%;
+    margin-top: 16px;
+}
+
+.imao-reps-table th,
+.imao-reps-table td {
+    text-align: right;
+}
