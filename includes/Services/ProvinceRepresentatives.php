@@ -28,6 +28,7 @@ class ProvinceRepresentatives {
         add_action( 'init', [ $this, 'add_account_endpoint' ] );
         add_filter( 'woocommerce_account_menu_items', [ $this, 'add_account_menu' ] );
         add_action( 'woocommerce_account_' . self::ACCOUNT_SLUG . '_endpoint', [ $this, 'render_account_endpoint' ] );
+        add_shortcode( 'crm_city_representatives', [ $this, 'city_representatives_shortcode' ] );
     }
 
     public function activate(): void {
@@ -225,18 +226,21 @@ class ProvinceRepresentatives {
     }
 
     public function render_account_endpoint(): void {
+        echo do_shortcode( '[crm_city_representatives]' );
+    }
+
+    public function city_representatives_shortcode(): string {
         if ( ! $this->current_user_is_province_rep() ) {
-            echo '<div class="woocommerce-error">شما دسترسی لازم برای این بخش را ندارید.</div>';
-            return;
+            return '<div class="woocommerce-error">شما دسترسی لازم برای این بخش را ندارید.</div>';
         }
+
         $province = $this->manager->get_active_province_for_user( get_current_user_id() );
         if ( ! $province ) {
-            echo '<div class="woocommerce-info">استانی برای شما ثبت نشده است.</div>';
-            return;
+            return '<div class="woocommerce-info">استانی برای شما ثبت نشده است.</div>';
         }
 
         $form = new CityRepresentativeForm( $this->manager, (string) $province['province_code'] );
-        echo $form->render();
+        return $form->render();
     }
 
     private function current_user_is_province_rep(): bool {
