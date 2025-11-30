@@ -1,6 +1,7 @@
 <?php
 namespace IMAOCustom\Services;
 
+use IMAOCustom\Services\Widgets\CompetitionRankingsWidget;
 use IMAOCustom\Helpers\UserMeta;
 use WP_Term;
 use WP_User;
@@ -51,6 +52,7 @@ class Ranking {
         add_action( 'plugins_loaded', [ $this, 'maybe_install' ] );
         add_action( 'wp_ajax_crm_competition_weight_classes', [ $this, 'ajax_competition_weight_classes' ] );
         add_action( 'wp_ajax_crm_competition_attendees', [ $this, 'ajax_competition_attendees' ] );
+        add_action( 'elementor/widgets/register', [ $this, 'register_elementor_widget' ] );
     }
 
     public function activate(): void {
@@ -150,6 +152,23 @@ class Ranking {
 
     public function deactivate(): void {
         flush_rewrite_rules();
+    }
+
+    /**
+     * Register Elementor widgets when Elementor is available.
+     *
+     * @param object $widgets_manager Widget manager instance provided by Elementor.
+     */
+    public function register_elementor_widget( $widgets_manager ): void {
+        if ( ! class_exists( '\\Elementor\\Widget_Base' ) ) {
+            return;
+        }
+
+        if ( ! is_object( $widgets_manager ) || ! method_exists( $widgets_manager, 'register' ) ) {
+            return;
+        }
+
+        $widgets_manager->register( new CompetitionRankingsWidget() );
     }
 
     public function add_admin_menu(): void {
@@ -1036,20 +1055,100 @@ class Ranking {
         return $value;
     }
 
-    private function get_ranking_rows( int $competition_id = 0, int $weight_class = 0 ): array {
+    private function get_ranking_rows( array $competition_ids = [], array $weight_classes = [] ): array {
         global $wpdb;
-        $where = 'WHERE 1=1';
-        if ( $competition_id ) {
-            $where .= $wpdb->prepare( ' AND competition_id=%d', $competition_id );
+        $where  = 'WHERE 1=1';
+        $params = [];
+
+        if ( $competition_ids ) {
+            $competition_ids = array_map( 'intval', $competition_ids );
+            $placeholders    = implode( ',', array_fill( 0, count( $competition_ids ), '%d' ) );
+            $where          .= " AND competition_id IN ($placeholders)";
+            $params         = array_merge( $params, $competition_ids );
         }
-        if ( $weight_class ) {
-            $where .= $wpdb->prepare( ' AND weight_class=%d', $weight_class );
+
+        if ( $weight_classes ) {
+            $weight_classes = array_map( 'intval', $weight_classes );
+            $placeholders   = implode( ',', array_fill( 0, count( $weight_classes ), '%d' ) );
+            $where         .= " AND weight_class IN ($placeholders)";
+            $params        = array_merge( $params, $weight_classes );
         }
+
         $expiry_days = (int) $wpdb->get_var( "SELECT opt_val FROM {$wpdb->prefix}crm_settings WHERE opt_key='points_expiry_days' LIMIT 1" );
         if ( $expiry_days ) {
-            $where .= $wpdb->prepare( ' AND assigned_date >= DATE_SUB(NOW(), INTERVAL %d DAY)', $expiry_days );
+            $where    .= ' AND assigned_date >= DATE_SUB(NOW(), INTERVAL %d DAY)';
+            $params[] = $expiry_days;
         }
-        return $wpdb->get_results( "SELECT user_id, SUM(points) AS pts FROM {$wpdb->prefix}crm_points $where GROUP BY user_id ORDER BY pts DESC" );
+
+        $sql = "SELECT user_id, SUM(points) AS pts FROM {$wpdb->prefix}crm_points $where GROUP BY user_id";
+        if ( $params ) {
+            $sql = $wpdb->prepare( $sql, ...$params );
+        }
+
+        return $wpdb->get_results( $sql );
+    }
+
+    /**
+     * Prepare ranking entries enriched with user data and gender filtering.
+     *
+     * @param array<int,object>     $raw_rows Rows fetched from the database.
+     * @param array<int,string|int> $gender_filter Normalized gender filters.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    private function build_competition_ranking_entries( array $raw_rows, array $gender_filter ): array {
+        $entries = [];
+
+        foreach ( $raw_rows as $row ) {
+            $uid = (int) ( $row->user_id ?? 0 );
+            if ( $uid <= 0 ) {
+                continue;
+            }
+
+            $gender_slug = $this->normalize_slug( UserMeta::gender_slug( $uid ) );
+            if ( $gender_filter && ! in_array( $gender_slug, $gender_filter, true ) ) {
+                continue;
+            }
+
+            $user         = get_userdata( $uid );
+            $display_name = is_object( $user ) && isset( $user->display_name ) ? (string) $user->display_name : '';
+            $avatar       = get_user_meta( $uid, 'personal_photo', true ) ?: get_avatar_url( $uid );
+
+            $entries[] = [
+                'user_id'      => $uid,
+                'display_name' => $display_name ?: $this->translate( 'کاربر' ) . ' ' . $uid,
+                'points'       => (int) ( $row->pts ?? 0 ),
+                'avatar'       => $avatar,
+                'gender'       => $gender_slug,
+            ];
+        }
+
+        return $entries;
+    }
+
+    /**
+     * Sort ranking entries by the selected order.
+     *
+     * @param array<int,array<string,mixed>> $entries
+     * @param string                         $order
+     */
+    private function sort_competition_entries( array &$entries, string $order ): void {
+        $compare = static function ( array $a, array $b ) use ( $order ): int {
+            switch ( $order ) {
+                case 'points_asc':
+                    return $a['points'] <=> $b['points'] ?: strnatcasecmp( (string) $a['display_name'], (string) $b['display_name'] );
+                case 'name_asc':
+                    return strnatcasecmp( (string) $a['display_name'], (string) $b['display_name'] ) ?: $b['points'] <=> $a['points'];
+                case 'name_desc':
+                    return strnatcasecmp( (string) $b['display_name'], (string) $a['display_name'] ) ?: $b['points'] <=> $a['points'];
+                case 'points_desc':
+                default:
+                    return $b['points'] <=> $a['points'] ?: strnatcasecmp( (string) $a['display_name'], (string) $b['display_name'] );
+            }
+        };
+
+        usort( $entries, $compare );
+        $entries = array_values( $entries );
     }
 
     /**
@@ -1550,27 +1649,45 @@ class Ranking {
     }
 
     public function competition_rankings_shortcode( $atts = [] ): string {
-        $a   = shortcode_atts( [ 'id' => 0, 'weight' => 0 ], $atts, 'crm_competition_rankings' );
-        $cid = intval( $a['id'] ?: ( $_GET['competition_id'] ?? 0 ) );
-        $wt  = intval( $a['weight'] ?: ( $_GET['weight_class'] ?? 0 ) );
-        if ( ! $cid ) {
+        $atts = shortcode_atts(
+            [
+                'id'          => 0,
+                'competition' => 0,
+                'weight'      => '',
+                'gender'      => '',
+                'order'       => 'points_desc',
+            ],
+            $atts,
+            'crm_competition_rankings'
+        );
+
+        $competition_filter = $this->parse_int_list( $atts['competition'] ?: ( $atts['id'] ?: ( $_GET['competition_id'] ?? '' ) ) );
+        $weight_filter      = $this->parse_int_list( $atts['weight'] ?: ( $_GET['weight_class'] ?? '' ) );
+        $gender_filter      = $this->parse_filter_list( $atts['gender'] );
+        $order              = $this->sanitize_ranking_order( $atts['order'] );
+
+        if ( ! $competition_filter ) {
             return '<p>مسابقه نامشخص است.</p>';
         }
-        $rows = $this->get_ranking_rows( $cid, $wt );
+
+        $raw_rows = $this->get_ranking_rows( $competition_filter, $weight_filter );
+        $rows     = $this->build_competition_ranking_entries( $raw_rows, $gender_filter );
+
         if ( ! $rows ) {
             return '<p>امتیازی ثبت نشده است.</p>';
         }
+
+        $this->sort_competition_entries( $rows, $order );
+
         ob_start();
         ?>
         <table class="crm-rank-table striped">
             <thead><tr><th>#</th><th>کاربر</th><th>امتیاز</th></tr></thead><tbody>
-            <?php $i = 1; foreach ( $rows as $r ) :
-                $u   = get_userdata( $r->user_id );
-                $img = get_user_meta( $r->user_id, 'personal_photo', true ) ?: get_avatar_url( $r->user_id ); ?>
+            <?php foreach ( $rows as $index => $r ) : ?>
                 <tr>
-                    <td><?php echo $i++; ?></td>
-                    <td><img src="<?php echo esc_url( $img ); ?>" style="width:30px;height:30px;border-radius:50%;vertical-align:middle"> <?php echo esc_html( $u->display_name ); ?></td>
-                    <td><?php echo intval( $r->pts ); ?></td>
+                    <td><?php echo intval( $index + 1 ); ?></td>
+                    <td><img src="<?php echo esc_url( $r['avatar'] ); ?>" style="width:30px;height:30px;border-radius:50%;vertical-align:middle" alt=""> <?php echo esc_html( $r['display_name'] ); ?></td>
+                    <td><?php echo intval( $r['points'] ); ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
@@ -1654,6 +1771,29 @@ class Ranking {
         }
 
         return array_values( array_unique( $filters, SORT_REGULAR ) );
+    }
+
+    /**
+     * Parse a CSV list and keep only integer values.
+     *
+     * @param mixed $value
+     *
+     * @return array<int,int>
+     */
+    private function parse_int_list( $value ): array {
+        $filters = $this->parse_filter_list( $value );
+
+        return array_values( array_filter( $filters, 'is_int' ) );
+    }
+
+    /**
+     * Sanitize the requested ranking order.
+     */
+    private function sanitize_ranking_order( $value ): string {
+        $allowed = [ 'points_desc', 'points_asc', 'name_asc', 'name_desc' ];
+        $value   = $this->normalize_slug( (string) $value );
+
+        return in_array( $value, $allowed, true ) ? $value : 'points_desc';
     }
 
     /**

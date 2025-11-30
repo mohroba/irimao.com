@@ -16,7 +16,14 @@ if ( ! class_exists( 'RankingTestWpdb' ) ) {
                 ];
             }
             if ( strpos( $query, 'GROUP BY user_id' ) !== false ) {
-                return [ (object) [ 'user_id' => 1, 'pts' => 10 ], (object) [ 'user_id' => 2, 'pts' => 5 ] ];
+                if ( strpos( $query, 'IN (11)' ) !== false ) {
+                    return [ (object) [ 'user_id' => 3, 'pts' => 15 ] ];
+                }
+                return [
+                    (object) [ 'user_id' => 1, 'pts' => 10 ],
+                    (object) [ 'user_id' => 2, 'pts' => 5 ],
+                    (object) [ 'user_id' => 3, 'pts' => 15 ],
+                ];
             }
             return [];
         }
@@ -133,6 +140,27 @@ class RankingTest extends TestCase {
         $service = new Ranking();
         $html    = $service->competition_rankings_shortcode( [ 'id' => 1 ] );
         $this->assertStringContainsString( 'crm-rank-table', $html );
+    }
+
+    public function test_competition_rankings_shortcode_filters_gender_and_weight(): void {
+        $service = new Ranking();
+        $html    = $service->competition_rankings_shortcode( [ 'id' => 1, 'gender' => 'women', 'weight' => '10' ] );
+
+        $this->assertStringContainsString( 'Bravo', $html );
+        $this->assertStringNotContainsString( 'Alpha', $html );
+        $this->assertStringNotContainsString( 'Charlie', $html );
+    }
+
+    public function test_competition_rankings_shortcode_supports_ordering(): void {
+        $service = new Ranking();
+        $html    = $service->competition_rankings_shortcode( [ 'id' => 1, 'order' => 'name_desc' ] );
+
+        $pos_charlie = strpos( $html, 'Charlie' );
+        $pos_bravo   = strpos( $html, 'Bravo' );
+
+        $this->assertNotFalse( $pos_charlie );
+        $this->assertNotFalse( $pos_bravo );
+        $this->assertTrue( $pos_charlie < $pos_bravo );
     }
 
     public function test_competition_rankings_shortcode_requires_id(): void {
