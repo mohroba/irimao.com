@@ -46,6 +46,7 @@ class Ranking {
         add_shortcode( 'crm_rankings_overview', [ $this, 'rankings_overview_shortcode' ] );
         add_action( 'init', [ $this, 'register_endpoint' ] );
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
+        add_action( 'wp_ajax_crm_ranking_table', [ $this, 'ajax_ranking_table' ] );
         add_action( 'woocommerce_account_my-rankings_endpoint', fn() => print do_shortcode( '[crm_my_rankings]' ) );
         add_action( 'plugins_loaded', [ $this, 'maybe_install' ] );
         add_action( 'wp_ajax_crm_competition_weight_classes', [ $this, 'ajax_competition_weight_classes' ] );
@@ -301,6 +302,7 @@ class Ranking {
                             class="crm-select2"
                             data-selected="<?php echo esc_attr( $selected_weight ?: '' ); ?>"
                             data-placeholder="<?php esc_attr_e( '— انتخاب —', 'imao-custom-plugin' ); ?>"
+                            <?php echo $selected_competition ? '' : 'disabled'; ?>
                             required
                         >
                             <?php
@@ -342,6 +344,7 @@ class Ranking {
                             class="crm-select2"
                             data-selected="<?php echo esc_attr( $selected_user ?: '' ); ?>"
                             data-placeholder="<?php esc_attr_e( '— انتخاب —', 'imao-custom-plugin' ); ?>"
+                            <?php echo $selected_competition ? '' : 'disabled'; ?>
                             required
                         >
                             <?php
@@ -378,39 +381,64 @@ class Ranking {
         if ( ! $screen || $screen->id !== 'users_page_crm-points-manager' ) {
             return;
         }
+        $tab = isset( $_GET['tab'] ) ? (string) $_GET['tab'] : 'assign';
         $url       = plugin_dir_url( IMAO_PLUGIN_FILE );
         $path      = plugin_dir_path( IMAO_PLUGIN_FILE );
-        $script    = 'assets/js/ranking-assign.js';
-        $version   = is_file( $path . $script ) ? (string) filemtime( $path . $script ) : '1.0.0';
         wp_enqueue_style( 'imao-select2', $url . 'assets/css/select2.min.css', [], '4.0.13' );
         wp_enqueue_script( 'imao-select2', $url . 'assets/js/select2.min.js', [ 'jquery' ], '4.0.13', true );
         wp_add_inline_script(
             'imao-select2',
             'jQuery(function($){$("select.crm-select2").select2({dir:"rtl",width:"resolve"});});'
         );
-        wp_enqueue_script( 'imao-ranking-assign', $url . $script, [ 'jquery', 'imao-select2' ], $version, true );
-        wp_localize_script(
-            'imao-ranking-assign',
-            'crmAssignPoints',
-            [
-                'ajax_url' => admin_url( 'admin-ajax.php' ),
-                'nonce'    => wp_create_nonce( self::AJAX_ACTION ),
-                'actions'  => [
-                    'weights'   => 'crm_competition_weight_classes',
-                    'attendees' => 'crm_competition_attendees',
-                ],
-                'i18n'     => [
-                    'loading'             => 'در حال بارگذاری…',
-                    'select_competition'  => '— ابتدا مسابقه را انتخاب کنید —',
-                    'select_weight'       => '— ابتدا دسته وزنی را انتخاب کنید —',
-                    'no_weights'          => 'دستهٔ وزنی برای این مسابقه ثبت نشده است.',
-                    'no_attendees'        => 'شرکت‌کننده‌ای یافت نشد.',
-                    'user_placeholder'    => '— انتخاب —',
-                    'weight_placeholder'  => '— انتخاب —',
-                    'error_generic'       => 'بروز خطا. لطفاً دوباره تلاش کنید.',
-                ],
-            ]
-        );
+
+        if ( $tab === 'assign' ) {
+            $assign_script  = 'assets/js/ranking-assign.js';
+            $assign_version = is_file( $path . $assign_script ) ? (string) filemtime( $path . $assign_script ) : '1.0.0';
+            wp_enqueue_script( 'imao-ranking-assign', $url . $assign_script, [ 'jquery', 'imao-select2' ], $assign_version, true );
+            wp_localize_script(
+                'imao-ranking-assign',
+                'crmAssignPoints',
+                [
+                    'ajax_url' => admin_url( 'admin-ajax.php' ),
+                    'nonce'    => wp_create_nonce( self::AJAX_ACTION ),
+                    'actions'  => [
+                        'weights'   => 'crm_competition_weight_classes',
+                        'attendees' => 'crm_competition_attendees',
+                    ],
+                    'i18n'     => [
+                        'loading'             => 'در حال بارگذاری…',
+                        'select_competition'  => '— ابتدا مسابقه را انتخاب کنید —',
+                        'select_weight'       => '— ابتدا دسته وزنی را انتخاب کنید —',
+                        'no_weights'          => 'دستهٔ وزنی برای این مسابقه ثبت نشده است.',
+                        'no_attendees'        => 'شرکت‌کننده‌ای یافت نشد.',
+                        'user_placeholder'    => '— انتخاب —',
+                        'weight_placeholder'  => '— انتخاب —',
+                        'error_generic'       => 'بروز خطا. لطفاً دوباره تلاش کنید.',
+                    ],
+                ]
+            );
+            return;
+        }
+
+        if ( $tab === 'rank' ) {
+            $dt_script  = 'assets/js/jquery.dataTables.min.js';
+            $dt_style   = 'assets/css/jquery.dataTables.min.css';
+            $rank_js    = 'assets/js/ranking-rank.js';
+            $dt_version = is_file( $path . $dt_script ) ? (string) filemtime( $path . $dt_script ) : '1.13.8';
+            $rank_ver   = is_file( $path . $rank_js ) ? (string) filemtime( $path . $rank_js ) : '1.0.0';
+            wp_enqueue_style( 'imao-dt', $url . $dt_style, [], $dt_version );
+            wp_enqueue_script( 'imao-dt', $url . $dt_script, [ 'jquery' ], $dt_version, true );
+            wp_enqueue_script( 'imao-ranking-rank', $url . $rank_js, [ 'jquery', 'imao-dt', 'imao-select2' ], $rank_ver, true );
+            wp_localize_script(
+                'imao-ranking-rank',
+                'crmRankingsTable',
+                [
+                    'ajax_url' => admin_url( 'admin-ajax.php' ),
+                    'nonce'    => wp_create_nonce( self::AJAX_ACTION ),
+                    'actions'  => [ 'table' => 'crm_ranking_table' ],
+                ]
+            );
+        }
     }
 
     public function ajax_competition_weight_classes(): void {
@@ -1025,6 +1053,315 @@ class Ranking {
     }
 
     /**
+     * AJAX endpoint for server-side rankings table.
+     */
+    public function ajax_ranking_table(): void {
+        $this->verify_ajax_request();
+
+        $competition_id = max( 0, intval( $_POST['competition_id'] ?? 0 ) );
+        $weight_class   = max( 0, intval( $_POST['weight_class'] ?? 0 ) );
+        $draw           = max( 0, intval( $_POST['draw'] ?? 0 ) );
+        $start          = max( 0, intval( $_POST['start'] ?? 0 ) );
+        $length         = max( -1, intval( $_POST['length'] ?? 20 ) );
+        $search_term    = '';
+        if ( isset( $_POST['search']['value'] ) && is_scalar( $_POST['search']['value'] ) ) {
+            $search_term = (string) $_POST['search']['value'];
+        }
+
+        $order_request = $_POST['order'] ?? [];
+        $order_by      = $this->parse_datatable_order( is_array( $order_request ) ? $order_request : [] );
+
+        $rows = $this->get_rank_table_rows( $competition_id, $weight_class );
+        $total_count = count( $rows );
+
+        if ( $search_term !== '' ) {
+            $rows = array_values(
+                array_filter(
+                    $rows,
+                    function ( array $row ) use ( $search_term ): bool {
+                        $needle = $this->safe_lower( trim( $search_term ) );
+                        if ( $needle === '' ) {
+                            return true;
+                        }
+                        $haystack = $this->safe_lower(
+                            implode(
+                                ' ',
+                                [
+                                    $this->strip_tags_safe( $row['user'] ?? '' ),
+                                    $row['gender'] ?? '',
+                                    $row['weights'] ?? '',
+                                ]
+                            )
+                        );
+                        return strpos( $haystack, $needle ) !== false;
+                    }
+                )
+            );
+        }
+
+        $filtered_count = count( $rows );
+
+        if ( $order_by ) {
+            usort(
+                $rows,
+                function ( array $a, array $b ) use ( $order_by ): int {
+                    foreach ( $order_by as $order ) {
+                        $column = $order['column'];
+                        $dir    = $order['dir'];
+                        $av     = $a[ $column ] ?? '';
+                        $bv     = $b[ $column ] ?? '';
+
+                        if ( $column === 'user' ) {
+                            $av = $this->strip_tags_safe( (string) $av );
+                            $bv = $this->strip_tags_safe( (string) $bv );
+                        }
+
+                        if ( $av === $bv ) {
+                            continue;
+                        }
+
+                        if ( is_numeric( $av ) && is_numeric( $bv ) ) {
+                            $result = (float) $av <=> (float) $bv;
+                            return $dir === 'asc' ? $result : -$result;
+                        }
+
+                        $result = strcasecmp( (string) $av, (string) $bv );
+                        return $dir === 'asc' ? $result : -$result;
+                    }
+
+                    return 0;
+                }
+            );
+        }
+
+        if ( $length > -1 ) {
+            $rows = array_slice( $rows, $start, $length );
+        }
+
+        foreach ( $rows as $idx => &$row ) {
+            $row['position'] = $start + $idx + 1;
+        }
+        unset( $row );
+
+        wp_send_json_success(
+            [
+                'draw'            => $draw,
+                'recordsTotal'    => $total_count,
+                'recordsFiltered' => $filtered_count,
+                'data'            => array_values( $rows ),
+            ]
+        );
+    }
+
+    /**
+     * Build ranking rows for DataTables response.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    private function get_rank_table_rows( int $competition_id, int $weight_class ): array {
+        global $wpdb;
+
+        $where = 'WHERE 1=1';
+        if ( $competition_id ) {
+            $where .= $wpdb->prepare( ' AND competition_id=%d', $competition_id );
+        }
+        if ( $weight_class ) {
+            $where .= $wpdb->prepare( ' AND weight_class=%d', $weight_class );
+        }
+        $expiry_days = (int) $wpdb->get_var( "SELECT opt_val FROM {$wpdb->prefix}crm_settings WHERE opt_key='points_expiry_days' LIMIT 1" );
+        if ( $expiry_days ) {
+            $where .= $wpdb->prepare( ' AND assigned_date >= DATE_SUB(NOW(), INTERVAL %d DAY)', $expiry_days );
+        }
+
+        $results = $wpdb->get_results(
+            "SELECT user_id, SUM(points) AS pts, GROUP_CONCAT(DISTINCT weight_class) AS weight_ids
+             FROM {$wpdb->prefix}crm_points
+             $where
+             GROUP BY user_id",
+            ARRAY_A
+        );
+
+        if ( ! $results ) {
+            return [];
+        }
+
+        $user_cache    = [];
+        $weight_lookup = $this->build_weight_lookup( $results );
+
+        $rows = [];
+        foreach ( $results as $row ) {
+            $uid = isset( $row['user_id'] ) ? (int) $row['user_id'] : 0;
+            if ( ! $uid ) {
+                continue;
+            }
+            if ( ! isset( $user_cache[ $uid ] ) ) {
+                $user_cache[ $uid ] = get_userdata( $uid );
+            }
+            $user = $user_cache[ $uid ];
+            if ( ! $user instanceof WP_User ) {
+                continue;
+            }
+
+            $display_name  = $user->display_name ?: $user->user_email;
+            $avatar        = get_user_meta( $uid, 'personal_photo', true ) ?: get_avatar_url( $uid );
+            $weights       = $this->format_weight_labels( (string) ( $row['weight_ids'] ?? '' ), $weight_lookup );
+            $gender_label  = $this->get_gender_label( $uid );
+            $points        = isset( $row['pts'] ) ? (int) $row['pts'] : 0;
+
+            $rows[] = [
+                'user_id' => $uid,
+                'user'    => sprintf(
+                    '<div class="crm-rank-user"><img src="%s" alt="" class="crm-rank-avatar"> %s</div>',
+                    esc_url( $avatar ),
+                    esc_html( $display_name )
+                ),
+                'gender'  => esc_html( $gender_label ),
+                'weights' => esc_html( $weights ),
+                'points'  => $points,
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Normalize ordering instructions from DataTables.
+     *
+     * @param array<int,array<string,mixed>> $orders
+     * @return array<int,array{column:string,dir:string}>
+     */
+    private function parse_datatable_order( array $orders ): array {
+        $map = [
+            1 => 'user',
+            2 => 'gender',
+            3 => 'weights',
+            4 => 'points',
+        ];
+
+        $parsed = [];
+        foreach ( $orders as $order ) {
+            $column_idx = isset( $order['column'] ) ? (int) $order['column'] : -1;
+            $dir        = strtolower( (string) ( $order['dir'] ?? 'asc' ) ) === 'desc' ? 'desc' : 'asc';
+            if ( isset( $map[ $column_idx ] ) ) {
+                $parsed[] = [
+                    'column' => $map[ $column_idx ],
+                    'dir'    => $dir,
+                ];
+            }
+        }
+
+        if ( ! $parsed ) {
+            $parsed[] = [ 'column' => 'points', 'dir' => 'desc' ];
+        }
+
+        return $parsed;
+    }
+
+    /**
+     * @param array<int,array<string,mixed>> $results
+     *
+     * @return array<int,string>
+     */
+    private function build_weight_lookup( array $results ): array {
+        $ids = [];
+        foreach ( $results as $row ) {
+            $parts = array_filter( array_map( 'intval', explode( ',', (string) ( $row['weight_ids'] ?? '' ) ) ) );
+            foreach ( $parts as $id ) {
+                $ids[ $id ] = $id;
+            }
+        }
+        if ( ! $ids ) {
+            return [];
+        }
+        $terms = get_terms(
+            [
+                'taxonomy'   => 'age_category',
+                'include'    => array_values( $ids ),
+                'hide_empty' => false,
+            ]
+        );
+        $lookup      = [];
+        $parent_map  = [];
+        $parents_to_fetch = [];
+        foreach ( $terms as $term ) {
+            if ( $term instanceof WP_Term ) {
+                $term_id                = (int) $term->term_id;
+                $parent_id              = (int) $term->parent;
+                $lookup[ $term_id ]     = (string) $term->name;
+                $parent_map[ $term_id ] = $parent_id;
+                if ( $parent_id ) {
+                    $parents_to_fetch[ $parent_id ] = $parent_id;
+                }
+            }
+        }
+
+        if ( $parents_to_fetch ) {
+            $parents = get_terms(
+                [
+                    'taxonomy'   => 'age_category',
+                    'include'    => array_values( $parents_to_fetch ),
+                    'hide_empty' => false,
+                ]
+            );
+            foreach ( $parents as $parent ) {
+                if ( $parent instanceof WP_Term ) {
+                    $lookup[ (int) $parent->term_id ] = (string) $parent->name;
+                }
+            }
+        }
+
+        $labels = [];
+        foreach ( $lookup as $id => $name ) {
+            $parent_id = $parent_map[ $id ] ?? 0;
+            if ( $parent_id && isset( $lookup[ $parent_id ] ) ) {
+                $labels[ $id ] = $lookup[ $parent_id ] . ' - ' . $name;
+            } else {
+                $labels[ $id ] = $name;
+            }
+        }
+
+        return $labels;
+    }
+
+    private function format_weight_labels( string $csv, array $lookup ): string {
+        $ids = array_filter( array_map( 'intval', explode( ',', $csv ) ) );
+        if ( ! $ids ) {
+            return '—';
+        }
+        $labels = [];
+        foreach ( array_unique( $ids ) as $id ) {
+            if ( isset( $lookup[ $id ] ) ) {
+                $labels[] = $lookup[ $id ];
+            }
+        }
+        return $labels ? implode( '، ', $labels ) : '—';
+    }
+
+    private function get_gender_label( int $user_id ): string {
+        $slug = UserMeta::gender_slug( $user_id );
+        if ( $slug !== '' && isset( $this->gender_label_cache[ $slug ] ) ) {
+            return $this->gender_label_cache[ $slug ];
+        }
+        return $slug !== '' ? $slug : '—';
+    }
+
+    private function safe_lower( string $value ): string {
+        if ( function_exists( 'mb_strtolower' ) ) {
+            return mb_strtolower( $value, 'UTF-8' );
+        }
+
+        return strtolower( $value );
+    }
+
+    private function strip_tags_safe( string $value ): string {
+        if ( function_exists( 'wp_strip_all_tags' ) ) {
+            return wp_strip_all_tags( $value );
+        }
+
+        return strip_tags( $value );
+    }
+
+    /**
      * Display rankings grouped by gender, age category, and weight class.
      *
      * @param array<string,mixed> $atts Shortcode attributes.
@@ -1454,26 +1791,16 @@ class Ranking {
 
         submit_button( 'نمایش', 'secondary', '', false );
         echo '</form>';
-
-        $rows = $this->get_ranking_rows( $comp_id, $w_term );
-        if ( ! $rows ) {
-            echo '<p>موردی یافت نشد.</p>';
-            return;
-        }
-        $grand_total = array_sum( wp_list_pluck( $rows, 'pts' ) );
-        echo '<p style="font-weight:600;margin:10px 0;"> مجموع امتیازهای فعال در این نما: '
-             . esc_html( number_format_i18n( $grand_total ) )
-             . '</p>';
-
-        echo '<table class="widefat striped"><thead><tr><th>#</th><th>کاربر</th><th>امتیاز</th></tr></thead><tbody>';
-        $pos = 1;
-        foreach ( $rows as $row ) {
-            $user = get_userdata( $row->user_id );
-            $img  = get_user_meta( $row->user_id, 'personal_photo', true ) ?: get_avatar_url( $row->user_id );
-            printf( '<tr><td>%d</td><td><img src="%s" style="width:30px;border-radius:50%%;vertical-align:middle"> %s</td><td>%d</td></tr>',
-                $pos++, esc_url( $img ), esc_html( $user ? $user->display_name : '—' ), (int) $row->pts );
-        }
-        echo '</tbody></table>';
+        echo '<table id="crm-ranking-table" class="widefat striped" style="width:100%">';
+        echo '<thead><tr>'
+             . '<th>#</th>'
+             . '<th>کاربر</th>'
+             . '<th>جنسیت</th>'
+             . '<th>دسته‌های وزنی</th>'
+             . '<th>امتیاز</th>'
+             . '</tr></thead>';
+        echo '<tbody><tr><td colspan="5">در حال بارگذاری…</td></tr></tbody>';
+        echo '</table>';
     }
 
     public function my_rankings_shortcode(): string {
