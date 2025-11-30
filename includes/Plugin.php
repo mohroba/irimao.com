@@ -39,6 +39,7 @@ use IMAOCustom\Services\RoleCleanup;
 use IMAOCustom\Services\StyleCommitteeRequests;
 use IMAOCustom\Services\CheckoutPrefill;
 use IMAOCustom\Services\OrderStatus;
+use IMAOCustom\Services\ProvinceRepresentatives;
 use IMAOCustom\ServiceManager;
 
 
@@ -87,6 +88,7 @@ class Plugin {
         Ban::class,
         LoginTracking::class,
         RoleCleanup::class,
+        ProvinceRepresentatives::class,
     ];
 
     private function __construct() {
