@@ -11,6 +11,11 @@ class Wallet {
     private const META_USED           = 'crm_used_wallet';
     private const META_ORIGINAL_TOTAL = 'crm_wallet_original_total';
     private const META_PROCESSED      = 'crm_wallet_processed';
+    private const META_BREAKDOWN      = 'crm_wallet_payment_breakdown';
+    private const META_BALANCE_BEFORE = 'crm_wallet_balance_before';
+    private const META_BALANCE_AFTER  = 'crm_wallet_balance_after';
+    private const META_GATEWAY_DUE    = 'crm_wallet_gateway_due';
+    private const META_PLANNED_USE    = 'crm_wallet_planned_use';
     private const META_LINKED         = '_linked_post_id';
     private const CRON_HOOK           = 'crm_cancel_unpaid_wallet_orders';
 
@@ -186,18 +191,45 @@ class Wallet {
     }
 
     public function save_used_wallet( $order, $data ): void {
-        $use = (float) WC()->session->get( 'crm_wallet_use_amount' );
-        if ( $use <= 0 ) {
+        $session_use = (float) WC()->session->get( 'crm_wallet_use_amount' );
+        if ( $session_use <= 0 ) {
             return;
         }
-        $original = (float) WC()->session->get( 'crm_wallet_cart_total' );
-        if ( $original <= 0 && method_exists( $order, 'get_total' ) ) {
-            $original = (float) $order->get_total() + $use;
+        $user_id          = method_exists( $order, 'get_customer_id' ) ? (int) $order->get_customer_id() : 0;
+        $balance_before   = $user_id > 0 ? self::get_balance( $user_id ) : 0.0;
+        $cart_total       = (float) WC()->session->get( 'crm_wallet_cart_total' );
+        $order_total      = method_exists( $order, 'get_total' ) ? (float) $order->get_total() : 0.0;
+        $original_total   = $cart_total > 0 ? $cart_total : $order_total + $session_use;
+        $planned_use      = min( $session_use, $balance_before, $original_total );
+        $remaining_for_pg = max( 0.0, $original_total - $planned_use );
+
+        if ( method_exists( $order, 'set_total' ) && abs( $order_total - $remaining_for_pg ) > 0.01 ) {
+            $order->set_total( $remaining_for_pg );
         }
+
+        $breakdown = [
+            'wallet_balance_before' => $balance_before,
+            'order_total_before'    => $original_total,
+            'wallet_planned_use'    => $planned_use,
+            'gateway_remaining'     => $remaining_for_pg,
+        ];
+
         if ( method_exists( $order, 'update_meta_data' ) ) {
-            $order->update_meta_data( self::META_USED, $use );
-            $order->update_meta_data( self::META_ORIGINAL_TOTAL, $original );
+            $order->update_meta_data( self::META_USED, $planned_use );
+            $order->update_meta_data( self::META_PLANNED_USE, $planned_use );
+            $order->update_meta_data( self::META_ORIGINAL_TOTAL, $original_total );
             $order->update_meta_data( self::META_PROCESSED, 'pending' );
+            $order->update_meta_data( self::META_BREAKDOWN, $breakdown );
+            $order->update_meta_data( self::META_BALANCE_BEFORE, $balance_before );
+            $order->update_meta_data( self::META_GATEWAY_DUE, $remaining_for_pg );
+        }
+
+        if ( method_exists( $order, 'add_order_note' ) ) {
+            $order->add_order_note( 'خلاصه پرداخت: مجموع ' . wc_price( $original_total ) . '، سهم کیف پول ' . wc_price( $planned_use ) . '، باقیمانده برای درگاه ' . wc_price( $remaining_for_pg ) );
+        }
+
+        if ( $remaining_for_pg <= 0.0 && $planned_use > 0 && $user_id > 0 ) {
+            $this->finalize_wallet_only_payment( $order, $user_id, $planned_use, $original_total, $balance_before );
         }
     }
 
@@ -300,6 +332,12 @@ class Wallet {
             $original_total = max( $requested, $fallback_total );
         }
 
+        $balance_before = method_exists( $order, 'get_meta' ) ? (float) $order->get_meta( self::META_BALANCE_BEFORE ) : 0.0;
+        if ( $balance_before <= 0 ) {
+            $balance_before = self::get_balance( $user_id );
+        }
+        $planned_use = method_exists( $order, 'get_meta' ) ? (float) $order->get_meta( self::META_PLANNED_USE ) : $requested;
+
         $paid_amount = 0.0;
         if ( method_exists( $order, 'get_total_paid' ) ) {
             $paid_amount = (float) $order->get_total_paid();
@@ -336,7 +374,7 @@ class Wallet {
         }
 
         $required = max( 0.0, $original_total - $paid_amount );
-        $required = min( $required, $requested );
+        $required = min( $required, $planned_use );
         $deduct   = min( $wallet_balance, $required );
 
         if ( $deduct > 0 ) {
@@ -345,16 +383,77 @@ class Wallet {
             self::add_log( $user_id, -$deduct, $note );
         }
 
+        $balance_after = self::get_balance( $user_id );
+        $breakdown     = method_exists( $order, 'get_meta' ) ? (array) $order->get_meta( self::META_BREAKDOWN ) : [];
+        $breakdown     = array_merge( $breakdown, [
+            'wallet_balance_after' => $balance_after,
+            'gateway_paid'         => $paid_amount,
+            'wallet_deducted'      => $deduct,
+        ] );
+
+        if ( method_exists( $order, 'add_order_note' ) ) {
+            $order->add_order_note( 'پرداخت ترکیبی: کیف پول ' . wc_price( $deduct ) . ' از موجودی ' . wc_price( $balance_before ) . '، مبلغ درگاه ' . wc_price( $paid_amount ) );
+        }
+
         if ( method_exists( $order, 'update_meta_data' ) ) {
             $order->update_meta_data( self::META_USED, $deduct );
             $order->update_meta_data( self::META_PROCESSED, 'completed' );
             $order->update_meta_data( self::META_ORIGINAL_TOTAL, $original_total );
+            $order->update_meta_data( self::META_BALANCE_AFTER, $balance_after );
+            $order->update_meta_data( self::META_BREAKDOWN, $breakdown );
+            $order->update_meta_data( self::META_GATEWAY_DUE, max( 0.0, $original_total - $deduct - $paid_amount ) );
         }
         if ( method_exists( $order, 'save' ) ) {
             $order->save();
         }
 
         return $deduct;
+    }
+
+    private function finalize_wallet_only_payment( $order, int $user_id, float $planned_use, float $original_total, float $balance_before ): void {
+        $available = self::get_balance( $user_id );
+        $deduct    = min( $planned_use, $available, $original_total );
+        $balance_after = $available;
+
+        if ( $deduct > 0 ) {
+            self::deduct_balance( $user_id, $deduct );
+            $balance_after = self::get_balance( $user_id );
+            self::add_log( $user_id, -$deduct, 'پرداخت کامل با کیف پول' );
+        }
+
+        $breakdown = [
+            'wallet_balance_before' => $balance_before,
+            'order_total_before'    => $original_total,
+            'wallet_planned_use'    => $planned_use,
+            'gateway_remaining'     => 0.0,
+            'wallet_deducted'       => $deduct,
+            'wallet_balance_after'  => $balance_after,
+            'gateway_paid'          => 0.0,
+        ];
+
+        if ( method_exists( $order, 'add_order_note' ) ) {
+            $order->add_order_note( 'پرداخت کامل با کیف پول: کسر ' . wc_price( $deduct ) . ' از موجودی ' . wc_price( $balance_before ) );
+        }
+
+        if ( method_exists( $order, 'set_total' ) ) {
+            $order->set_total( 0 );
+        }
+
+        if ( method_exists( $order, 'update_meta_data' ) ) {
+            $order->update_meta_data( self::META_USED, $deduct );
+            $order->update_meta_data( self::META_PROCESSED, 'completed' );
+            $order->update_meta_data( self::META_ORIGINAL_TOTAL, $original_total );
+            $order->update_meta_data( self::META_BREAKDOWN, $breakdown );
+            $order->update_meta_data( self::META_BALANCE_AFTER, $balance_after );
+            $order->update_meta_data( self::META_GATEWAY_DUE, 0 );
+        }
+
+        if ( method_exists( $order, 'payment_complete' ) ) {
+            $order->payment_complete();
+        }
+        if ( method_exists( $order, 'save' ) ) {
+            $order->save();
+        }
     }
 
     public function refund_wallet( int $order_id ): void {
