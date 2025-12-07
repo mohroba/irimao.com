@@ -193,16 +193,28 @@ class Wallet {
     }
 
     public function save_used_wallet( $order, $data ): void {
-        $session_use = (float) WC()->session->get( 'crm_wallet_use_amount' );
+        $session_use   = (float) WC()->session->get( 'crm_wallet_use_amount' );
+        $cart_total    = (float) WC()->session->get( 'crm_wallet_cart_total' );
+        $user_id       = method_exists( $order, 'get_customer_id' ) ? (int) $order->get_customer_id() : 0;
+        $order_total   = method_exists( $order, 'get_total' ) ? (float) $order->get_total() : 0.0;
+        $use_wallet_ui = (bool) WC()->session->get( 'crm_use_wallet' );
+
+        if ( $session_use <= 0 && $use_wallet_ui && $user_id > 0 ) {
+            if ( $cart_total <= 0 && $order_total > 0 ) {
+                $cart_total = $order_total;
+                WC()->session->set( 'crm_wallet_cart_total', $cart_total );
+            }
+            $session_use = min( self::get_balance( $user_id ), $cart_total );
+            WC()->session->set( 'crm_wallet_use_amount', $session_use );
+        }
+
         if ( $session_use <= 0 ) {
             return;
         }
-        $user_id          = method_exists( $order, 'get_customer_id' ) ? (int) $order->get_customer_id() : 0;
-        $balance_before   = $user_id > 0 ? self::get_balance( $user_id ) : 0.0;
-        $cart_total       = (float) WC()->session->get( 'crm_wallet_cart_total' );
-        $order_total      = method_exists( $order, 'get_total' ) ? (float) $order->get_total() : 0.0;
-        $original_total   = $cart_total > 0 ? $cart_total : $order_total + $session_use;
-        $planned_use      = min( $session_use, $balance_before, $original_total );
+
+        $balance_before = $user_id > 0 ? self::get_balance( $user_id ) : 0.0;
+        $original_total = $cart_total > 0 ? $cart_total : ( $order_total > 0 ? $order_total : $session_use );
+        $planned_use    = min( $session_use, $balance_before, $original_total );
         $remaining_for_pg = max( 0.0, $original_total - $planned_use );
 
         if ( method_exists( $order, 'set_total' ) && abs( $order_total - $remaining_for_pg ) > 0.01 ) {

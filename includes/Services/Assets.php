@@ -44,6 +44,9 @@ class Assets {
         wp_enqueue_script( 'imao-identity-professional', $url . 'assets/js/identity-professional.js', [], '1.0.0', true );
         wp_enqueue_script( 'imao-club-register', $url . 'assets/js/club-register.js', [ 'jquery' ], '1.0.0', true );
         wp_enqueue_script( 'imao-vip-subscription', $url . 'assets/js/vip-subscription.js', [ 'jquery' ], '1.0.0', true );
+        if ( ( function_exists( 'is_checkout' ) && is_checkout() ) || ( function_exists( 'is_cart' ) && is_cart() ) ) {
+            wp_enqueue_script( 'imao-wallet', $url . 'assets/js/wallet.js', [ 'jquery' ], '1.0.0', true );
+        }
     }
 }
 
