@@ -499,21 +499,25 @@ class Wallet {
             . 'serverSide:true,'
             . 'serverMethod:"POST",'
             . 'ajax:{url:"' . esc_url_raw( $ajax_url ) . '",data:function(d){d.action="crm_wallet_manager_table";d._ajax_nonce="' . esc_js( $ajax_nonce ) . '";}},'
-            . 'order:[[1,"desc"]],'
+            . 'order:[[3,"desc"]],'
             . 'dom:"Bfrtip",'
             . 'deferRender:true,'
             . 'columns:['
-                . '{data:"user",orderable:true},'
+                . '{data:"row_number",orderable:false,searchable:false},'
+                . '{data:"first_name",orderable:false},'
+                . '{data:"last_name",orderable:false},'
                 . '{data:"balance",orderable:true},'
+                . '{data:"card_number",orderable:false},'
+                . '{data:"iban",orderable:false},'
                 . '{data:"amount",orderable:false,searchable:false},'
                 . '{data:"memo",orderable:false,searchable:false},'
                 . '{data:"actions",orderable:false,searchable:false}'
             . '],'
             . 'buttons:['
-                . '{extend:"excelHtml5",text:"خروجی اکسل",exportOptions:{columns:[0,1]}},'
-                . '{extend:"print",text:"چاپ",exportOptions:{columns:[0,1]},customize:function(win){$(win.document.body).css("direction","rtl");$(win.document.body).find("table").addClass("rtl-table");}}'
+                . '{extend:"excelHtml5",text:"خروجی اکسل",exportOptions:{columns:[0,1,2,3,4,5],rows:function(idx,data){return parseFloat(data.balance_raw) !== 0;}}},'
+                . '{extend:"print",text:"چاپ",exportOptions:{columns:[0,1,2,3,4,5],rows:function(idx,data){return parseFloat(data.balance_raw) !== 0;}},customize:function(win){$(win.document.body).css("direction","rtl");$(win.document.body).find("table").addClass("rtl-table");}}'
             . '],'
-            . 'columnDefs:[{targets:[2,3,4],className:"dt-nowrap"}],'
+            . 'columnDefs:[{targets:[6,7,8],className:"dt-nowrap"}],'
             . 'drawCallback:function(){ $(".crm-wallet-amount").attr({min:0,step:0.01}); }'
         . '});});';
 
@@ -547,7 +551,7 @@ class Wallet {
         }
         echo '<div class="wrap"><h1>مدیریت کیف پول کاربران</h1>';
         echo '<table id="crm-wallet-table" class="widefat striped nowrap" style="width:100%">'
-            . '<thead><tr><th>کاربر</th><th>موجودی</th><th>مبلغ</th><th>پرداخت بابت</th><th>عملیات</th></tr></thead>'
+            . '<thead><tr><th>ردیف</th><th>نام</th><th>نام خانوادگی</th><th>موجودی</th><th>شماره کارت</th><th>شماره شبا</th><th>مبلغ</th><th>پرداخت بابت</th><th>عملیات</th></tr></thead>'
             . '<tbody></tbody>'
             . '</table></div>';
     }
@@ -565,8 +569,8 @@ class Wallet {
         $length = $length > 0 ? $length : 50;
 
         $search_value = isset( $_POST['search']['value'] ) ? sanitize_text_field( wp_unslash( $_POST['search']['value'] ) ) : '';
-        $order        = $_POST['order'][0] ?? [ 'column' => 1, 'dir' => 'desc' ];
-        $order_col    = isset( $order['column'] ) ? (int) $order['column'] : 1;
+        $order        = $_POST['order'][0] ?? [ 'column' => 3, 'dir' => 'desc' ];
+        $order_col    = isset( $order['column'] ) ? (int) $order['column'] : 3;
         $order_dir    = ( isset( $order['dir'] ) && strtolower( $order['dir'] ) === 'asc' ) ? 'ASC' : 'DESC';
 
         $args = [
@@ -576,6 +580,21 @@ class Wallet {
             'fields'      => [ 'ID', 'display_name', 'user_email' ],
             'orderby'     => 'display_name',
             'order'       => $order_dir,
+            'meta_query'  => [
+                'relation' => 'OR',
+                [
+                    'key'     => WalletHelper::get_meta_key(),
+                    'value'   => 0,
+                    'compare' => '>',
+                    'type'    => 'NUMERIC',
+                ],
+                [
+                    'key'     => WalletHelper::get_meta_key(),
+                    'value'   => 0,
+                    'compare' => '<',
+                    'type'    => 'NUMERIC',
+                ],
+            ],
         ];
 
         if ( $search_value !== '' ) {
@@ -583,27 +602,27 @@ class Wallet {
             $args['search_columns']  = [ 'user_email', 'user_nicename', 'display_name' ];
         }
 
-        if ( $order_col === 1 ) {
+        if ( $order_col === 3 ) {
             $args['orderby']  = 'meta_value_num';
             $args['meta_key'] = WalletHelper::get_meta_key();
             $args['meta_type'] = 'NUMERIC';
         }
 
-        $query           = new \WP_User_Query( $args );
-        $total_users     = function_exists( 'count_users' ) ? (int) ( count_users()['total_users'] ?? 0 ) : 0;
-        $filtered_total  = (int) $query->get_total();
-        $users           = $query->get_results();
+        $query          = new \WP_User_Query( $args );
+        $total_users    = (int) $query->get_total();
+        $filtered_total = $total_users;
+        $users          = $query->get_results();
         $nonce_field_tpl = function (): string {
             return wp_nonce_field( 'crm_wallet_adj_nonce', '_wpnonce', true, false );
         };
 
         $rows = [];
-        foreach ( $users as $user ) {
-            $balance   = self::get_balance( $user->ID );
-            $form_id   = 'crm-wallet-form-' . $user->ID;
-            $amount    = '<input type="number" class="crm-wallet-amount" name="amount" form="' . esc_attr( $form_id ) . '" step="0.01" required style="width:120px">';
-            $memo      = '<input type="text" class="crm-wallet-memo" name="memo" form="' . esc_attr( $form_id ) . '" style="width:100%">';
-            $actions   = '<form method="post" id="' . esc_attr( $form_id ) . '" class="crm-wallet-form">'
+        foreach ( $users as $index => $user ) {
+            $balance    = self::get_balance( $user->ID );
+            $form_id    = 'crm-wallet-form-' . $user->ID;
+            $amount     = '<input type="number" class="crm-wallet-amount" name="amount" form="' . esc_attr( $form_id ) . '" step="0.01" required style="width:120px">';
+            $memo       = '<input type="text" class="crm-wallet-memo" name="memo" form="' . esc_attr( $form_id ) . '" style="width:100%">';
+            $actions    = '<form method="post" id="' . esc_attr( $form_id ) . '" class="crm-wallet-form">'
                         . $nonce_field_tpl()
                         . '<input type="hidden" name="user" value="' . absint( $user->ID ) . '">'
                         . '<input type="hidden" name="crm_wallet_adj" value="1">'
@@ -612,12 +631,22 @@ class Wallet {
                         . '<button class="button" name="action" value="set">تنظیم موجودی</button>'
                         . '</form>';
 
+            $first_name = get_user_meta( $user->ID, 'first_name', true );
+            $last_name  = get_user_meta( $user->ID, 'last_name', true );
+            $card       = get_user_meta( $user->ID, 'card_number', true );
+            $iban       = get_user_meta( $user->ID, 'iban', true );
+
             $rows[] = [
-                'user'    => esc_html( $user->display_name ) . ' (' . esc_html( $user->user_email ) . ')',
-                'balance' => wc_price( $balance ),
-                'amount'  => $amount,
-                'memo'    => $memo,
-                'actions' => $actions,
+                'row_number'  => $start + $index + 1,
+                'first_name'  => esc_html( $first_name ?: '-' ),
+                'last_name'   => esc_html( $last_name ?: '-' ),
+                'balance'     => wc_price( $balance ),
+                'balance_raw' => $balance,
+                'card_number' => esc_html( $card ?: '-' ),
+                'iban'        => esc_html( $iban ?: '-' ),
+                'amount'      => $amount,
+                'memo'        => $memo,
+                'actions'     => $actions,
             ];
         }
 
