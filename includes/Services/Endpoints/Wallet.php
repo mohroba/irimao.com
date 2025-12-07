@@ -520,43 +520,34 @@ class Wallet {
 
         $ajax_url   = admin_url( 'admin-ajax.php' );
         $ajax_nonce = wp_create_nonce( 'crm_wallet_manager_table' );
-        $init_js    = <<<JS
-jQuery(function($){
-    var includeZero = false;
-    var zeroButtonLabel = function() {
-        return includeZero ? 'حذف کیف‌های صفر' : 'نمایش کیف‌های صفر';
-    };
-    var table = $("#crm-wallet-table").DataTable({
-        language:{url:"https://cdn.datatables.net/plug-ins/1.13.8/i18n/fa.json"},
-        pageLength:50,
-        processing:true,
-        serverSide:true,
-        serverMethod:"POST",
-        ajax:{url:"{$ajax_url}",data:function(d){d.action="crm_wallet_manager_table";d._ajax_nonce="{$ajax_nonce}";d.include_zero=includeZero?1:0;}},
-        order:[[3,"desc"]],
-        dom:"Bfrtip",
-        deferRender:true,
-        columns:[
-            {data:"row_number",orderable:false,searchable:false},
-            {data:"first_name",orderable:false},
-            {data:"last_name",orderable:false},
-            {data:"balance",orderable:true},
-            {data:"card_number",orderable:false},
-            {data:"iban",orderable:false},
-            {data:"amount",orderable:false,searchable:false},
-            {data:"memo",orderable:false,searchable:false},
-            {data:"actions",orderable:false,searchable:false}
-        ],
-        buttons:[
-            {text:zeroButtonLabel(),action:function(){includeZero=!includeZero;this.text(zeroButtonLabel());table.ajax.reload();}},
-            {extend:"excelHtml5",text:"خروجی اکسل",exportOptions:{columns:[0,1,2,3,4,5],rows:function(idx,data){return includeZero ? true : parseFloat(data.balance_raw) !== 0;}}},
-            {extend:"print",text:"چاپ",exportOptions:{columns:[0,1,2,3,4,5],rows:function(idx,data){return includeZero ? true : parseFloat(data.balance_raw) !== 0;}},customize:function(win){$(win.document.body).css("direction","rtl");$(win.document.body).find("table").addClass("rtl-table");}}
-        ],
-        columnDefs:[{targets:[6,7,8],className:"dt-nowrap"}],
-        drawCallback:function(){ $(".crm-wallet-amount").attr({min:0,step:0.01}); }
-    });
-});
-JS;
+        $init_js    = 'jQuery(function($){$("#crm-wallet-table").DataTable({'
+            . 'language:{url:"https://cdn.datatables.net/plug-ins/1.13.8/i18n/fa.json"},'
+            . 'pageLength:50,'
+            . 'processing:true,'
+            . 'serverSide:true,'
+            . 'serverMethod:"POST",'
+            . 'ajax:{url:"' . esc_url_raw( $ajax_url ) . '",data:function(d){d.action="crm_wallet_manager_table";d._ajax_nonce="' . esc_js( $ajax_nonce ) . '";}},'
+            . 'order:[[3,"desc"]],'
+            . 'dom:"Bfrtip",'
+            . 'deferRender:true,'
+            . 'columns:['
+                . '{data:"row_number",orderable:false,searchable:false},'
+                . '{data:"first_name",orderable:false},'
+                . '{data:"last_name",orderable:false},'
+                . '{data:"balance",orderable:true},'
+                . '{data:"card_number",orderable:false},'
+                . '{data:"iban",orderable:false},'
+                . '{data:"amount",orderable:false,searchable:false},'
+                . '{data:"memo",orderable:false,searchable:false},'
+                . '{data:"actions",orderable:false,searchable:false}'
+            . '],'
+            . 'buttons:['
+                . '{extend:"excelHtml5",text:"خروجی اکسل",exportOptions:{columns:[0,1,2,3,4,5],rows:function(idx,data){return parseFloat(data.balance_raw) !== 0;}}},'
+                . '{extend:"print",text:"چاپ",exportOptions:{columns:[0,1,2,3,4,5],rows:function(idx,data){return parseFloat(data.balance_raw) !== 0;}},customize:function(win){$(win.document.body).css("direction","rtl");$(win.document.body).find("table").addClass("rtl-table");}}'
+            . '],'
+            . 'columnDefs:[{targets:[6,7,8],className:"dt-nowrap"}],'
+            . 'drawCallback:function(){ $(".crm-wallet-amount").attr({min:0,step:0.01}); }'
+        . '});});';
 
         wp_add_inline_script( 'dt-buttons-print', $init_js );
     }
@@ -610,8 +601,6 @@ JS;
         $order_col    = isset( $order['column'] ) ? (int) $order['column'] : 3;
         $order_dir    = ( isset( $order['dir'] ) && strtolower( $order['dir'] ) === 'asc' ) ? 'ASC' : 'DESC';
 
-        $include_zero = ! empty( $_POST['include_zero'] );
-
         $args = [
             'number'      => $length,
             'offset'      => $start,
@@ -619,10 +608,7 @@ JS;
             'fields'      => [ 'ID', 'display_name', 'user_email' ],
             'orderby'     => 'display_name',
             'order'       => $order_dir,
-        ];
-
-        if ( ! $include_zero ) {
-            $args['meta_query'] = [
+            'meta_query'  => [
                 'relation' => 'OR',
                 [
                     'key'     => WalletHelper::get_meta_key(),
@@ -636,8 +622,8 @@ JS;
                     'compare' => '<',
                     'type'    => 'NUMERIC',
                 ],
-            ];
-        }
+            ],
+        ];
 
         if ( $search_value !== '' ) {
             $args['search']          = '*' . $search_value . '*';
@@ -645,8 +631,8 @@ JS;
         }
 
         if ( $order_col === 3 ) {
-            $args['orderby']   = 'meta_value_num';
-            $args['meta_key']  = WalletHelper::get_meta_key();
+            $args['orderby']  = 'meta_value_num';
+            $args['meta_key'] = WalletHelper::get_meta_key();
             $args['meta_type'] = 'NUMERIC';
         }
 
