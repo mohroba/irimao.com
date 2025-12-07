@@ -34,6 +34,7 @@ class Wallet {
         add_action( 'woocommerce_checkout_update_order_review', [ $this, 'store_wallet_flag' ] );
         add_action( 'woocommerce_cart_calculate_fees', [ $this, 'apply_wallet_discount' ] );
         add_action( 'woocommerce_checkout_create_order', [ $this, 'save_used_wallet' ], 10, 2 );
+        add_filter( 'woocommerce_order_needs_payment', [ $this, 'order_needs_payment' ], 10, 3 );
         add_action( 'woocommerce_payment_complete', [ $this, 'after_payment' ] );
         add_action( 'woocommerce_order_status_cancelled', [ $this, 'refund_wallet' ], 10 );
         add_action( 'woocommerce_order_status_refunded', [ $this, 'refund_wallet' ], 10 );
@@ -232,6 +233,21 @@ class Wallet {
         if ( $remaining_for_pg <= 0.0 && $planned_use > 0 && $user_id > 0 ) {
             $this->finalize_wallet_only_payment( $order, $user_id, $planned_use, $original_total, $balance_before );
         }
+    }
+
+    public function order_needs_payment( bool $needs_payment, $order, array $valid_order_statuses ): bool {
+        if ( ! $needs_payment || ! $order || ! method_exists( $order, 'get_meta' ) ) {
+            return $needs_payment;
+        }
+
+        $planned_use = (float) $order->get_meta( self::META_PLANNED_USE );
+        $gateway_due = (float) $order->get_meta( self::META_GATEWAY_DUE );
+
+        if ( $planned_use > 0 && $gateway_due <= 0.0 ) {
+            return false;
+        }
+
+        return $needs_payment;
     }
 
     public function after_payment( int $order_id ): void {
