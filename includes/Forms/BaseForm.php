@@ -11,6 +11,7 @@ abstract class BaseForm {
     protected bool $saved    = false;
     protected string $nonce_action = '';
     protected string $nonce_name   = 'imao_nonce';
+    protected string $success_text = 'اطلاعات شما با موفقیت ذخیره شد.';
 
     public function __construct() {
         if ( $_SERVER['REQUEST_METHOD'] === 'POST' ) {
@@ -47,7 +48,7 @@ abstract class BaseForm {
             return '';
         }
 
-        return '<div class="notice-success imao-success">اطلاعات شما با موفقیت ذخیره شد.</div>';
+        return '<div class="notice-success imao-success">' . esc_html( $this->success_text ) . '</div>';
     }
 
     /**
@@ -105,4 +106,3 @@ abstract class BaseForm {
         return $out;
     }
 }
-

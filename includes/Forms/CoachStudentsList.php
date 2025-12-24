@@ -60,11 +60,11 @@ class CoachStudentsList {
                 echo '<td class="text-center" style="font-size:12px;text-align:center">' . esc_html( $phone_label ?: '—' ) . '</td>';
                 echo '<td class="text-center" style="font-size:12px;text-align:center">' . esc_html( $email_label ?: '—' ) . '</td>';
                 echo '<td class="text-center" style="font-size:12px;">';
-                echo '<button type="button" class="button coach-student-toggle" data-target="' . esc_attr( $row_id ) . '" data-expand="نمایش جزئیات" data-collapse="پنهان کردن جزئیات">نمایش جزئیات</button>';
+                echo '<button type="button" class="imao-btn sm coach-student-toggle" data-target="' . esc_attr( $row_id ) . '" data-name="' . esc_attr( $person['name'] ) . '">نمایش جزئیات</button>';
                 echo '</td>';
                 echo '</tr>';
                 echo '<tr id="' . esc_attr( $row_id ) . '" class="coach-student-details" style="display:none;">';
-                echo '<td colspan="6">' . $this->render_details( $person, $club ) . '</td>';
+                echo '<td colspan="6"><div class="coach-student-details-inner">' . $this->render_details( $person, $club ) . '</div></td>';
                 echo '</tr>';
                 $i++;
             }
@@ -171,11 +171,13 @@ class CoachStudentsList {
             if ( empty( $meta['billing_email'] ) ) {
                 $meta['billing_email'] = (string) ( $user->user_email ?? '' );
             }
+            $enrollments = $this->student_enrollments( $user_id );
             $students[] = [
-                'id'    => $user_id,
-                'name'  => (string) ( $user->display_name ?? '' ),
-                'email' => (string) ( $user->user_email ?? '' ),
-                'meta'  => $meta,
+                'id'          => $user_id,
+                'name'        => (string) ( $user->display_name ?? '' ),
+                'email'       => (string) ( $user->user_email ?? '' ),
+                'meta'        => $meta,
+                'enrollments' => $enrollments,
             ];
         }
         return $students;
@@ -195,19 +197,18 @@ class CoachStudentsList {
                     if (!targetId || !$row.length) {
                         return;
                     }
-                    var expandLabel = $btn.data('expand');
-                    var collapseLabel = $btn.data('collapse');
-                    var isVisible = $row.is(':visible');
-                    if (isVisible) {
-                        $row.hide();
-                        if (expandLabel) {
-                            $btn.text(expandLabel);
-                        }
+                    var title = $btn.data('name') || 'جزئیات شاگرد';
+                    var content = $row.find('.coach-student-details-inner').first().html();
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: title,
+                            html: content,
+                            width: '70%',
+                            customClass: { popup: 'coach-student-modal' },
+                            confirmButtonText: 'بستن'
+                        });
                     } else {
-                        $row.show();
-                        if (collapseLabel) {
-                            $btn.text(collapseLabel);
-                        }
+                        alert('جزئیات در این مرورگر قابل نمایش نیست.');
                     }
                 });
             });
@@ -279,6 +280,45 @@ class CoachStudentsList {
             echo '<tr><th style="text-align:right;font-size:12px;width:160px;">' . esc_html( $label ) . '</th><td style="font-size:12px;">' . $value . '</td></tr>';
         }
         echo '</tbody></table></div>';
+        $enrollments = $student['enrollments'] ?? [ 'competitions' => [], 'courses' => [] ];
+        echo '<div class="coach-details-section">';
+        echo '<h5>مسابقات دانشجو</h5>';
+        if ( empty( $enrollments['competitions'] ) ) {
+            echo '<p class="coach-details-empty">رکوردی یافت نشد.</p>';
+        } else {
+            echo '<table class="coach-details-table"><thead><tr><th>نام</th><th>کد</th><th>شماره سفارش</th><th>تاریخ</th><th>مبلغ</th><th>وضعیت</th></tr></thead><tbody>';
+            foreach ( $enrollments['competitions'] as $comp ) {
+                echo '<tr>';
+                echo '<td>' . esc_html( $comp['title'] ) . '</td>';
+                echo '<td>' . esc_html( $comp['code'] ) . '</td>';
+                echo '<td>#' . esc_html( (string) $comp['order_id'] ) . '</td>';
+                echo '<td>' . esc_html( $comp['date'] ) . '</td>';
+                echo '<td>' . esc_html( $comp['amount'] ) . '</td>';
+                echo '<td>' . esc_html( $comp['status'] ) . '</td>';
+                echo '</tr>';
+            }
+            echo '</tbody></table>';
+        }
+        echo '</div>';
+        echo '<div class="coach-details-section">';
+        echo '<h5>دوره‌های خریداری‌شده</h5>';
+        if ( empty( $enrollments['courses'] ) ) {
+            echo '<p class="coach-details-empty">رکوردی یافت نشد.</p>';
+        } else {
+            echo '<table class="coach-details-table"><thead><tr><th>نام</th><th>کد</th><th>شماره سفارش</th><th>تاریخ</th><th>مبلغ</th><th>وضعیت</th></tr></thead><tbody>';
+            foreach ( $enrollments['courses'] as $course ) {
+                echo '<tr>';
+                echo '<td>' . esc_html( $course['title'] ) . '</td>';
+                echo '<td>' . esc_html( $course['code'] ) . '</td>';
+                echo '<td>#' . esc_html( (string) $course['order_id'] ) . '</td>';
+                echo '<td>' . esc_html( $course['date'] ) . '</td>';
+                echo '<td>' . esc_html( $course['amount'] ) . '</td>';
+                echo '<td>' . esc_html( $course['status'] ) . '</td>';
+                echo '</tr>';
+            }
+            echo '</tbody></table>';
+        }
+        echo '</div>';
         return (string) ob_get_clean();
     }
 
@@ -320,5 +360,55 @@ class CoachStudentsList {
             }
         }
         return [ 'name' => sprintf( 'باشگاه #%d', $club_id ), 'address' => '' ];
+    }
+
+    /**
+     * @return array{competitions:array<int,array<string,string>>,courses:array<int,array<string,string>>}
+     */
+    private function student_enrollments( int $user_id ): array {
+        if ( ! function_exists( '\\wc_get_orders' ) ) {
+            return [ 'competitions' => [], 'courses' => [] ];
+        }
+        $orders = \wc_get_orders( [
+            'customer_id' => $user_id,
+            'limit'       => 20,
+            'orderby'     => 'date',
+            'order'       => 'DESC',
+            'status'      => [ 'completed', 'processing', 'pending', 'on-hold' ],
+        ] );
+        $competitions = [];
+        $courses      = [];
+        foreach ( $orders as $order ) {
+            $order_id   = method_exists( $order, 'get_id' ) ? (int) $order->get_id() : 0;
+            $order_date = $order->get_date_created() ? $order->get_date_created()->date_i18n( 'Y/m/d' ) : '';
+            $status     = \wc_get_order_status_name( $order->get_status() );
+            foreach ( $order->get_items() as $item ) {
+                $product_id = (int) $item->get_product_id();
+                $linked_id  = (int) \get_post_meta( $product_id, '_linked_post_id', true );
+                if ( ! $linked_id ) {
+                    continue;
+                }
+                $type  = get_post_type( $linked_id );
+                $entry = [
+                    'title'    => (string) get_the_title( $linked_id ),
+                    'code'     => '',
+                    'order_id' => (string) $order_id,
+                    'date'     => $order_date,
+                    'amount'   => \wc_price( $item->get_total() ),
+                    'status'   => $status,
+                ];
+                if ( $type === 'competition' ) {
+                    $entry['code'] = (string) get_post_meta( $linked_id, 'competition_code', true );
+                    $competitions[] = $entry;
+                } elseif ( $type === 'course' ) {
+                    $entry['code'] = (string) get_post_meta( $linked_id, 'course_code', true );
+                    $courses[] = $entry;
+                }
+            }
+        }
+        return [
+            'competitions' => $competitions,
+            'courses'      => $courses,
+        ];
     }
 }

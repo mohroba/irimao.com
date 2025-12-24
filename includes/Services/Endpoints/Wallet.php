@@ -18,12 +18,18 @@ class Wallet {
     private const META_PLANNED_USE    = 'crm_wallet_planned_use';
     private const META_LINKED         = '_linked_post_id';
     private const CRON_HOOK           = 'crm_cancel_unpaid_wallet_orders';
+    private const ENDPOINT_INCOME     = 'wallet-income';
+    private const ENDPOINT_PAYMENTS   = 'wallet-payments';
 
     public function register(): void {
         add_action( 'init', [ $this, 'add_endpoint' ] );
         add_filter( 'woocommerce_account_menu_items', [ $this, 'add_menu_item' ] );
         add_action( 'woocommerce_account_wallet_endpoint', [ $this, 'endpoint_content' ] );
         add_shortcode( 'crm_wallet', [ $this, 'shortcode' ] );
+        add_action( 'woocommerce_account_' . self::ENDPOINT_INCOME . '_endpoint', [ $this, 'income_content' ] );
+        add_action( 'woocommerce_account_' . self::ENDPOINT_PAYMENTS . '_endpoint', [ $this, 'payments_content' ] );
+        add_shortcode( 'crm_wallet_income', [ $this, 'income_shortcode' ] );
+        add_shortcode( 'crm_wallet_payments', [ $this, 'payments_shortcode' ] );
 
         add_action( 'woocommerce_order_status_completed', [ $this, 'credit_topup' ] );
         add_action( 'init', [ $this, 'schedule_cancellation' ] );
@@ -46,11 +52,21 @@ class Wallet {
 
     public function add_endpoint(): void {
         add_rewrite_endpoint( 'wallet', EP_ROOT | EP_PAGES );
+        add_rewrite_endpoint( self::ENDPOINT_INCOME, EP_ROOT | EP_PAGES );
+        add_rewrite_endpoint( self::ENDPOINT_PAYMENTS, EP_ROOT | EP_PAGES );
     }
 
     public function add_menu_item( array $items ): array {
         $items['wallet'] = 'کیف پول';
-        return $items;
+        $reordered       = [];
+        foreach ( $items as $key => $label ) {
+            $reordered[ $key ] = $label;
+            if ( $key === 'wallet' ) {
+                $reordered[ self::ENDPOINT_INCOME ]   = 'درآمدهای کیف پول';
+                $reordered[ self::ENDPOINT_PAYMENTS ] = 'پرداخت‌های کیف پول';
+            }
+        }
+        return $reordered;
     }
 
     public function endpoint_content(): void {
@@ -59,6 +75,22 @@ class Wallet {
 
     public function shortcode(): string {
         return $this->render_wallet_page();
+    }
+
+    public function income_content(): void {
+        echo $this->render_income_page();
+    }
+
+    public function payments_content(): void {
+        echo $this->render_payments_page();
+    }
+
+    public function income_shortcode(): string {
+        return $this->render_income_page();
+    }
+
+    public function payments_shortcode(): string {
+        return $this->render_payments_page();
     }
 
     public static function get_balance( int $user_id = 0 ): float {
@@ -645,6 +677,87 @@ class Wallet {
         ] );
     }
 
+    /**
+     * @return array<int,array{date:string,amount:float,note:string}>
+     */
+    private function get_wallet_log( int $user_id ): array {
+        $logs = (array) get_user_meta( $user_id, self::META_LOG, true );
+        usort(
+            $logs,
+            static function ( $a, $b ) {
+                return strtotime( $b['date'] ?? '' ) <=> strtotime( $a['date'] ?? '' );
+            }
+        );
+        return $logs;
+    }
+
+    private function render_income_page(): string {
+        if ( ! is_user_logged_in() ) {
+            return '<p style="text-align:center;color:#c00;">برای مشاهدهٔ کیف پول ابتدا وارد شوید.</p>';
+        }
+        $user_id = get_current_user_id();
+        $logs    = array_filter(
+            $this->get_wallet_log( $user_id ),
+            static fn( $row ) => (float) ( $row['amount'] ?? 0 ) > 0
+        );
+        return $this->render_log_table(
+            $logs,
+            'فهرست درآمدهای کیف پول',
+            'تراکنش مثبتی یافت نشد.'
+        );
+    }
+
+    private function render_payments_page(): string {
+        if ( ! is_user_logged_in() ) {
+            return '<p style="text-align:center;color:#c00;">برای مشاهدهٔ کیف پول ابتدا وارد شوید.</p>';
+        }
+        $user_id = get_current_user_id();
+        $logs    = array_filter(
+            $this->get_wallet_log( $user_id ),
+            static fn( $row ) => (float) ( $row['amount'] ?? 0 ) < 0
+        );
+        return $this->render_log_table(
+            $logs,
+            'پرداخت‌های انجام‌شده با کیف پول',
+            'پرداختی با کیف پول ثبت نشده است.'
+        );
+    }
+
+    /**
+     * @param array<int,array{date:string,amount:float,note:string}> $logs
+     */
+    private function render_log_table( array $logs, string $title, string $empty_message ): string {
+        ob_start();
+        ?>
+        <div id="wallet-box">
+            <h4 class="wallet-section-title"><?php echo esc_html( $title ); ?></h4>
+            <?php if ( empty( $logs ) ) : ?>
+                <p class="wallet-no-orders"><?php echo esc_html( $empty_message ); ?></p>
+            <?php else : ?>
+                <table class="wallet-table log-table striped">
+                    <thead>
+                        <tr>
+                            <th>تاریخ</th>
+                            <th>مبلغ</th>
+                            <th>توضیحات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ( $logs as $row ) : ?>
+                        <tr>
+                            <td><?php echo esc_html( date_i18n( 'Y/m/d H:i', strtotime( $row['date'] ?? '' ) ) ); ?></td>
+                            <td><?php echo wc_price( (float) $row['amount'] ); ?></td>
+                            <td><?php echo esc_html( (string) ( $row['note'] ?? '' ) ); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
+        </div>
+        <?php
+        return (string) ob_get_clean();
+    }
+
     private function render_wallet_page(): string {
         if ( ! is_user_logged_in() ) {
             return '<p style="text-align:center;color:#c00;">برای مشاهدهٔ کیف پول ابتدا وارد شوید.</p>';
@@ -703,8 +816,7 @@ class Wallet {
                 <p class="wallet-no-orders">هیچ تراکنشی برای شارژ کیف پول ثبت نشده است.</p>
             <?php endif; ?>
             <?php
-            $logs = (array) get_user_meta( $user_id, self::META_LOG, true );
-            usort( $logs, fn( $a, $b ) => strtotime( $b['date'] ) <=> strtotime( $a['date'] ) );
+            $logs = $this->get_wallet_log( $user_id );
             if ( $logs ) : ?>
                 <h4 class="wallet-section-title">جدول تراکنش های سامانه</h4>
                 <table class="wallet-table log-table striped">
