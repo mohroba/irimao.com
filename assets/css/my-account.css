@@ -55,10 +55,37 @@ jdp-container{
 }
 
 @media (max-width:600px){
-    .cbif-grid{grid-template-columns:1fr}
-    .cbif-wide{grid-column:1}
+.cbif-grid{grid-template-columns:1fr}
+.cbif-wide{grid-column:1}
 }
 .date-select {
     display: flex;
     gap: 10px;
 }
+.city-stepper{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:15px 0}
+.city-step{background:#f7f9fc;border:1px solid #e1e7f0;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:4px;position:relative}
+.city-step span{width:32px;height:32px;border-radius:50%;background:#060097;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center}
+.city-step strong{color:#1f2937}
+.city-step small{color:#6b7280}
+.city-step.is-disabled{opacity:0.55}
+.city-step.is-complete span{background:#16a34a}
+.city-rep-grid .sd-field label .required{color:#d00;margin-left:4px}
+.city-step-details.is-hidden{display:none !important}
+.city-step-details.is-visible{display:flex}
+.city-rep-form .sd-inline{display:flex;gap:8px}
+.city-rep-form input[type="text"]{background:#f9fafb;border:1px solid #d1d5db;border-radius:8px;padding:10px}
+.city-rep-form .city-check-btn{background:#1890ff;color:#fff;border:none;border-radius:8px;padding:10px 14px;cursor:pointer}
+.city-rep-table th,.city-rep-table td{text-align:center!important}
+.city-rep-table .inline-form{display:inline-flex;gap:6px;align-items:center}
+.city-rep-table .button-small{padding:6px 10px;font-size:12px;border-radius:6px}
+.imao-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:8px;border:1px solid #1890ff;background:#1890ff;color:#fff;text-decoration:none;font-size:13px;transition:all .2s ease}
+.imao-btn:hover{background:#0f6fc2;color:#fff;border-color:#0f6fc2}
+.imao-btn.secondary{background:#f8fafc;border-color:#cbd5e1;color:#1f2937}
+.imao-btn.secondary:hover{background:#e2e8f0;color:#0f172a}
+.imao-btn.sm{padding:6px 10px;font-size:12px;border-radius:6px}
+.coach-student-modal table{width:100%;border-collapse:collapse}
+.coach-student-modal th,.coach-student-modal td{border:1px solid #e5e7eb;padding:6px 8px;text-align:right;font-size:12px}
+.coach-student-modal thead{background:#f1f5f9}
+.coach-details-section{margin-top:12px}
+.coach-details-section h5{margin:0 0 8px;text-align:right;font-size:13px;color:#111827}
+.coach-details-empty{color:#6b7280;font-size:12px;margin:0}
