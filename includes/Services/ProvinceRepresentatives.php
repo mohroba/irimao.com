@@ -62,7 +62,7 @@ class ProvinceRepresentatives {
         if ( $page !== self::ADMIN_SLUG ) {
             return;
         }
-        $base = plugin_dir_url( dirname( __DIR__, 2 ) ) . 'assets/';
+        $base = plugin_dir_url( IMAO_PLUGIN_FILE ) . 'assets/';
         wp_enqueue_style( 'imao-datatables', $base . 'css/jquery.dataTables.min.css' );
         wp_enqueue_style( 'imao-datatables-buttons', 'https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css', [], '2.4.2' );
         wp_enqueue_style( 'imao-select2', $base . 'css/select2.min.css' );
@@ -545,7 +545,7 @@ class ProvinceRepresentatives {
         if ( function_exists( 'is_account_page' ) && ! is_account_page() ) {
             return;
         }
-        $base = plugin_dir_url( dirname( __DIR__, 2 ) ) . 'assets/';
+        $base = plugin_dir_url( IMAO_PLUGIN_FILE ) . 'assets/';
         wp_enqueue_style( 'imao-select2', $base . 'css/select2.min.css' );
         wp_enqueue_script( 'imao-select2', $base . 'js/select2.min.js', [ 'jquery' ], null, true );
         wp_enqueue_script( 'imao-city-rep-form', $base . 'js/city-rep-form.js', [ 'jquery' ], null, true );
