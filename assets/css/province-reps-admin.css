@@ -11,3 +11,22 @@
 .imao-reps-table td {
     text-align: right;
 }
+
+.imao-actions form.inline-form {
+    display: inline-block;
+}
+
+.imao-actions .button {
+    margin: 2px 0;
+}
+
+.imao-edit-panel {
+    background: #fff;
+    padding: 16px;
+    margin-top: 16px;
+    border: 1px solid #ccd0d4;
+}
+
+.imao-edit-panel h3 {
+    margin-top: 0;
+}
