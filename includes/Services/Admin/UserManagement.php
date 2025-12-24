@@ -97,12 +97,13 @@ class UserManagement {
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( 'Access denied' );
         }
+        $filter_user_id = isset( $_GET['user_id'] ) ? (int) $_GET['user_id'] : 0;
         if ( isset( $_GET['edit_user'] ) ) {
             $this->basic_info_edit_form( (int) $_GET['edit_user'] );
             return;
         }
         $fields = self::basic_fields();
-        $users  = get_users();
+        $users  = $filter_user_id ? array_filter( [ get_userdata( $filter_user_id ) ] ) : get_users();
         echo '<div class="wrap table-responsive" style="max-width:90vw;overflow-x:auto;"><h1>اطلاعات پایه کاربران</h1>';
         echo '<table id="crm-basic-table" class="wp-list-table widefat striped">';
         echo '<thead><tr><th>ID</th><th>نام</th>';
