@@ -67,11 +67,11 @@ class CityRepresentativeForm extends BaseForm {
             $this->errors[] = 'شهرستان انتخاب‌شده در محدوده استان شما نیست.';
             return;
         }
-        $result = $this->manager->assign_city_representative( (int) $user->ID, $this->province_code, $city, get_current_user_id(), $gender );
+        $result = $this->manager->create_city_request( (int) $user->ID, $this->province_code, $city, get_current_user_id(), $gender );
         if ( $result['ok'] ?? false ) {
             $this->saved = true;
         } else {
-            $this->errors[] = $result['message'] ?? 'خطا در ذخیره نماینده شهرستان.';
+            $this->errors[] = $result['message'] ?? 'خطا در ثبت درخواست نماینده شهرستان.';
         }
     }
 
@@ -129,6 +129,7 @@ class CityRepresentativeForm extends BaseForm {
 
     public function render(): string {
         $assignments = $this->manager->get_city_assignments( $this->province_code );
+        $requests    = $this->manager->get_city_requests_for_requester( get_current_user_id(), $this->province_code );
         $genders     = \IMAOCustom\Helpers\RepresentativeManager::gender_labels();
         $province    = CityMap::get_provinces()[ $this->province_code ] ?? $this->province_code;
         $prefill_user = null;
@@ -196,9 +197,45 @@ class CityRepresentativeForm extends BaseForm {
                     </div>
                 </div>
                 <div class="sd-submit city-step-details <?= $prefill_user || $this->prefill_ready ? 'is-visible' : 'is-hidden'; ?>">
-                    <button type="submit" class="btn sd-submit" id="city_rep_submit">ذخیره نماینده شهرستان</button>
+                    <button type="submit" class="btn sd-submit" id="city_rep_submit">ثبت درخواست نماینده شهرستان</button>
                 </div>
             </form>
+            <div class="sd-header" style="margin-top:24px;">درخواست‌های نماینده شهرستان</div>
+            <div class="table-responsive">
+                <table class="widefat striped city-rep-table">
+                    <thead>
+                        <tr>
+                            <th>شهرستان</th>
+                            <th>جنسیت</th>
+                            <th>کاربر</th>
+                            <th>وضعیت</th>
+                            <th>دلیل رد</th>
+                            <th>تاریخ درخواست</th>
+                            <th>تاریخ بررسی</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ( $requests as $row ) :
+                            $user = get_userdata( (int) $row->user_id );
+                            $status_label = match ( $row->status ) {
+                                'approved' => 'تایید شده',
+                                'rejected' => 'رد شده',
+                                default => 'در انتظار بررسی',
+                            };
+                            ?>
+                            <tr>
+                                <td><?= esc_html( $row->city_name ); ?></td>
+                                <td><?= esc_html( $genders[ $row->gender ] ?? '—' ); ?></td>
+                                <td><?= $user instanceof WP_User ? esc_html( $user->display_name ) : '—'; ?></td>
+                                <td><?= esc_html( $status_label ); ?></td>
+                                <td><?= esc_html( $row->rejection_reason ?: '—' ); ?></td>
+                                <td><?= esc_html( $row->requested_at ); ?></td>
+                                <td><?= esc_html( $row->decided_at ?: '—' ); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
             <div class="sd-header" style="margin-top:24px;">فهرست نمایندگان شهرستان</div>
             <div class="table-responsive">
                 <table class="widefat striped city-rep-table">

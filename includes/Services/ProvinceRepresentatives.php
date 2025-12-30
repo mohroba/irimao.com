@@ -131,11 +131,17 @@ class ProvinceRepresentatives {
             $notice = $this->handle_city_edit();
         }
 
+        if ( $tab === 'requests' && isset( $_POST['imao_city_request_action'] ) ) {
+            check_admin_referer( 'imao_city_request_action' );
+            $notice = $this->handle_city_request_actions();
+        }
+
         echo '<div class="wrap"><h1 class="wp-heading-inline">نمایندگان استان ها</h1><hr>';
         echo '<h2 class="nav-tab-wrapper">';
         echo '<a class="nav-tab ' . ( $tab === 'assign' ? 'nav-tab-active' : '' ) . '" href="?page=' . self::ADMIN_SLUG . '&tab=assign">ثبت نماینده استان</a>';
         echo '<a class="nav-tab ' . ( $tab === 'list' ? 'nav-tab-active' : '' ) . '" href="?page=' . self::ADMIN_SLUG . '&tab=list">فهرست نمایندگان استان</a>';
         echo '<a class="nav-tab ' . ( $tab === 'cities' ? 'nav-tab-active' : '' ) . '" href="?page=' . self::ADMIN_SLUG . '&tab=cities">نمایندگان شهرستان</a>';
+        echo '<a class="nav-tab ' . ( $tab === 'requests' ? 'nav-tab-active' : '' ) . '" href="?page=' . self::ADMIN_SLUG . '&tab=requests">درخواست‌های نماینده شهرستان</a>';
         echo '</h2>';
         echo $notice;
 
@@ -143,6 +149,8 @@ class ProvinceRepresentatives {
             $this->render_province_table();
         } elseif ( $tab === 'cities' ) {
             $this->render_city_table();
+        } elseif ( $tab === 'requests' ) {
+            $this->render_city_requests_table();
         } else {
             $this->render_assign_form();
         }
@@ -451,6 +459,66 @@ class ProvinceRepresentatives {
         <?php
     }
 
+    private function render_city_requests_table(): void {
+        $requests  = $this->manager->get_city_requests();
+        $provinces = CityMap::get_provinces();
+        $genders   = \IMAOCustom\Helpers\RepresentativeManager::gender_labels();
+        ?>
+        <form method="post">
+            <?php wp_nonce_field( 'imao_city_request_action' ); ?>
+            <table class="widefat striped imao-reps-table" id="imao-city-requests-table">
+            <thead>
+                <tr>
+                    <th>استان</th>
+                    <th>شهرستان</th>
+                    <th>جنسیت</th>
+                    <th>کاربر</th>
+                    <th>درخواست‌دهنده</th>
+                    <th>وضعیت</th>
+                    <th>دلیل رد</th>
+                    <th>تاریخ درخواست</th>
+                    <th>تاریخ بررسی</th>
+                    <th>توسط</th>
+                    <th>عملیات</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ( $requests as $row ) :
+                    $user       = get_userdata( (int) $row->user_id );
+                    $requester  = get_userdata( (int) $row->requested_by );
+                    $decidedBy  = get_userdata( (int) $row->decided_by );
+                    $status_label = $row->status === 'approved' ? 'تایید شده' : ( $row->status === 'rejected' ? 'رد شده' : 'در انتظار' );
+                    ?>
+                    <tr>
+                        <td><?= esc_html( $provinces[ $row->province_code ] ?? $row->province_code ); ?></td>
+                        <td><?= esc_html( $row->city_name ); ?></td>
+                        <td><?= esc_html( $genders[ $row->gender ] ?? '—' ); ?></td>
+                        <td><?= $user instanceof WP_User ? esc_html( $user->display_name ) : '—'; ?></td>
+                        <td><?= $requester instanceof WP_User ? esc_html( $requester->display_name ) : '—'; ?></td>
+                        <td><?= esc_html( $status_label ); ?></td>
+                        <td><?= esc_html( $row->rejection_reason ?: '—' ); ?></td>
+                        <td><?= esc_html( $row->requested_at ); ?></td>
+                        <td><?= esc_html( $row->decided_at ?: '—' ); ?></td>
+                        <td><?= $decidedBy instanceof WP_User ? esc_html( $decidedBy->display_name ) : '—'; ?></td>
+                        <td class="imao-actions">
+                            <?php if ( $row->status === 'pending' ) : ?>
+                                <input type="hidden" name="request[<?= esc_attr( (string) $row->id ); ?>][id]" value="<?= esc_attr( (string) $row->id ); ?>">
+                                <button class="button approve-btn" name="request[<?= esc_attr( (string) $row->id ); ?>][act]" value="approve">تایید</button>
+                                <button class="button reject-btn" name="request[<?= esc_attr( (string) $row->id ); ?>][act]" value="reject">رد</button>
+                                <input type="hidden" name="request[<?= esc_attr( (string) $row->id ); ?>][reason]" value="">
+                            <?php else : ?>
+                                —
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+            </table>
+            <input type="hidden" name="imao_city_request_action" value="1">
+        </form>
+        <?php
+    }
+
     private function handle_province_actions(): string {
         $notice = '';
         $actions = $_POST['assignment'] ?? [];
@@ -524,6 +592,29 @@ class ProvinceRepresentatives {
         }
         $msg = esc_html( $result['message'] ?? 'خطا در ویرایش.' );
         return '<div class="notice notice-error"><p>' . $msg . '</p></div>';
+    }
+
+    private function handle_city_request_actions(): string {
+        $notice  = '';
+        $actions = $_POST['request'] ?? [];
+        foreach ( $actions as $row ) {
+            $id     = isset( $row['id'] ) ? (int) $row['id'] : 0;
+            $act    = sanitize_text_field( $row['act'] ?? '' );
+            $reason = sanitize_text_field( $row['reason'] ?? '' );
+            if ( ! $id || ! $act ) {
+                continue;
+            }
+            if ( $act === 'approve' ) {
+                $result = $this->manager->approve_city_request( $id, get_current_user_id() );
+            } else {
+                $result = $this->manager->reject_city_request( $id, $reason, get_current_user_id() );
+            }
+            if ( ! ( $result['ok'] ?? false ) ) {
+                $msg    = esc_html( $result['message'] ?? 'خطا در به‌روزرسانی.' );
+                $notice = '<div class="notice notice-error"><p>' . $msg . '</p></div>';
+            }
+        }
+        return $notice;
     }
 
     public function add_account_endpoint(): void {

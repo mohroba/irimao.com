@@ -7,6 +7,7 @@ use WP_User;
 class RepresentativeManager {
     private string $province_table;
     private string $city_table;
+    private string $city_request_table;
     private static bool $install_checked = false;
     public const ROLE_PROVINCE       = 'province_rep';
     public const ROLE_CITY           = 'city_rep';
@@ -18,6 +19,7 @@ class RepresentativeManager {
         global $wpdb;
         $this->province_table = $wpdb->prefix . 'crm_province_reps';
         $this->city_table     = $wpdb->prefix . 'crm_city_reps';
+        $this->city_request_table = $wpdb->prefix . 'crm_city_rep_requests';
     }
 
     public function get_province_table(): string {
@@ -26,6 +28,10 @@ class RepresentativeManager {
 
     public function get_city_table(): string {
         return $this->city_table;
+    }
+
+    public function get_city_request_table(): string {
+        return $this->city_request_table;
     }
 
     public function install(): void {
@@ -70,8 +76,27 @@ class RepresentativeManager {
             KEY idx_user (user_id)
         ) {$charset};";
 
+        $sql_city_requests = "CREATE TABLE {$this->city_request_table} (
+            id bigint unsigned NOT NULL AUTO_INCREMENT,
+            user_id bigint unsigned NOT NULL,
+            requested_by bigint unsigned NOT NULL,
+            province_code varchar(20) NOT NULL,
+            city_name varchar(191) NOT NULL,
+            gender varchar(20) NOT NULL DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            rejection_reason text NULL,
+            requested_at datetime NOT NULL,
+            decided_at datetime NULL,
+            decided_by bigint unsigned NULL,
+            PRIMARY KEY (id),
+            KEY idx_status (status),
+            KEY idx_province_city (province_code, city_name),
+            KEY idx_user (user_id)
+        ) {$charset};";
+
         dbDelta( $sql_province );
         dbDelta( $sql_city );
+        dbDelta( $sql_city_requests );
 
         $this->ensure_gender_columns();
     }
@@ -238,6 +263,202 @@ class RepresentativeManager {
                 $this->maybe_remove_role( (int) $previous_user, self::ROLE_CITY, $this->city_table );
             }
         }
+
+        return [ 'ok' => true ];
+    }
+
+    /**
+     * @return array{ok:bool,message?:string}
+     */
+    public function create_city_request( int $user_id, string $province_code, string $city_name, int $requested_by, string $gender ): array {
+        $province_code = sanitize_text_field( $province_code );
+        $city_name     = sanitize_text_field( $city_name );
+        $gender        = $this->normalize_gender( $gender );
+        $this->ensure_roles_exist();
+        if ( ! $user_id || ! $province_code || ! $city_name ) {
+            return [ 'ok' => false, 'message' => 'کاربر و شهر الزامی هستند.' ];
+        }
+        if ( ! $gender ) {
+            return [ 'ok' => false, 'message' => 'انتخاب جنسیت الزامی است.' ];
+        }
+
+        $provinces = CityMap::get_provinces();
+        if ( ! isset( $provinces[ $province_code ] ) ) {
+            return [ 'ok' => false, 'message' => 'استان نامعتبر است.' ];
+        }
+
+        $cities = CityMap::get_cities( $province_code );
+        if ( ! in_array( $city_name, $cities, true ) ) {
+            return [ 'ok' => false, 'message' => 'شهرستان انتخاب‌شده معتبر نیست.' ];
+        }
+
+        $user = get_userdata( $user_id );
+        if ( ! $user instanceof WP_User ) {
+            return [ 'ok' => false, 'message' => 'کاربر یافت نشد.' ];
+        }
+
+        $this->install();
+        global $wpdb;
+        $existing = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$this->city_request_table} WHERE user_id=%d AND province_code=%s AND city_name=%s AND gender=%s AND status='pending'",
+                $user_id,
+                $province_code,
+                $city_name,
+                $gender
+            )
+        );
+        if ( (int) $existing > 0 ) {
+            return [ 'ok' => false, 'message' => 'درخواست مشابه قبلاً ثبت شده است.' ];
+        }
+
+        $wpdb->insert(
+            $this->city_request_table,
+            [
+                'user_id'       => $user_id,
+                'requested_by'  => $requested_by,
+                'province_code' => $province_code,
+                'city_name'     => $city_name,
+                'gender'        => $gender,
+                'status'        => 'pending',
+                'requested_at'  => current_time( 'mysql' ),
+            ],
+            [ '%d', '%d', '%s', '%s', '%s', '%s', '%s' ]
+        );
+
+        return [ 'ok' => true ];
+    }
+
+    /**
+     * @return array<int,object>
+     */
+    public function get_city_requests( ?string $province_code = null ): array {
+        $this->install();
+        global $wpdb;
+        if ( $province_code ) {
+            return $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT * FROM {$this->city_request_table} WHERE province_code=%s ORDER BY requested_at DESC",
+                    $province_code
+                )
+            );
+        }
+        return $wpdb->get_results( "SELECT * FROM {$this->city_request_table} ORDER BY requested_at DESC" );
+    }
+
+    /**
+     * @return array<int,object>
+     */
+    public function get_city_requests_for_requester( int $user_id, ?string $province_code = null ): array {
+        $this->install();
+        if ( ! $user_id ) {
+            return [];
+        }
+        global $wpdb;
+        if ( $province_code ) {
+            return $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT * FROM {$this->city_request_table} WHERE requested_by=%d AND province_code=%s ORDER BY requested_at DESC",
+                    $user_id,
+                    $province_code
+                )
+            );
+        }
+        return $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT * FROM {$this->city_request_table} WHERE requested_by=%d ORDER BY requested_at DESC",
+                $user_id
+            )
+        );
+    }
+
+    public function get_city_request( int $request_id ): ?array {
+        $this->install();
+        if ( ! $request_id ) {
+            return null;
+        }
+        global $wpdb;
+        $row = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT * FROM {$this->city_request_table} WHERE id=%d",
+                $request_id
+            ),
+            ARRAY_A
+        );
+        return $row ?: null;
+    }
+
+    /**
+     * @return array{ok:bool,message?:string}
+     */
+    public function approve_city_request( int $request_id, int $decided_by ): array {
+        $this->install();
+        $request = $this->get_city_request( $request_id );
+        if ( ! $request ) {
+            return [ 'ok' => false, 'message' => 'درخواست یافت نشد.' ];
+        }
+        if ( $request['status'] !== 'pending' ) {
+            return [ 'ok' => false, 'message' => 'این درخواست قبلاً بررسی شده است.' ];
+        }
+
+        $assign = $this->assign_city_representative(
+            (int) $request['user_id'],
+            (string) $request['province_code'],
+            (string) $request['city_name'],
+            $decided_by,
+            (string) $request['gender']
+        );
+        if ( ! ( $assign['ok'] ?? false ) ) {
+            return $assign;
+        }
+
+        global $wpdb;
+        $wpdb->update(
+            $this->city_request_table,
+            [
+                'status'       => 'approved',
+                'rejection_reason' => null,
+                'decided_at'   => current_time( 'mysql' ),
+                'decided_by'   => $decided_by,
+            ],
+            [ 'id' => $request_id ],
+            [ '%s', '%s', '%s', '%d' ],
+            [ '%d' ]
+        );
+
+        return [ 'ok' => true ];
+    }
+
+    /**
+     * @return array{ok:bool,message?:string}
+     */
+    public function reject_city_request( int $request_id, string $reason, int $decided_by ): array {
+        $this->install();
+        $request = $this->get_city_request( $request_id );
+        if ( ! $request ) {
+            return [ 'ok' => false, 'message' => 'درخواست یافت نشد.' ];
+        }
+        if ( $request['status'] !== 'pending' ) {
+            return [ 'ok' => false, 'message' => 'این درخواست قبلاً بررسی شده است.' ];
+        }
+        $reason = sanitize_text_field( $reason );
+        if ( ! $reason ) {
+            return [ 'ok' => false, 'message' => 'دلیل رد الزامی است.' ];
+        }
+
+        global $wpdb;
+        $wpdb->update(
+            $this->city_request_table,
+            [
+                'status'           => 'rejected',
+                'rejection_reason' => $reason,
+                'decided_at'       => current_time( 'mysql' ),
+                'decided_by'       => $decided_by,
+            ],
+            [ 'id' => $request_id ],
+            [ '%s', '%s', '%s', '%d' ],
+            [ '%d' ]
+        );
 
         return [ 'ok' => true ];
     }

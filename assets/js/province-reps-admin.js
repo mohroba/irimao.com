@@ -16,11 +16,15 @@ jQuery(function ($) {
 
   const $provinceTable = $('#imao-province-table');
   const $cityTable = $('#imao-city-table');
+  const $cityRequestsTable = $('#imao-city-requests-table');
   if ($provinceTable.length) {
     $provinceTable.DataTable(tableConfig);
   }
   if ($cityTable.length) {
     $cityTable.DataTable(tableConfig);
+  }
+  if ($cityRequestsTable.length) {
+    $cityRequestsTable.DataTable(tableConfig);
   }
 
   $('.crm-select2').select2({ width: 'resolve' });
@@ -29,6 +33,21 @@ jQuery(function ($) {
     if (!confirm('حذف این رکورد قطعی است. ادامه می‌دهید؟')) {
       e.preventDefault();
     }
+  });
+
+  $(document).on('click', '.reject-btn', function (e) {
+    const reason = prompt('لطفاً دلیل رد را وارد کنید:');
+    if (reason === null) {
+      e.preventDefault();
+      return;
+    }
+    if (!reason.trim()) {
+      alert('دلیل رد الزامی است.');
+      e.preventDefault();
+      return;
+    }
+    const $row = $(this).closest('tr');
+    $row.find('input[name*=\"[reason]\"]').val(reason.trim());
   });
 
   const data = window.IMAOREPS || { cityMap: {} };
