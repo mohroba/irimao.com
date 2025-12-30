@@ -17,7 +17,7 @@ class CityRepresentativeForm extends BaseForm {
         $this->manager       = $manager;
         $this->province_code = $province_code;
         $this->cities        = CityMap::get_cities( $province_code );
-        $this->success_text  = 'عملیات با موفقیت انجام شد.';
+        $this->success_text  = 'درخواست با موفقیت ثبت شد و پس از تایید مدیر فعال می‌شود.';
         $this->prefill_ready = isset( $_GET['city_rep_success'] );
         if ( $this->prefill_ready ) {
             $this->saved = true;
@@ -202,7 +202,7 @@ class CityRepresentativeForm extends BaseForm {
             </form>
             <div class="sd-header" style="margin-top:24px;">درخواست‌های نماینده شهرستان</div>
             <div class="table-responsive">
-                <table class="widefat striped city-rep-table">
+                <table class="widefat striped city-rep-table text-center">
                     <thead>
                         <tr>
                             <th>شهرستان</th>
@@ -217,11 +217,13 @@ class CityRepresentativeForm extends BaseForm {
                     <tbody>
                         <?php foreach ( $requests as $row ) :
                             $user = get_userdata( (int) $row->user_id );
-                            $status_label = match ( $row->status ) {
-                                'approved' => 'تایید شده',
-                                'rejected' => 'رد شده',
-                                default => 'در انتظار بررسی',
-                            };
+                            if ( $row->status === 'approved' ) {
+                                $status_label = 'تایید شده';
+                            } elseif ( $row->status === 'rejected' ) {
+                                $status_label = 'رد شده';
+                            } else {
+                                $status_label = 'در انتظار بررسی';
+                            }
                             ?>
                             <tr>
                                 <td><?= esc_html( $row->city_name ); ?></td>
@@ -238,7 +240,7 @@ class CityRepresentativeForm extends BaseForm {
             </div>
             <div class="sd-header" style="margin-top:24px;">فهرست نمایندگان شهرستان</div>
             <div class="table-responsive">
-                <table class="widefat striped city-rep-table">
+                <table class="widefat striped city-rep-table text-center">
                     <thead>
                         <tr>
                             <th>شهرستان</th>

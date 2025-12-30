@@ -10,6 +10,7 @@ use WP_User;
 class ProvinceRepresentatives {
     private const ADMIN_SLUG      = 'imao-province-reps';
     private const ACCOUNT_SLUG    = 'city-representatives';
+    private const ACCOUNT_REQUESTS_SLUG = 'city-rep-requests';
     private const ROLE_PROVINCE   = 'province_rep';
     private const ROLE_CITY       = 'city_rep';
 
@@ -30,7 +31,9 @@ class ProvinceRepresentatives {
         add_action( 'init', [ $this, 'add_account_endpoint' ] );
         add_filter( 'woocommerce_account_menu_items', [ $this, 'add_account_menu' ] );
         add_action( 'woocommerce_account_' . self::ACCOUNT_SLUG . '_endpoint', [ $this, 'render_account_endpoint' ] );
+        add_action( 'woocommerce_account_' . self::ACCOUNT_REQUESTS_SLUG . '_endpoint', [ $this, 'render_account_requests_endpoint' ] );
         add_shortcode( 'crm_city_representatives', [ $this, 'city_representatives_shortcode' ] );
+        add_shortcode( 'crm_city_rep_requests', [ $this, 'city_rep_requests_shortcode' ] );
     }
 
     public function activate(): void {
@@ -619,14 +622,16 @@ class ProvinceRepresentatives {
 
     public function add_account_endpoint(): void {
         add_rewrite_endpoint( self::ACCOUNT_SLUG, EP_ROOT | EP_PAGES );
+        add_rewrite_endpoint( self::ACCOUNT_REQUESTS_SLUG, EP_ROOT | EP_PAGES );
     }
 
     public function add_account_menu( array $items ): array {
-        if ( ! $this->current_user_is_province_rep() ) {
-            return $items;
+        $insert = [];
+        if ( $this->current_user_is_province_rep() ) {
+            $insert[ self::ACCOUNT_SLUG ] = 'نمایندگان شهرستان';
         }
-        $items = array_slice( $items, 0, 1, true ) + [ self::ACCOUNT_SLUG => 'نمایندگان شهرستان' ] + array_slice( $items, 1, null, true );
-        return $items;
+        $insert[ self::ACCOUNT_REQUESTS_SLUG ] = 'درخواست‌های نماینده شهرستان';
+        return array_slice( $items, 0, 1, true ) + $insert + array_slice( $items, 1, null, true );
     }
 
     public function enqueue_front_assets(): void {
@@ -675,6 +680,10 @@ class ProvinceRepresentatives {
         echo do_shortcode( '[crm_city_representatives]' );
     }
 
+    public function render_account_requests_endpoint(): void {
+        echo do_shortcode( '[crm_city_rep_requests]' );
+    }
+
     public function city_representatives_shortcode(): string {
         $this->enqueue_front_assets();
         if ( ! $this->current_user_is_province_rep() ) {
@@ -688,6 +697,63 @@ class ProvinceRepresentatives {
 
         $form = new CityRepresentativeForm( $this->manager, (string) $province['province_code'] );
         return $form->render();
+    }
+
+    public function city_rep_requests_shortcode(): string {
+        if ( ! is_user_logged_in() ) {
+            return '<div class="woocommerce-info">برای مشاهده درخواست‌ها ابتدا وارد حساب کاربری شوید.</div>';
+        }
+
+        $requests  = $this->manager->get_city_requests_for_user( get_current_user_id() );
+        $provinces = CityMap::get_provinces();
+        $genders   = \IMAOCustom\Helpers\RepresentativeManager::gender_labels();
+
+        ob_start();
+        ?>
+        <div class="sd-container">
+            <div class="sd-header">درخواست‌های نماینده شهرستان</div>
+            <div class="table-responsive">
+                <table class="widefat striped city-rep-table text-center">
+                    <thead>
+                        <tr>
+                            <th>استان</th>
+                            <th>شهرستان</th>
+                            <th>جنسیت</th>
+                            <th>درخواست‌دهنده</th>
+                            <th>وضعیت</th>
+                            <th>علت رد</th>
+                            <th>تاریخ درخواست</th>
+                            <th>تاریخ بررسی</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ( $requests as $row ) :
+                            $requester = get_userdata( (int) $row->requested_by );
+                            if ( $row->status === 'approved' ) {
+                                $status_label = 'تایید شده';
+                            } elseif ( $row->status === 'rejected' ) {
+                                $status_label = 'رد شده';
+                            } else {
+                                $status_label = 'در انتظار بررسی';
+                            }
+                            ?>
+                            <tr>
+                                <td><?= esc_html( $provinces[ $row->province_code ] ?? $row->province_code ); ?></td>
+                                <td><?= esc_html( $row->city_name ); ?></td>
+                                <td><?= esc_html( $genders[ $row->gender ] ?? '—' ); ?></td>
+                                <td><?= $requester instanceof WP_User ? esc_html( $requester->display_name ) : '—'; ?></td>
+                                <td><?= esc_html( $status_label ); ?></td>
+                                <td><?= esc_html( $row->rejection_reason ?: '—' ); ?></td>
+                                <td><?= esc_html( $row->requested_at ); ?></td>
+                                <td><?= esc_html( $row->decided_at ?: '—' ); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <?php
+        return (string) ob_get_clean();
     }
 
     private function current_user_is_province_rep(): bool {

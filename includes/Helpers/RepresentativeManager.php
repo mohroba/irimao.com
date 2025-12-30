@@ -372,6 +372,34 @@ class RepresentativeManager {
         );
     }
 
+    /**
+     * City-rep requests that target a specific user (the person who will become city representative).
+     *
+     * @return array<int,object>
+     */
+    public function get_city_requests_for_user( int $user_id, ?string $province_code = null ): array {
+        $this->install();
+        if ( ! $user_id ) {
+            return [];
+        }
+        global $wpdb;
+        if ( $province_code ) {
+            return $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT * FROM {$this->city_request_table} WHERE user_id=%d AND province_code=%s ORDER BY requested_at DESC",
+                    $user_id,
+                    $province_code
+                )
+            );
+        }
+        return $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT * FROM {$this->city_request_table} WHERE user_id=%d ORDER BY requested_at DESC",
+                $user_id
+            )
+        );
+    }
+
     public function get_city_request( int $request_id ): ?array {
         $this->install();
         if ( ! $request_id ) {
