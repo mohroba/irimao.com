@@ -767,7 +767,10 @@ class Wallet {
         if ( isset( $_POST['wallet_charge'], $_POST['amount'] ) ) {
             $amount     = max( 0, (float) $_POST['amount'] );
             $min_charge = Price::from_rial( 10000 );
-            if ( $amount < $min_charge ) {
+            $accepted = isset( $_POST['wallet_non_refundable'] ) && $_POST['wallet_non_refundable'] === '1';
+            if ( ! $accepted ) {
+                wc_add_notice( 'برای ادامه باید با شرط عدم استرداد موافقت کنید.', 'error' );
+            } elseif ( $amount < $min_charge ) {
                 wc_add_notice( 'حداقل شارژ ' . wc_price( $min_charge ) . ' است.', 'error' );
             } else {
                 $order = wc_create_order();
@@ -792,6 +795,10 @@ class Wallet {
             <form method="post" class="wallet-charge-form">
                 <label for="wallet-amount">مبلغ شارژ (تومان):</label>
                 <input type="number" id="wallet-amount" name="amount" min="100000" step="10000">
+                <label class="wallet-acceptance">
+                    <input type="checkbox" name="wallet_non_refundable" value="1" required>
+                    می پذیریم که مبلغ واریزی در کیف پول من باقی خواهد ماند و قابل استرداد نمی باشد.
+                </label>
                 <button class="btn button" type="submit" name="wallet_charge">پرداخت و شارژ</button>
             </form>
             <?php
