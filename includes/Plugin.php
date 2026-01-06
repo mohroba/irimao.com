@@ -28,6 +28,7 @@ use IMAOCustom\Services\Endpoints\UserCompetitionList;
 use IMAOCustom\Services\Endpoints\CourseList;
 use IMAOCustom\Services\Endpoints\UserCourseList;
 use IMAOCustom\Services\Endpoints\CourseDetails;
+use IMAOCustom\Services\Endpoints\ApprovedLists;
 use IMAOCustom\Services\Endpoints\StyleCommittee;
 use IMAOCustom\Services\Endpoints\StyleCommitteeFormEndpoint;
 use IMAOCustom\Services\Avatar;
@@ -80,6 +81,7 @@ class Plugin {
         CourseList::class,
         UserCourseList::class,
         CourseDetails::class,
+        ApprovedLists::class,
         StyleCommittee::class,
         StyleCommitteeFormEndpoint::class,
         StyleCommitteeRequests::class,
@@ -123,4 +125,3 @@ class Plugin {
         return $roles;
     }
 }
-
