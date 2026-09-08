@@ -2,6 +2,8 @@
 namespace IMAOCustom\Services;
 
 use IMAOCustom\Helpers\UserMeta;
+use IMAOCustom\Helpers\AgeCategory;
+use IMAOCustom\Helpers\Date;
 
 class Eligibility {
     public function register(): void {
@@ -30,8 +32,21 @@ class Eligibility {
         }
         $gterms = wp_get_post_terms( $post_id, 'gender', [ 'fields' => 'slugs' ] );
         if ( $gterms && ! in_array( $gender, $gterms, true ) ) {
-            wc_add_notice( 'این مورد با جنسیت شما سازگار نیست.', 'error' );
+            $message = $type === 'competition'
+                ? 'این مسابقات با جنسیت شما مطابقت ندارد، لطفا در انتخاب مسابقات دقت فرمایید.'
+                : 'این مورد با جنسیت شما سازگار نیست.';
+            wc_add_notice( $message, 'error' );
             return false;
+        }
+        if ( $type === 'competition' ) {
+            $birth = (string) UserMeta::get( $uid, 'birth_date', '' );
+            $age   = $birth !== '' ? Date::age( $birth ) : null;
+            $slug  = $age !== null ? AgeCategory::slug_from_age( $age ) : '';
+            $age_terms = wp_get_post_terms( $post_id, 'age_category', [ 'fields' => 'slugs' ] );
+            if ( $slug !== '' && $age_terms && ! in_array( $slug, $age_terms, true ) ) {
+                wc_add_notice( 'این مسابقات با رده ی سنی شما مطابقت ندارد، لطفا در انتخاب مسابقات دقت فرمایید.', 'error' );
+                return false;
+            }
         }
         return $passed;
     }

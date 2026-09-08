@@ -1071,7 +1071,7 @@ class Competitions
         }
         $gterms = wp_get_post_terms($cid, 'gender', ['fields' => 'slugs']);
         if ($gterms && !in_array($gender, $gterms, true)) {
-            return '<p style="text-align:center;color:#c00;">این مسابقه با جنسیت شما سازگار نیست.</p>';
+            return '<p style="text-align:center;color:#c00;">این مسابقات با جنسیت شما مطابقت ندارد، لطفا در انتخاب مسابقات دقت فرمایید.</p>';
         }
 
         $terms   = wp_get_post_terms($cid, 'age_category');
@@ -1153,7 +1153,7 @@ class Competitions
         }
 
         if (!$eligible_age_ids) {
-            return '<p style="text-align:center;color:#c00;">این مسابقه با ردهٔ سنی شما سازگار نیست.</p>';
+            return '<p style="text-align:center;color:#c00;">این مسابقات با رده ی سنی شما مطابقت ندارد، لطفا در انتخاب مسابقات دقت فرمایید.</p>';
         }
 
         $eligible_keys = array_flip(array_unique($eligible_age_ids));
