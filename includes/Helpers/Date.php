@@ -19,6 +19,24 @@ class Date {
     }
 
     /**
+     * Convert a WordPress/MySQL Gregorian date into a sortable Jalali value.
+     */
+    public static function to_jalali(string $date, string $format = 'Y/m/d H:i'): string {
+        $date = trim($date);
+        if ($date === '' || $date === '0000-00-00 00:00:00') {
+            return '';
+        }
+
+        try {
+            $tz = function_exists('wp_timezone') ? wp_timezone() : new \DateTimeZone('UTC');
+            $gregorian = new \DateTimeImmutable($date, $tz);
+            return Jalalian::fromDateTime($gregorian)->format($format);
+        } catch (\Throwable $e) {
+            return '';
+        }
+    }
+
+    /**
      * Check if current date is within the given Jalali range.
      *
      * Accepts dates formatted as "Y/m/d" or "Y/m/d H:i:s".

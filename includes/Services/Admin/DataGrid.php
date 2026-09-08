@@ -37,6 +37,7 @@ class DataGrid
         wp_enqueue_style('imao-admin-datatables', $url . 'css/jquery.dataTables.min.css', [], '1.13.8');
         wp_enqueue_style('imao-admin-datatables-buttons', $url . 'css/buttons.dataTables.min.css', ['imao-admin-datatables'], '2.4.2');
         wp_enqueue_style('imao-admin-data-grid', $url . 'css/admin-data-grid.css', ['imao-admin-datatables-buttons'], '1.0.0');
+        wp_enqueue_style('imao-jalali-datepicker', 'https://unpkg.com/@majidh1/jalalidatepicker@1.0.0/dist/jalalidatepicker.min.css', [], '1.0.0');
 
         $buttons_handle = $this->first_enqueued(['imao-datatables-buttons', 'dt-buttons']);
         if ($buttons_handle === '') {
@@ -58,7 +59,8 @@ class DataGrid
             $print_handle = 'imao-admin-buttons-print';
             wp_enqueue_script($print_handle, $url . 'js/buttons.print.min.js', [$buttons_handle], '2.4.2', true);
         }
-        wp_enqueue_script('imao-admin-data-grid', $url . 'js/admin-data-grid.js', [$html_handle, $print_handle], '1.0.0', true);
+        wp_enqueue_script('imao-jalali-datepicker', 'https://unpkg.com/@majidh1/jalalidatepicker@1.0.0/dist/jalalidatepicker.min.js', [], '1.0.0', true);
+        wp_enqueue_script('imao-admin-data-grid', $url . 'js/admin-data-grid.js', [$html_handle, $print_handle, 'imao-jalali-datepicker'], '1.1.0', true);
         wp_localize_script('imao-admin-data-grid', 'IMAO_ADMIN_GRID', [
             'page' => $page,
             'title' => wp_get_document_title(),

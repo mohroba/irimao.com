@@ -5,6 +5,7 @@ namespace IMAOCustom\Services\Endpoints;
 use IMAOCustom\Helpers\Price;
 use IMAOCustom\Helpers\Wallet as WalletHelper;
 use IMAOCustom\Helpers\CityMap;
+use IMAOCustom\Helpers\Date;
 use WC_Order_Item_Fee;
 
 class Wallet {
@@ -551,7 +552,7 @@ class Wallet {
         wp_enqueue_script( 'dt-buttons-html5', 'https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js', [ 'dt-jszip' ], '2.4.2', true );
         wp_enqueue_script( 'dt-buttons-print', 'https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js', [ 'dt-buttons' ], '2.4.2', true );
 
-        wp_register_script( 'crm-wallet-manager', $url . 'assets/js/wallet-manager.js', [ 'jquery', 'dt-buttons-print' ], '1.0.0', true );
+        wp_register_script( 'crm-wallet-manager', $url . 'assets/js/wallet-manager.js', [ 'jquery', 'dt-buttons-print' ], '1.1.0', true );
         wp_localize_script( 'crm-wallet-manager', 'crmWalletManager', [
             'ajaxUrl'   => admin_url( 'admin-ajax.php' ),
             'ajaxNonce' => wp_create_nonce( 'crm_wallet_manager_table' ),
@@ -625,7 +626,7 @@ class Wallet {
             $args['search_columns']  = [ 'user_email', 'user_nicename', 'display_name' ];
         }
 
-        if ( $order_col === 3 ) {
+        if ( $order_col === 7 ) {
             $args['orderby']   = 'meta_value_num';
             $args['meta_key']  = WalletHelper::get_meta_key();
             $args['meta_type'] = 'NUMERIC';
@@ -654,8 +655,11 @@ class Wallet {
                         . '<button class="button" name="action" value="set">تنظیم موجودی</button>'
                         . '</form>';
 
-            $first_name = get_user_meta( $user->ID, 'first_name', true );
-            $last_name  = get_user_meta( $user->ID, 'last_name', true );
+            $first_name = $this->first_user_meta( (int) $user->ID, [ 'first_name_fa', 'first_name', 'billing_first_name' ] );
+            $last_name  = $this->first_user_meta( (int) $user->ID, [ 'last_name_fa', 'last_name', 'billing_last_name' ] );
+            if ( $first_name === '' && $last_name === '' ) {
+                $first_name = (string) $user->display_name;
+            }
             $card       = get_user_meta( $user->ID, 'card_number', true );
             $iban       = get_user_meta( $user->ID, 'iban', true );
             $province_code = (string) get_user_meta( $user->ID, 'residence_province', true );
@@ -670,7 +674,7 @@ class Wallet {
                 'province'    => esc_html( $province ?: '-' ),
                 'city'        => esc_html( $city ?: '-' ),
                 'status'      => esc_html( $status ),
-                'registered'  => esc_html( (string) $user->user_registered ),
+                'registered'  => esc_html( Date::to_jalali( (string) $user->user_registered ) ?: '-' ),
                 'balance'     => wc_price( $balance ),
                 'balance_raw' => $balance,
                 'card_number' => esc_html( $card ?: '-' ),
@@ -687,6 +691,17 @@ class Wallet {
             'recordsFiltered' => $filtered_total,
             'data'            => $rows,
         ] );
+    }
+
+    /** @param string[] $keys */
+    private function first_user_meta( int $user_id, array $keys ): string {
+        foreach ( $keys as $key ) {
+            $value = trim( (string) get_user_meta( $user_id, $key, true ) );
+            if ( $value !== '' ) {
+                return $value;
+            }
+        }
+        return '';
     }
 
     /**

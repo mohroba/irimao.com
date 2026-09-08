@@ -24,6 +24,17 @@
         return $('<div>').html(value == null ? '' : value).text().replace(/\s+/g, ' ').trim();
     }
 
+    function jalaliComparable(value) {
+        const clean = normalized(value).replace(/[۰-۹]/g, digit => '۰۱۲۳۴۵۶۷۸۹'.indexOf(digit));
+        const match = clean.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(.*)$/);
+        if (!match || Number(match[1]) < 1700 || !window.Intl) return clean.replace(/-/g, '/');
+        const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+        const parts = new Intl.DateTimeFormat('fa-IR-u-ca-persian-nu-latn', {
+            year: 'numeric', month: '2-digit', day: '2-digit'
+        }).formatToParts(date).reduce((out, part) => { out[part.type] = part.value; return out; }, {});
+        return parts.year + '/' + parts.month + '/' + parts.day + match[4];
+    }
+
     function columnMap($table) {
         const map = {};
         $table.find('thead th').each(function (index) {
@@ -72,15 +83,20 @@
         });
 
         (map.dates || []).forEach((date, position) => {
+            api.column(date.index).nodes().each(function (cell) {
+                const current = cleanCell(cell.innerHTML);
+                const converted = jalaliComparable(current);
+                if (converted !== current.replace(/-/g, '/')) cell.textContent = converted;
+            });
             const key = 'date-' + position;
-            const $from = $('<input type="text" inputmode="numeric" placeholder="مثال: 1405/01/01">').attr('data-filter', key + '-from');
-            const $to = $('<input type="text" inputmode="numeric" placeholder="مثال: 1405/12/29">').attr('data-filter', key + '-to');
+            const $from = $('<input type="text" inputmode="numeric" data-jdp autocomplete="off" placeholder="انتخاب تاریخ">').attr('data-filter', key + '-from');
+            const $to = $('<input type="text" inputmode="numeric" data-jdp autocomplete="off" placeholder="انتخاب تاریخ">').attr('data-filter', key + '-to');
             $toolbar.append($('<div class="imao-grid-field">').append($('<label>').text(date.label + ' از'), $from));
             $toolbar.append($('<div class="imao-grid-field">').append($('<label>').text(date.label + ' تا'), $to));
 
             const predicate = function (settings, row) {
                 if (settings.nTable !== $table[0]) return true;
-                const value = normalized(cleanCell(row[date.index])).replace(/-/g, '/');
+                const value = jalaliComparable(cleanCell(row[date.index]));
                 const from = normalized($from.val()).replace(/-/g, '/');
                 const to = normalized($to.val()).replace(/-/g, '/');
                 if (!value || value === '—') return !from && !to;
@@ -136,6 +152,9 @@
         const $shell = $wrapper.parent();
         const $toolbar = $('<div class="imao-grid-toolbar" aria-label="فیلترهای جدول">');
         setupFilters(api, $table, $toolbar);
+        if (window.jalaliDatepicker && typeof window.jalaliDatepicker.startWatch === 'function') {
+            window.jalaliDatepicker.startWatch({ selector: '.imao-grid-toolbar input[data-jdp]', time: false, persianDigits: false, autoShow: true });
+        }
 
         const $actions = $('<div class="imao-grid-actions">');
         buttonsFor(api, normalized($('h1').first().text()) || document.title).container().appendTo($actions);

@@ -3,6 +3,7 @@
 namespace IMAOCustom\Services\Admin;
 
 use IMAOCustom\Helpers\FieldLabel;
+use IMAOCustom\Helpers\Date;
 
 class UserManagement {
     public function register(): void {
@@ -114,7 +115,7 @@ class UserManagement {
         foreach ( $users as $u ) {
             echo '<tr>';
             $user_status = get_user_meta( $u->ID, 'imao_banned', true ) ? 'مسدود' : 'فعال';
-            echo '<td>' . esc_html( $u->ID ) . '</td><td>' . esc_html( $u->display_name ) . '</td><td>' . esc_html( $user_status ) . '</td><td>' . esc_html( $u->user_registered ?? '—' ) . '</td>';
+            echo '<td>' . esc_html( $u->ID ) . '</td><td>' . esc_html( $u->display_name ) . '</td><td>' . esc_html( $user_status ) . '</td><td>' . esc_html( Date::to_jalali( (string) ( $u->user_registered ?? '' ) ) ?: '—' ) . '</td>';
             foreach ( $fields as $k => $lbl ) {
                 $raw = get_user_meta( $u->ID, $k, true );
                 if ( $k === 'billing_email' && ! $raw ) {
@@ -188,7 +189,7 @@ class UserManagement {
             echo '<tr>';
             $province = $this->display_value( 'residence_province', get_user_meta( $u->ID, 'residence_province', true ) );
             $city     = $this->display_value( 'residence_city', get_user_meta( $u->ID, 'residence_city', true ) );
-            echo '<td>' . esc_html( $u->ID ) . '</td><td>' . esc_html( $u->display_name ) . '</td><td>' . esc_html( $province ?: '—' ) . '</td><td>' . esc_html( $city ?: '—' ) . '</td><td>' . esc_html( $u->user_registered ?? '—' ) . '</td>';
+            echo '<td>' . esc_html( $u->ID ) . '</td><td>' . esc_html( $u->display_name ) . '</td><td>' . esc_html( $province ?: '—' ) . '</td><td>' . esc_html( $city ?: '—' ) . '</td><td>' . esc_html( Date::to_jalali( (string) ( $u->user_registered ?? '' ) ) ?: '—' ) . '</td>';
             foreach ( $pro_fields as $key => $lbl ) {
                 $uurl = get_user_meta( $u->ID, $key, true );
                 $cell = $uurl ? '<a href="' . esc_url( $uurl ) . '" target="_blank">مشاهده</a>' : '-';
