@@ -36,7 +36,7 @@ jQuery(function ($) {
 			action:'crm_admin_update_role',
 			nonce: CRM_ADMIN.nonce,
 			user : $sel.data('user-id'),
-			role : $sel.val()
+			roles : $sel.val() || []
 		}, res=>{
 			alert(res.success ? 'نقش ذخیره شد' : 'خطا');
 		});
@@ -65,13 +65,13 @@ $(document).on('click', '.identity-action-form button[name="crm_user_action"]', 
         const $row = $btn.closest('tr');
         const uid  = $row.find('input[name="user_id"]').val();
         const act  = $btn.val();
-        const role = $row.find('.role-select').val();
+        const roles = $row.find('.role-select').val() || [];
         $.post(CRM_ADMIN.ajax, {
                 action:'crm_admin_id_status',
                 nonce : CRM_ADMIN.nonce,
                 user  : uid,
                 action_type: act,
-                role : role
+                roles : roles
         }, ()=> location.reload() );
 });
 

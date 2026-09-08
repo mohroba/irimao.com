@@ -196,11 +196,8 @@ class UserManagement {
                 echo '<td>' . $cell . '</td>';
             }
             echo '<td>' . esc_html( $label ) . '</td>';
-            echo '<td><select class="role-select" data-user-id="' . $u->ID . '"><option value="">--</option>';
+            echo '<td><select class="role-select" data-user-id="' . $u->ID . '" multiple data-placeholder="انتخاب نقش‌ها">';
             foreach ( wp_roles()->roles as $rk => $rd ) {
-                if ( $rk === 'administrator' ) {
-                    continue;
-                }
                 $sel = in_array( $rk, $u->roles, true ) ? 'selected' : '';
                 echo '<option value="' . esc_attr( $rk ) . '" ' . $sel . '>' . esc_html( $rd['name'] ) . '</option>';
             }
@@ -228,10 +225,10 @@ class UserManagement {
             wp_send_json_error();
         }
         $user = get_userdata( (int) ( $_POST['user'] ?? 0 ) );
-        $role = sanitize_text_field( $_POST['role'] ?? '' );
-        if ( $user && $role && isset( wp_roles()->roles[ $role ] ) ) {
-            $user->set_role( $role );
-            wp_send_json_success( [ 'msg' => 'نقش بروز شد' ] );
+        $roles = $this->sanitize_roles( $_POST['roles'] ?? ( $_POST['role'] ?? [] ) );
+        if ( $user ) {
+            $this->sync_user_roles( $user, $roles );
+            wp_send_json_success( [ 'msg' => 'نقش‌ها بروزرسانی شدند' ] );
         }
         wp_send_json_error( [ 'msg' => 'خطا' ] );
     }
@@ -258,14 +255,35 @@ class UserManagement {
             update_user_meta( $user_id, $meta, 'disapproved' );
             update_user_meta( $user_id, 'identity_rejection_reason_professional', sanitize_text_field( $_POST['reason'] ?? '' ) );
         }
-        $role = sanitize_text_field( $_POST['role'] ?? '' );
-        if ( $role && isset( wp_roles()->roles[ $role ] ) ) {
+        if ( isset( $_POST['roles'] ) || isset( $_POST['role'] ) ) {
+            $roles = $this->sanitize_roles( $_POST['roles'] ?? $_POST['role'] );
             $u = get_userdata( $user_id );
             if ( $u ) {
-                $u->set_role( $role );
+                $this->sync_user_roles( $u, $roles );
             }
         }
         wp_send_json_success();
+    }
+
+    /** @return string[] */
+    private function sanitize_roles( $roles ): array {
+        $roles   = is_array( $roles ) ? $roles : [ $roles ];
+        $allowed = array_keys( wp_roles()->roles );
+        $clean   = array_map( static function ( $role ): string {
+            return sanitize_key( (string) $role );
+        }, $roles );
+        return array_values( array_unique( array_intersect( $clean, $allowed ) ) );
+    }
+
+    /** @param string[] $roles */
+    public function sync_user_roles( $user, array $roles ): void {
+        $current = is_array( $user->roles ?? null ) ? $user->roles : [];
+        foreach ( array_diff( $current, $roles ) as $role ) {
+            $user->remove_role( $role );
+        }
+        foreach ( array_diff( $roles, $current ) as $role ) {
+            $user->add_role( $role );
+        }
     }
 
     public function toggle_ban(): void {

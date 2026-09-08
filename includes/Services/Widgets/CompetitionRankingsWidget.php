@@ -44,6 +44,19 @@ class CompetitionRankingsWidget extends Widget_Base {
         );
 
         $this->add_control(
+            'all_competitions',
+            [
+                'label'        => 'همه مسابقات',
+                'type'         => Controls_Manager::SWITCHER,
+                'label_on'     => 'بله',
+                'label_off'    => 'خیر',
+                'return_value' => 'yes',
+                'default'      => '',
+                'description'  => 'با فعال‌سازی این گزینه، همه مسابقات فعلی و آینده به‌صورت خودکار نمایش داده می‌شوند.',
+            ]
+        );
+
+        $this->add_control(
             'competition_id',
             [
                 'label'       => 'مسابقات',
@@ -52,6 +65,7 @@ class CompetitionRankingsWidget extends Widget_Base {
                 'options'     => $competition_options,
                 'label_block' => true,
                 'description' => 'از مسابقات موجود انتخاب کنید. می‌توانید چند مسابقه را هم‌زمان انتخاب کنید.',
+                'condition'   => [ 'all_competitions!' => 'yes' ],
             ]
         );
 
@@ -102,7 +116,7 @@ class CompetitionRankingsWidget extends Widget_Base {
 
     protected function render(): void {
         $settings     = $this->get_settings_for_display();
-        $competitions = $this->parse_id_list( $settings['competition_id'] ?? [] );
+        $competitions = $this->resolve_competitions( $settings );
         $weight_ids   = $this->parse_id_list( $settings['weight_class'] ?? [] );
         $gender       = $this->sanitize_csv_value( $settings['gender'] ?? '' );
         $order        = $this->sanitize_csv_value( $settings['order'] ?? 'points_desc' );
@@ -172,6 +186,25 @@ class CompetitionRankingsWidget extends Widget_Base {
         }
 
         return $choices;
+    }
+
+    /** @return array<int> */
+    protected function get_all_competition_ids(): array {
+        if ( ! function_exists( 'get_posts' ) ) {
+            return [];
+        }
+        $ids = get_posts( [
+            'post_type' => 'competition', 'post_status' => 'publish', 'posts_per_page' => -1,
+            'fields' => 'ids', 'orderby' => 'ID', 'order' => 'ASC', 'suppress_filters' => false,
+        ] );
+        return is_array( $ids ) ? $this->parse_id_list( $ids ) : [];
+    }
+
+    /** @param array<string,mixed> $settings @return array<int> */
+    protected function resolve_competitions( array $settings ): array {
+        return ( $settings['all_competitions'] ?? '' ) === 'yes'
+            ? $this->get_all_competition_ids()
+            : $this->parse_id_list( $settings['competition_id'] ?? [] );
     }
 
     /**

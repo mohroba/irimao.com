@@ -19,9 +19,14 @@ namespace IMAOCustom\Services\Admin {
     function delete_user_meta( $uid, $key ) { unset( $GLOBALS['user_meta'][$uid][$key] ); }
     function get_user_meta( $uid, $key, $single = true ) { return $GLOBALS['user_meta'][$uid][$key] ?? ''; }
     function sanitize_text_field( $str ) { return $str; }
+    function sanitize_key( $str ) { return preg_replace( '/[^a-z0-9_\-]/', '', strtolower( (string) $str ) ); }
     function esc_url_raw( $url ) { return $url; }
     function wp_roles() { return (object) [ 'roles' => [ 'editor' => [], 'subscriber' => [] ] ]; }
-    class DummyUser { public function set_role( $r ) { $GLOBALS['last_role_set'] = $r; } }
+    class DummyUser {
+        public array $roles = [ 'subscriber' ];
+        public function add_role( $role ) { $this->roles[] = $role; $GLOBALS['roles_added'][] = $role; }
+        public function remove_role( $role ) { $this->roles = array_values( array_diff( $this->roles, [ $role ] ) ); $GLOBALS['roles_removed'][] = $role; }
+    }
     function get_userdata( $uid ) { return new DummyUser(); }
 }
 
@@ -59,12 +64,24 @@ class UserManagementTest extends TestCase {
         $this->assertSame( '/wp-admin/', $GLOBALS['redirected_to'] );
     }
 
-    public function test_change_status_updates_role(): void {
+    public function test_change_status_updates_multiple_roles(): void {
         $um = new UserManagement();
-        $_POST = [ 'user' => 1, 'action_type' => 'approve', 'role' => 'editor' ];
-        $GLOBALS['last_role_set'] = '';
+        $_POST = [ 'user' => 1, 'action_type' => 'approve', 'roles' => [ 'editor', 'subscriber' ] ];
+        $GLOBALS['roles_added'] = [];
+        $GLOBALS['roles_removed'] = [];
         $um->change_status();
-        $this->assertSame( 'editor', $GLOBALS['last_role_set'] );
+        $this->assertSame( [ 'editor' ], $GLOBALS['roles_added'] );
+        $this->assertSame( [], $GLOBALS['roles_removed'] );
+    }
+
+    public function test_role_sync_removes_only_unselected_roles(): void {
+        $user = new \IMAOCustom\Services\Admin\DummyUser();
+        $user->roles = [ 'subscriber', 'editor' ];
+        $GLOBALS['roles_added'] = [];
+        $GLOBALS['roles_removed'] = [];
+        ( new UserManagement() )->sync_user_roles( $user, [ 'editor' ] );
+        $this->assertSame( [ 'subscriber' ], $GLOBALS['roles_removed'] );
+        $this->assertSame( [ 'editor' ], $user->roles );
     }
 
     public function test_toggle_ban_sets_meta(): void {

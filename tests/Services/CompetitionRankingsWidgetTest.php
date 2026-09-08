@@ -16,6 +16,7 @@ namespace Elementor {
             public const TEXT   = 'text';
             public const SELECT2 = 'select2';
             public const SELECT = 'select';
+            public const SWITCHER = 'switcher';
         }
     }
 }
@@ -68,6 +69,10 @@ namespace {
                     return [];
                 }
 
+                protected function get_all_competition_ids(): array {
+                    return [ 2, 5, 9 ];
+                }
+
                 protected function get_settings_for_display(): array {
                     return [];
                 }
@@ -93,6 +98,13 @@ namespace {
             $weights = $filter_method->invoke( $widget, [ 10 ], [ 1, 2, 3 ] );
 
             $this->assertSame( [ 2, 3 ], $weights );
+        }
+
+        public function test_all_competitions_mode_ignores_manual_selection(): void {
+            $method = new ReflectionMethod( CompetitionRankingsWidget::class, 'resolve_competitions' );
+            $method->setAccessible( true );
+            $result = $method->invoke( $this->widget(), [ 'all_competitions' => 'yes', 'competition_id' => [ 77 ] ] );
+            $this->assertSame( [ 2, 5, 9 ], $result );
         }
     }
 }
