@@ -107,6 +107,7 @@ class Settings
                 submit_button();
                 ?>
             </form>
+            <?php do_action('imao_plugin_settings_after_sections'); ?>
         </div>
         <?php
     }

@@ -16,6 +16,7 @@ use IMAOCustom\Services\Endpoints\Wallet;
 use IMAOCustom\Services\Admin\UserManagement;
 use IMAOCustom\Services\Admin\Settings;
 use IMAOCustom\Services\Admin\DataGrid;
+use IMAOCustom\Services\Admin\DataTransfer;
 use IMAOCustom\Services\Endpoints\SmartcardIssue;
 use IMAOCustom\Services\Endpoints\SelfDeclaration;
 use IMAOCustom\Services\Endpoints\SelfDeclarationsList;
@@ -71,6 +72,7 @@ class Plugin {
         UserManagement::class,
         Settings::class,
         DataGrid::class,
+        DataTransfer::class,
         SmartcardIssue::class,
         SelfDeclaration::class,
         SelfDeclarationsList::class,

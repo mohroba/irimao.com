@@ -132,6 +132,12 @@ class BasicInfoForm extends BaseForm {
         foreach ( $this->meta_keys() as $k ) {
             update_user_meta( $uid, $k, $data[ $k ] ?? '' );
         }
+        wp_update_user( [
+            'ID'           => $uid,
+            'display_name' => trim( $data['first_name_fa'] . ' ' . $data['last_name_fa'] ),
+            'nickname'     => trim( $data['first_name_fa'] . ' ' . $data['last_name_fa'] ),
+        ] );
+        clean_user_cache( $uid );
         $this->saved  = true;
         $this->posted = [];
     }
