@@ -7,6 +7,7 @@ use IMAOCustom\Helpers\FieldLabel;
 use IMAOCustom\Helpers\AgeCategory;
 use IMAOCustom\Helpers\CompetitionTypeAssignments;
 use IMAOCustom\Helpers\UserMeta;
+use IMAOCustom\Services\Widgets\CompetitionCountdownWidget;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use WC_Product_Simple;
@@ -41,6 +42,16 @@ class Competitions
         add_filter('woocommerce_get_cart_item_from_session', [$this, 'restore_cart_item_from_session'], 10, 2);
         add_filter('woocommerce_get_item_data', [$this, 'add_item_data'], 10, 2);
         add_action('woocommerce_checkout_create_order_line_item', [$this, 'add_order_line_item_meta'], 10, 4);
+        add_action('elementor/widgets/register', [$this, 'register_elementor_widget']);
+    }
+
+    public function register_elementor_widget($widgets_manager): void
+    {
+        if (!class_exists('\\Elementor\\Widget_Base') || !is_object($widgets_manager) || !method_exists($widgets_manager, 'register')) {
+            return;
+        }
+
+        $widgets_manager->register(new CompetitionCountdownWidget());
     }
 
     public function register_taxonomies(): void

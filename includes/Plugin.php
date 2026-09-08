@@ -14,6 +14,7 @@ use IMAOCustom\Services\Endpoints\IdentityProfessional;
 use IMAOCustom\Services\Endpoints\ChangePassword;
 use IMAOCustom\Services\Endpoints\Wallet;
 use IMAOCustom\Services\Admin\UserManagement;
+use IMAOCustom\Services\Admin\Settings;
 use IMAOCustom\Services\Endpoints\SmartcardIssue;
 use IMAOCustom\Services\Endpoints\SelfDeclaration;
 use IMAOCustom\Services\Endpoints\SelfDeclarationsList;
@@ -67,6 +68,7 @@ class Plugin {
         CheckoutPrefill::class,
         OrderStatus::class,
         UserManagement::class,
+        Settings::class,
         SmartcardIssue::class,
         SelfDeclaration::class,
         SelfDeclarationsList::class,

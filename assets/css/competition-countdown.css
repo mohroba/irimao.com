@@ -1,0 +1,110 @@
+.imao-competition-countdown {
+    --imao-competition-navy: #071d70;
+    --imao-competition-red: #f7193f;
+    --imao-competition-card: #fff;
+    direction: rtl;
+    display: grid;
+    gap: 42px;
+    width: 100%;
+}
+
+.imao-competition-countdown__card {
+    align-items: center;
+    background: var(--imao-competition-card);
+    border: 1px solid #d8dbe5;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(5, 20, 77, 0.08);
+    color: var(--imao-competition-navy);
+    display: flex;
+    flex-direction: column;
+    gap: 19px;
+    justify-content: center;
+    min-height: 144px;
+    padding: 27px 34px;
+    text-align: center;
+    text-decoration: none;
+    transition: box-shadow 180ms ease, transform 180ms ease;
+}
+
+.imao-competition-countdown__card:hover,
+.imao-competition-countdown__card:focus-visible {
+    box-shadow: 0 8px 22px rgba(5, 20, 77, 0.14);
+    color: var(--imao-competition-navy);
+    transform: translateY(-2px);
+}
+
+.imao-competition-countdown__card:focus-visible {
+    outline: 3px solid #f5c84b;
+    outline-offset: 3px;
+}
+
+.imao-competition-countdown__title {
+    color: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.9;
+    margin: 0;
+}
+
+.imao-competition-countdown__timer {
+    align-items: baseline;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    justify-content: center;
+}
+
+.imao-competition-countdown__part {
+    align-items: baseline;
+    display: inline-flex;
+    gap: 5px;
+    white-space: nowrap;
+}
+
+.imao-competition-countdown__number {
+    color: var(--imao-competition-red);
+    font-size: 17px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    min-width: 1.25em;
+}
+
+.imao-competition-countdown__label {
+    color: var(--imao-competition-navy);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.imao-competition-countdown__expired,
+.imao-competition-countdown__empty {
+    color: var(--imao-competition-navy);
+    font-weight: 600;
+    margin: 0;
+    text-align: center;
+}
+
+@media (max-width: 767px) {
+    .imao-competition-countdown {
+        gap: 24px;
+    }
+
+    .imao-competition-countdown__card {
+        gap: 14px;
+        min-height: 132px;
+        padding: 22px 18px;
+    }
+
+    .imao-competition-countdown__title {
+        font-size: 14px;
+    }
+
+    .imao-competition-countdown__timer {
+        gap: 12px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .imao-competition-countdown__card {
+        transition: none;
+    }
+}
