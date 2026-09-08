@@ -56,7 +56,7 @@ class SelfDeclarations {
         ]);
         echo '<div class="wrap"><h1>مدیریت خوداظهاری‌ها</h1>';
         echo '<table id="crm-selfdec-table" class="wp-list-table widefat striped">';
-        echo '<thead><tr><th>ردیف</th><th>کاربر</th><th>نوع حکم</th><th>درجه</th><th>شماره حکم</th><th>تاریخ اخذ</th><th>تاریخ آزمون</th><th>تاریخ تئوری</th><th>هیئت</th><th>فایل</th><th>وضعیت</th><th>اقدامات</th></tr></thead><tbody>';
+        echo '<thead><tr><th>ردیف</th><th>کاربر</th><th>نوع حکم</th><th>درجه</th><th>شماره حکم</th><th>تاریخ ثبت</th><th>تاریخ اخذ</th><th>تاریخ آزمون</th><th>تاریخ تئوری</th><th>هیئت</th><th>شهرستان</th><th>فایل</th><th>وضعیت</th><th>اقدامات</th></tr></thead><tbody>';
         $i = 1;
         while ( $q->have_posts() ) { $q->the_post();
             $pid     = get_the_ID();
@@ -73,16 +73,19 @@ class SelfDeclarations {
             $board_code   = (string) get_post_meta( $pid, 'boards', true );
             $board_label  = $wc_states[ $board_code ] ?? $board_code ?: '—';
             $image_url    = esc_url( get_post_meta( $pid, 'image_url', true ) );
+            $city         = (string) get_user_meta( (int) get_post_field( 'post_author', $pid ), 'residence_city', true );
             echo '<tr data-id="'. esc_attr( $pid ) .'">';
             echo '<td>'. ($i++) .'</td>';
             echo '<td>'. esc_html( $author ) .'</td>';
             echo '<td>'. esc_html( $coursetypes[ $type_id ] ?? '—' ) .'</td>';
             echo '<td>'. esc_html( $degree_label ) .'</td>';
             echo '<td>'. esc_html( $hokm_number ?: '—' ) .'</td>';
+            echo '<td>'. esc_html( get_the_date( 'Y/m/d H:i', $pid ) ) .'</td>';
             echo '<td>'. esc_html( $getdate ?: '—' ) .'</td>';
             echo '<td>'. esc_html( $exam_date ?: '—' ) .'</td>';
             echo '<td>'. esc_html( $theory_date ?: '—' ) .'</td>';
             echo '<td>'. esc_html( $board_label ) .'</td>';
+            echo '<td>'. esc_html( $city ?: '—' ) .'</td>';
             echo '<td>'. ( $image_url ? '<a href="'.$image_url.'" target="_blank">مشاهده</a>' : '—' ) .'</td>';
             echo '<td>'. $status_label .'</td>';
             echo '<td><button class="button approve-btn" data-id="'.$pid.'">تأیید</button> <button class="button disapprove-btn" data-id="'.$pid.'">رد</button> <button class="button delete-btn" data-id="'.$pid.'">حذف</button></td>';

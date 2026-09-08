@@ -15,6 +15,7 @@ use IMAOCustom\Services\Endpoints\ChangePassword;
 use IMAOCustom\Services\Endpoints\Wallet;
 use IMAOCustom\Services\Admin\UserManagement;
 use IMAOCustom\Services\Admin\Settings;
+use IMAOCustom\Services\Admin\DataGrid;
 use IMAOCustom\Services\Endpoints\SmartcardIssue;
 use IMAOCustom\Services\Endpoints\SelfDeclaration;
 use IMAOCustom\Services\Endpoints\SelfDeclarationsList;
@@ -69,6 +70,7 @@ class Plugin {
         OrderStatus::class,
         UserManagement::class,
         Settings::class,
+        DataGrid::class,
         SmartcardIssue::class,
         SelfDeclaration::class,
         SelfDeclarationsList::class,

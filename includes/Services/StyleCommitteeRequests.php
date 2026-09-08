@@ -2,6 +2,8 @@
 
 namespace IMAOCustom\Services;
 
+use IMAOCustom\Helpers\CityMap;
+
 class StyleCommitteeRequests {
     public function register(): void {
         add_action( 'init', [ $this, 'register_cpt' ] );
@@ -68,7 +70,7 @@ class StyleCommitteeRequests {
         ]);
         echo '<div class="wrap"><h1>درخواست عضویت در کمیته‌های سبک</h1>';
         echo '<table id="crm-stylecomm-table" class="wp-list-table widefat striped">';
-        echo '<thead><tr><th>ردیف</th><th>کاربر</th><th>کمیته‌ها</th><th>وضعیت</th><th>دلیل رد</th><th>اقدامات</th></tr></thead><tbody>';
+        echo '<thead><tr><th>ردیف</th><th>کاربر</th><th>استان</th><th>شهرستان</th><th>کمیته‌ها</th><th>وضعیت</th><th>دلیل رد</th><th>تاریخ ثبت</th><th>اقدامات</th></tr></thead><tbody>';
         $i = 1;
         while ( $q->have_posts() ) { $q->the_post();
             $pid     = get_the_ID();
@@ -77,12 +79,19 @@ class StyleCommitteeRequests {
             $status_label = $status === 'publish' ? 'تأیید شده' : ( $status === 'pending' ? 'در حال بررسی' : 'رد شده' );
             $comms   = (array) get_post_meta( $pid, 'committees', true );
             $reason  = get_post_meta( $pid, 'stylecomm_rejection_reason', true );
+            $author_id = (int) get_post_field( 'post_author', $pid );
+            $province = (string) get_user_meta( $author_id, 'residence_province', true );
+            $province = CityMap::get_provinces()[ $province ] ?? $province;
+            $city     = (string) get_user_meta( $author_id, 'residence_city', true );
             echo '<tr data-id="'. esc_attr( $pid ) .'">';
             echo '<td>'. ( $i++ ) .'</td>';
             echo '<td>'. esc_html( $author ) .'</td>';
+            echo '<td>'. esc_html( $province ?: '—' ) .'</td>';
+            echo '<td>'. esc_html( $city ?: '—' ) .'</td>';
             echo '<td>'. esc_html( implode( '، ', $comms ) ) .'</td>';
             echo '<td>'. esc_html( $status_label ) .'</td>';
             echo '<td>'. esc_html( $reason ?: '—' ) .'</td>';
+            echo '<td>'. esc_html( get_the_date( 'Y/m/d H:i', $pid ) ) .'</td>';
             echo '<td><button class="button approve-btn" data-id="'. $pid .'">تأیید</button> <button class="button disapprove-btn" data-id="'. $pid .'">رد</button> <button class="button delete-btn" data-id="'. $pid .'">حذف</button></td>';
             echo '</tr>';
         }

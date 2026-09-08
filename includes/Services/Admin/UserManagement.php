@@ -106,14 +106,15 @@ class UserManagement {
         $users  = $filter_user_id ? array_filter( [ get_userdata( $filter_user_id ) ] ) : get_users();
         echo '<div class="wrap table-responsive" style="max-width:90vw;overflow-x:auto;"><h1>اطلاعات پایه کاربران</h1>';
         echo '<table id="crm-basic-table" class="wp-list-table widefat striped">';
-        echo '<thead><tr><th>ID</th><th>نام</th>';
+        echo '<thead><tr><th>ID</th><th>نام</th><th>وضعیت</th><th>تاریخ عضویت</th>';
         foreach ( $fields as $lbl ) {
             echo '<th>' . esc_html( $lbl ) . '</th>';
         }
         echo '<th>عملیات</th></tr></thead><tbody>';
         foreach ( $users as $u ) {
             echo '<tr>';
-            echo '<td>' . esc_html( $u->ID ) . '</td><td>' . esc_html( $u->display_name ) . '</td>';
+            $user_status = get_user_meta( $u->ID, 'imao_banned', true ) ? 'مسدود' : 'فعال';
+            echo '<td>' . esc_html( $u->ID ) . '</td><td>' . esc_html( $u->display_name ) . '</td><td>' . esc_html( $user_status ) . '</td><td>' . esc_html( $u->user_registered ?? '—' ) . '</td>';
             foreach ( $fields as $k => $lbl ) {
                 $raw = get_user_meta( $u->ID, $k, true );
                 if ( $k === 'billing_email' && ! $raw ) {
@@ -176,7 +177,7 @@ class UserManagement {
         $users = get_users();
         echo '<div class="wrap"><h1>تأیید هویت حرفه‌ای</h1>';
         echo '<table id="crm-prof-table" class="wp-list-table widefat striped"><thead><tr>';
-        echo '<th>ID</th><th>نام</th>';
+        echo '<th>ID</th><th>نام</th><th>استان</th><th>شهرستان</th><th>تاریخ عضویت</th>';
         foreach ( $pro_fields as $lbl ) {
             echo '<th>' . esc_html( $lbl ) . '</th>';
         }
@@ -185,7 +186,9 @@ class UserManagement {
             $status = get_user_meta( $u->ID, 'identity_verified_professional', true ) ?: 'pending';
             $label  = $status === 'approved' ? 'مورد تایید' : ( $status === 'disapproved' ? 'مردود' : 'در انتظار' );
             echo '<tr>';
-            echo '<td>' . esc_html( $u->ID ) . '</td><td>' . esc_html( $u->display_name ) . '</td>';
+            $province = $this->display_value( 'residence_province', get_user_meta( $u->ID, 'residence_province', true ) );
+            $city     = $this->display_value( 'residence_city', get_user_meta( $u->ID, 'residence_city', true ) );
+            echo '<td>' . esc_html( $u->ID ) . '</td><td>' . esc_html( $u->display_name ) . '</td><td>' . esc_html( $province ?: '—' ) . '</td><td>' . esc_html( $city ?: '—' ) . '</td><td>' . esc_html( $u->user_registered ?? '—' ) . '</td>';
             foreach ( $pro_fields as $key => $lbl ) {
                 $uurl = get_user_meta( $u->ID, $key, true );
                 $cell = $uurl ? '<a href="' . esc_url( $uurl ) . '" target="_blank">مشاهده</a>' : '-';

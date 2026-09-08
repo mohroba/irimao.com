@@ -4,6 +4,7 @@ namespace IMAOCustom\Services\Endpoints;
 
 use IMAOCustom\Helpers\Price;
 use IMAOCustom\Helpers\Wallet as WalletHelper;
+use IMAOCustom\Helpers\CityMap;
 use WC_Order_Item_Fee;
 
 class Wallet {
@@ -585,7 +586,7 @@ class Wallet {
         }
         echo '<div class="wrap"><h1>مدیریت کیف پول کاربران</h1>';
         echo '<table id="crm-wallet-table" class="widefat striped nowrap" style="width:100%">'
-            . '<thead><tr><th>ردیف</th><th>نام</th><th>نام خانوادگی</th><th>موجودی</th><th>شماره کارت</th><th>شماره شبا</th><th>مبلغ</th><th>پرداخت بابت</th><th>عملیات</th></tr></thead>'
+            . '<thead><tr><th>ردیف</th><th>نام</th><th>نام خانوادگی</th><th>استان</th><th>شهرستان</th><th>وضعیت</th><th>تاریخ عضویت</th><th>موجودی</th><th>شماره کارت</th><th>شماره شبا</th><th>مبلغ</th><th>پرداخت بابت</th><th>عملیات</th></tr></thead>'
             . '<tbody></tbody>'
             . '</table></div>';
     }
@@ -600,7 +601,7 @@ class Wallet {
         $draw   = isset( $_POST['draw'] ) ? (int) $_POST['draw'] : 0;
         $start  = isset( $_POST['start'] ) ? max( 0, (int) $_POST['start'] ) : 0;
         $length = isset( $_POST['length'] ) ? (int) $_POST['length'] : 50;
-        $length = $length > 0 ? $length : 50;
+        $length = $length === -1 ? -1 : ( $length > 0 ? $length : 50 );
 
         $search_value = isset( $_POST['search']['value'] ) ? sanitize_text_field( wp_unslash( $_POST['search']['value'] ) ) : '';
         $order        = $_POST['order'][0] ?? [ 'column' => 3, 'dir' => 'desc' ];
@@ -609,12 +610,15 @@ class Wallet {
 
         $args = [
             'number'      => $length,
-            'offset'      => $start,
             'count_total' => true,
-            'fields'      => [ 'ID', 'display_name', 'user_email' ],
+            'fields'      => [ 'ID', 'display_name', 'user_email', 'user_registered' ],
             'orderby'     => 'display_name',
             'order'       => $order_dir,
         ];
+
+        if ( $length !== -1 ) {
+            $args['offset'] = $start;
+        }
 
         if ( $search_value !== '' ) {
             $args['search']          = '*' . $search_value . '*';
@@ -654,11 +658,19 @@ class Wallet {
             $last_name  = get_user_meta( $user->ID, 'last_name', true );
             $card       = get_user_meta( $user->ID, 'card_number', true );
             $iban       = get_user_meta( $user->ID, 'iban', true );
+            $province_code = (string) get_user_meta( $user->ID, 'residence_province', true );
+            $province      = CityMap::get_provinces()[ $province_code ] ?? $province_code;
+            $city          = (string) get_user_meta( $user->ID, 'residence_city', true );
+            $status        = get_user_meta( $user->ID, 'imao_banned', true ) ? 'مسدود' : 'فعال';
 
             $rows[] = [
                 'row_number'  => $start + $index + 1,
                 'first_name'  => esc_html( $first_name ?: '-' ),
                 'last_name'   => esc_html( $last_name ?: '-' ),
+                'province'    => esc_html( $province ?: '-' ),
+                'city'        => esc_html( $city ?: '-' ),
+                'status'      => esc_html( $status ),
+                'registered'  => esc_html( (string) $user->user_registered ),
                 'balance'     => wc_price( $balance ),
                 'balance_raw' => $balance,
                 'card_number' => esc_html( $card ?: '-' ),

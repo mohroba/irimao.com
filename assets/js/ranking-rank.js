@@ -23,7 +23,7 @@
 
   const dt = $table.DataTable({
     processing: true,
-    serverSide: true,
+    serverSide: false,
     searching: true,
     paging: true,
     language: {
@@ -32,18 +32,29 @@
     ajax: {
       url: ajaxUrl,
       type: 'POST',
-      data: dataBuilder
+      data: function (data) {
+        dataBuilder(data);
+        data.start = 0;
+        data.length = -1;
+      },
+      dataSrc: function (json) {
+        return json && json.data && Array.isArray(json.data.data) ? json.data.data : (json.data || []);
+      }
     },
-    order: [[4, 'desc']],
+    order: [[8, 'desc']],
     columns: [
       { data: 'position', title: '#', orderable: false, searchable: false, className: 'crm-rank-col--pos' },
       { data: 'user', title: 'کاربر', orderable: true, searchable: true, className: 'crm-rank-col--user' },
       { data: 'gender', title: 'جنسیت', orderable: true, searchable: true, className: 'crm-rank-col--gender' },
+      { data: 'province', title: 'استان', orderable: true, searchable: true },
+      { data: 'city', title: 'شهرستان', orderable: true, searchable: true },
+      { data: 'status', title: 'وضعیت', orderable: true, searchable: true },
+      { data: 'date', title: 'آخرین تاریخ امتیاز', orderable: true, searchable: true },
       { data: 'weights', title: 'دسته‌های وزنی', orderable: true, searchable: true, className: 'crm-rank-col--weights' },
       { data: 'points', title: 'امتیاز', orderable: true, searchable: false, className: 'crm-rank-col--points' }
     ],
     columnDefs: [
-      { targets: 4, render: $.fn.dataTable.render.number(',', '.', 0, '') }
+      { targets: 8, render: $.fn.dataTable.render.number(',', '.', 0, '') }
     ],
     createdRow: function (row) {
       $(row).addClass('crm-rank-row');

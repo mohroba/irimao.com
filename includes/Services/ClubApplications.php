@@ -53,7 +53,7 @@ class ClubApplications {
             'post_status'    => [ 'pending', 'publish', 'draft' ],
         ]);
         echo '<div class="wrap"><h1 class="wp-heading-inline">درخواست‌های ثبت باشگاه</h1><hr class="wp-header-end">';
-        echo '<table id="club-table" class="wp-list-table widefat fixed striped"><thead><tr><th>ردیف</th><th>نام باشگاه</th><th>صاحب امتیاز</th><th>استان</th><th>شهرستان</th><th>وضعیت</th><th>اقدام</th></tr></thead><tbody>';
+        echo '<table id="club-table" class="wp-list-table widefat fixed striped"><thead><tr><th>ردیف</th><th>نام باشگاه</th><th>صاحب امتیاز</th><th>استان</th><th>شهرستان</th><th>وضعیت</th><th>تاریخ ثبت</th><th>اقدام</th></tr></thead><tbody>';
         $i = 1;
         while ( $q->have_posts() ) { $q->the_post();
             $pid      = get_the_ID();
@@ -70,6 +70,7 @@ class ClubApplications {
             echo '<td>'. esc_html( $province ) .'</td>';
             echo '<td>'. esc_html( $city ) .'</td>';
             echo '<td>'. esc_html( $status_label ) .'</td>';
+            echo '<td>'. esc_html( get_the_date( 'Y/m/d H:i', $pid ) ) .'</td>';
             echo '<td><button class="button view-club" data-pid="'. esc_attr( $pid ) .'">جزئیات</button> <button class="button approve-club">تأیید</button> <button class="button reject-club">رد</button> <button class="button delete-club">حذف</button></td>';
             echo '</tr>';
         }

@@ -1,0 +1,110 @@
+.users-php .wrap:has(.dataTable),
+.users_page_imao-basic-info .wrap,
+.users_page_imao-prof-identity .wrap {
+    direction: rtl;
+}
+
+.imao-grid-shell {
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 12px;
+    box-shadow: 0 5px 24px rgba(18, 38, 63, .06);
+    margin: 18px 0;
+    padding: 18px;
+}
+
+.imao-grid-toolbar {
+    align-items: end;
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+    margin-bottom: 16px;
+    padding: 14px;
+}
+
+.imao-grid-field label {
+    color: #1d2327;
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.imao-grid-field input,
+.imao-grid-field select {
+    margin: 0;
+    max-width: none;
+    min-height: 38px;
+    width: 100%;
+}
+
+.imao-grid-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    grid-column: 1 / -1;
+}
+
+.imao-grid-actions .dt-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.imao-grid-actions button.dt-button,
+.imao-grid-reset {
+    background: #fff;
+    border: 1px solid #0b5cab;
+    border-radius: 6px;
+    color: #0b5cab;
+    cursor: pointer;
+    font-weight: 700;
+    margin: 0;
+    padding: 7px 13px;
+}
+
+.imao-grid-actions button.dt-button:hover,
+.imao-grid-reset:hover {
+    background: #0b5cab;
+    color: #fff;
+}
+
+.imao-grid-shell .dataTables_filter {
+    margin-bottom: 12px;
+}
+
+.imao-grid-shell .dataTables_filter input {
+    min-width: 260px;
+}
+
+.imao-grid-shell table.dataTable {
+    border-collapse: collapse !important;
+    width: 100% !important;
+}
+
+.imao-grid-shell table.dataTable thead th {
+    background: #102a56;
+    color: #fff;
+    white-space: nowrap;
+}
+
+.imao-grid-shell table.dataTable tbody tr:hover {
+    background: #f0f6ff;
+}
+
+.imao-grid-shell .dataTables_paginate .paginate_button.current {
+    background: #0b5cab !important;
+    border-color: #0b5cab !important;
+    color: #fff !important;
+}
+
+@media (max-width: 782px) {
+    .imao-grid-toolbar { grid-template-columns: 1fr; }
+    .imao-grid-shell { padding: 10px; }
+    .imao-grid-shell .dataTables_filter,
+    .imao-grid-shell .dataTables_filter input { width: 100%; }
+}

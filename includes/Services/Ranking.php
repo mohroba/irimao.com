@@ -2,6 +2,7 @@
 namespace IMAOCustom\Services;
 
 use IMAOCustom\Services\Widgets\CompetitionRankingsWidget;
+use IMAOCustom\Helpers\CityMap;
 use IMAOCustom\Helpers\UserMeta;
 use WP_Term;
 use WP_User;
@@ -1273,7 +1274,7 @@ class Ranking {
         }
 
         $results = $wpdb->get_results(
-            "SELECT user_id, SUM(points) AS pts, GROUP_CONCAT(DISTINCT weight_class) AS weight_ids
+            "SELECT user_id, SUM(points) AS pts, GROUP_CONCAT(DISTINCT weight_class) AS weight_ids, MAX(assigned_date) AS latest_date
              FROM {$wpdb->prefix}crm_points
              $where
              GROUP BY user_id",
@@ -1306,6 +1307,9 @@ class Ranking {
             $weights       = $this->format_weight_labels( (string) ( $row['weight_ids'] ?? '' ), $weight_lookup );
             $gender_label  = $this->get_gender_label( $uid );
             $points        = isset( $row['pts'] ) ? (int) $row['pts'] : 0;
+            $province_code = (string) get_user_meta( $uid, 'residence_province', true );
+            $province      = CityMap::get_provinces()[ $province_code ] ?? $province_code;
+            $city          = (string) get_user_meta( $uid, 'residence_city', true );
 
             $rows[] = [
                 'user_id' => $uid,
@@ -1315,6 +1319,10 @@ class Ranking {
                     esc_html( $display_name )
                 ),
                 'gender'  => esc_html( $gender_label ),
+                'province'=> esc_html( $province ?: '—' ),
+                'city'    => esc_html( $city ?: '—' ),
+                'status'  => get_user_meta( $uid, 'imao_banned', true ) ? 'مسدود' : 'فعال',
+                'date'    => esc_html( (string) ( $row['latest_date'] ?? '' ) ),
                 'weights' => esc_html( $weights ),
                 'points'  => $points,
             ];
@@ -1936,6 +1944,10 @@ class Ranking {
              . '<th>#</th>'
              . '<th>کاربر</th>'
              . '<th>جنسیت</th>'
+             . '<th>استان</th>'
+             . '<th>شهرستان</th>'
+             . '<th>وضعیت</th>'
+             . '<th>آخرین تاریخ امتیاز</th>'
              . '<th>دسته‌های وزنی</th>'
              . '<th>امتیاز</th>'
              . '</tr></thead>';
