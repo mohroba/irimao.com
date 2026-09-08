@@ -36,7 +36,7 @@ class DataGrid
 
         wp_enqueue_style('imao-admin-datatables', $url . 'css/jquery.dataTables.min.css', [], '1.13.8');
         wp_enqueue_style('imao-admin-datatables-buttons', $url . 'css/buttons.dataTables.min.css', ['imao-admin-datatables'], '2.4.2');
-        wp_enqueue_style('imao-admin-data-grid', $url . 'css/admin-data-grid.css', ['imao-admin-datatables-buttons'], '1.0.0');
+        wp_enqueue_style('imao-admin-data-grid', $url . 'css/admin-data-grid.css', ['imao-admin-datatables-buttons'], '1.1.1');
         wp_enqueue_style('imao-jalali-datepicker', 'https://unpkg.com/@majidh1/jalalidatepicker@1.0.0/dist/jalalidatepicker.min.css', [], '1.0.0');
 
         $buttons_handle = $this->first_enqueued(['imao-datatables-buttons', 'dt-buttons']);

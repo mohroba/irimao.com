@@ -1314,7 +1314,7 @@ class Ranking {
             $rows[] = [
                 'user_id' => $uid,
                 'user'    => sprintf(
-                    '<div class="crm-rank-user"><img src="%s" alt="" class="crm-rank-avatar"> %s</div>',
+                    '<div class="crm-rank-user"><img src="%s" alt="" class="crm-rank-avatar" width="40" height="40" style="width:40px;height:40px;max-width:40px;max-height:40px;object-fit:cover;border-radius:50%%"> %s</div>',
                     esc_url( $avatar ),
                     esc_html( $display_name )
                 ),
