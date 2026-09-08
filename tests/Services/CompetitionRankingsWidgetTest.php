@@ -8,6 +8,8 @@ namespace Elementor {
             protected function start_controls_section( ...$args ): void {}
             protected function end_controls_section(): void {}
             protected function add_control( ...$args ): void {}
+            protected function add_group_control( ...$args ): void {}
+            protected function add_responsive_control( ...$args ): void {}
         }
     }
 
@@ -17,7 +19,17 @@ namespace Elementor {
             public const SELECT2 = 'select2';
             public const SELECT = 'select';
             public const SWITCHER = 'switcher';
+            public const TAB_STYLE = 'style';
+            public const DIMENSIONS = 'dimensions';
+            public const SLIDER = 'slider';
+            public const COLOR = 'color';
+            public const CHOOSE = 'choose';
         }
+
+        class Group_Control_Background { public static function get_type(): string { return 'background'; } }
+        class Group_Control_Border { public static function get_type(): string { return 'border'; } }
+        class Group_Control_Box_Shadow { public static function get_type(): string { return 'box-shadow'; } }
+        class Group_Control_Typography { public static function get_type(): string { return 'typography'; } }
     }
 }
 
