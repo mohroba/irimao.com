@@ -2,13 +2,17 @@
 namespace IMAOCustom\Services {
     if (!function_exists(__NAMESPACE__.'\\update_post_meta')) { function update_post_meta($id,$key,$val){ $GLOBALS['updated_meta'][$key]=$val; } }
     if (!function_exists(__NAMESPACE__.'\\sanitize_text_field')) { function sanitize_text_field($v){ return is_string($v)?trim($v):$v; } }
+    if (!function_exists(__NAMESPACE__.'\\is_wp_error')) { function is_wp_error($value){ return false; } }
 }
 namespace {
     use PHPUnit\Framework\TestCase;
     use IMAOCustom\Services\Competitions;
     if (!class_exists('WP_Post')) { class WP_Post { public $post_type; } }
     class CompetitionPayoutSaveTest extends TestCase {
-        protected function setUp(): void { $GLOBALS['updated_meta']=[]; }
+        protected function setUp(): void {
+            $GLOBALS['updated_meta'] = [];
+            $GLOBALS['mock_post_terms_return'] = [];
+        }
         public function test_user_mode_saves_recipient_type(): void {
             $_POST = [
                 'crm_payouts_nonce'=>'n',
@@ -29,7 +33,7 @@ namespace {
             $_POST = [
                 'crm_payouts_nonce'=>'n',
                 'payout_mode'=>'predefined',
-                'payout_role'=>['documentation'],
+                'payout_role'=>['coach'],
                 'payout_type'=>['fixed'],
                 'payout_value'=>['15'],
             ];
@@ -38,7 +42,7 @@ namespace {
             $this->assertSame('predefined',$GLOBALS['updated_meta']['_competition_payout_mode']);
             $rows=$GLOBALS['updated_meta']['_competition_payouts'];
             $this->assertSame('predefined',$rows[0]['recipient_type']);
-            $this->assertSame('documentation',$rows[0]['role']);
+            $this->assertSame('coach',$rows[0]['role']);
         }
     }
 }

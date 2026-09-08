@@ -309,62 +309,6 @@ class Wallet {
                 return;
             }
         }
-        if ( ! method_exists( $order, 'get_items' ) ) {
-            return;
-        }
-        foreach ( $order->get_items() as $item ) {
-            $post_id = (int) get_post_meta( $item->get_product_id(), self::META_LINKED, true );
-            if ( ! $post_id ) {
-                continue;
-            }
-            $ptype      = get_post_type( $post_id );
-            $payout_key = '_' . $ptype . '_payouts';
-            $payouts    = (array) get_post_meta( $post_id, $payout_key, true );
-            $line_total = $item->get_total();
-            foreach ( $payouts as $p ) {
-                $targets = [];
-                $rtype   = $p['recipient_type'] ?? 'user';
-                if ( $rtype === 'predefined' ) {
-                    $role = $p['role'] ?? '';
-                    if ( $role ) {
-                        $defs = \IMAOCustom\Plugin::get_payout_roles();
-                        $def  = $defs[ $role ] ?? null;
-                        if ( $def ) {
-                            if ( ( $def['resolver'] ?? '' ) === 'user_meta' ) {
-                                $meta_key = $def['meta_key'] ?? ( $role . '_id' );
-                                $dynamic  = (int) get_user_meta( $user_id, $meta_key, true );
-                                if ( $dynamic ) {
-                                    $targets[] = $dynamic;
-                                }
-                            } else {
-                                continue;
-                            }
-                        }
-                    }
-                } else {
-                    $uid  = (int) ( $p['user_id'] ?? 0 );
-                    $role = $p['role'] ?? '';
-                    if ( $uid ) {
-                        $targets[] = $uid;
-                    } elseif ( $role ) {
-                        $meta_key = $role . '_id';
-                        $dynamic  = (int) get_user_meta( $user_id, $meta_key, true );
-                        if ( $dynamic ) {
-                            $targets[] = $dynamic;
-                        }
-                    }
-                }
-                foreach ( $targets as $dest ) {
-                    $amt = ( $p['type'] === 'percent' ) ? $line_total * $p['value'] / 100 : (float) $p['value'];
-                    if ( $amt <= 0 ) {
-                        continue;
-                    }
-                    self::add_balance( $dest, $amt );
-                    $label = ( $ptype === 'competition' ) ? 'مسابقه' : 'دوره';
-                    self::add_log( $dest, $amt, 'درآمد از ' . $label . ' #' . $post_id . ' (سفارش ' . $order_id . ')' );
-                }
-            }
-        }
     }
 
     /**

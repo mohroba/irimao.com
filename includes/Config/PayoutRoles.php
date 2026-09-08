@@ -2,18 +2,27 @@
 /**
  * Payout role definitions.
  *
- * @return array<string,array{label:string,resolver:string,meta_key?:string}>
+ * @return array<string,array{label:string,resolver:string,meta_key?:string,scope?:string}>
  */
 return [
-    // Coach role resolves to user meta `coach_id` on the buyer's profile.
     'coach' => [
-        'label'    => 'Coach',
+        'label'    => 'مربی ورزشکار',
         'resolver' => 'user_meta',
         'meta_key' => 'coach_id',
     ],
-    // Documentation-only role; payout is skipped.
-    'documentation' => [
-        'label'    => 'Documentation',
-        'resolver' => 'none',
+    'club_owner' => [
+        'label'    => 'مالک باشگاه ورزشکار',
+        'resolver' => 'user_meta_post_author',
+        'meta_key' => 'club_id',
+    ],
+    'province_rep' => [
+        'label'    => 'نماینده استان ورزشکار',
+        'resolver' => 'representative',
+        'scope'    => 'province',
+    ],
+    'city_rep' => [
+        'label'    => 'نماینده شهرستان ورزشکار',
+        'resolver' => 'representative',
+        'scope'    => 'city',
     ],
 ];

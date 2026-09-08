@@ -44,6 +44,7 @@ use IMAOCustom\Services\StyleCommitteeRequests;
 use IMAOCustom\Services\CheckoutPrefill;
 use IMAOCustom\Services\OrderStatus;
 use IMAOCustom\Services\ProvinceRepresentatives;
+use IMAOCustom\Services\PayoutManager;
 use IMAOCustom\ServiceManager;
 
 
@@ -67,6 +68,7 @@ class Plugin {
         IdentityProfessional::class,
         ChangePassword::class,
         Wallet::class,
+        PayoutManager::class,
         CheckoutPrefill::class,
         OrderStatus::class,
         UserManagement::class,
@@ -120,7 +122,7 @@ class Plugin {
     /**
      * Load payout role configuration.
      *
-     * @return array<string,array{label:string,resolver:string,meta_key?:string}>
+     * @return array<string,array{label:string,resolver:string,meta_key?:string,scope?:string}>
      */
     public static function get_payout_roles(): array {
         static $roles = null;

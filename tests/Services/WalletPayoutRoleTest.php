@@ -56,7 +56,7 @@ namespace {
             $GLOBALS['test_post_types'] = [];
         }
 
-        public function test_predefined_roles_payout_and_skip(): void {
+        public function test_wallet_service_does_not_duplicate_dedicated_payout_processing(): void {
             $GLOBALS['test_post_meta'] = [
                 55 => [ '_linked_post_id' => 10 ],
                 10 => [ '_course_payouts' => [
@@ -71,7 +71,7 @@ namespace {
             ];
             $svc = new Wallet();
             $svc->after_payment( 1 );
-            $this->assertSame( 20.0, Wallet::get_balance( 100 ) );
+            $this->assertSame( 0.0, Wallet::get_balance( 100 ) );
             $this->assertCount( 2, $GLOBALS['test_user_meta'] );
         }
     }

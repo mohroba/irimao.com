@@ -190,7 +190,7 @@ class Competitions
             return $opts;
         };
 
-        echo '<p>'
+        echo '<p style="color:#50575e">مبلغ مبنا، جمع همان قلم سفارش پس از تخفیف و بدون مالیات است. برای هر مسابقه می‌توانید چند ذی‌نفع تعریف کنید؛ مجموع درصدها نباید بیشتر از ۱۰۰ باشد.</p><p>'
             . '<label><input type="radio" name="payout_mode" value="user"' . checked( 'user', $mode, false ) . '>کاربر</label> '
             . '<label style="margin-right:15px"><input type="radio" name="payout_mode" value="predefined"' . checked( 'predefined', $mode, false ) . '>پیش‌فرض</label>'
             . '</p>';
@@ -772,19 +772,26 @@ class Competitions
 
         if (isset($_POST['crm_payouts_nonce'])) {
             $mode = sanitize_text_field( $_POST['payout_mode'] ?? 'user' );
+            $mode = in_array( $mode, [ 'user', 'predefined' ], true ) ? $mode : 'user';
             update_post_meta( $post_id, self::META_PAYOUT_MODE, $mode );
             $rows = [];
             if ( $mode === 'predefined' ) {
                 foreach ( (array) ( $_POST['payout_role'] ?? [] ) as $i => $role ) {
                     $role = sanitize_text_field( $role );
-                    if ( $role === '' ) {
+                    if ( $role === '' || ! isset( \IMAOCustom\Plugin::get_payout_roles()[ $role ] ) ) {
                         continue;
+                    }
+                    $type  = sanitize_text_field( $_POST['payout_type'][ $i ] ?? 'percent' );
+                    $type  = in_array( $type, [ 'percent', 'fixed' ], true ) ? $type : 'percent';
+                    $value = max( 0.0, (float) ( $_POST['payout_value'][ $i ] ?? 0 ) );
+                    if ( $type === 'percent' ) {
+                        $value = min( 100.0, $value );
                     }
                     $rows[] = [
                         'recipient_type' => 'predefined',
                         'role'           => $role,
-                        'type'           => sanitize_text_field( $_POST['payout_type'][ $i ] ?? 'percent' ),
-                        'value'          => (float) ( $_POST['payout_value'][ $i ] ?? 0 ),
+                        'type'           => $type,
+                        'value'          => $value,
                     ];
                 }
             } else {
@@ -793,11 +800,17 @@ class Competitions
                     if ( ! $uid ) {
                         continue;
                     }
+                    $type  = sanitize_text_field( $_POST['payout_user_type'][ $i ] ?? 'percent' );
+                    $type  = in_array( $type, [ 'percent', 'fixed' ], true ) ? $type : 'percent';
+                    $value = max( 0.0, (float) ( $_POST['payout_user_value'][ $i ] ?? 0 ) );
+                    if ( $type === 'percent' ) {
+                        $value = min( 100.0, $value );
+                    }
                     $rows[] = [
                         'recipient_type' => 'user',
                         'user_id'        => $uid,
-                        'type'           => sanitize_text_field( $_POST['payout_user_type'][ $i ] ?? 'percent' ),
-                        'value'          => (float) ( $_POST['payout_user_value'][ $i ] ?? 0 ),
+                        'type'           => $type,
+                        'value'          => $value,
                     ];
                 }
             }

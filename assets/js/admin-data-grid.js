@@ -4,7 +4,7 @@
     const tableSelectors = [
         '#crm-basic-table', '#crm-prof-table', '#crm-selfdec-table', '#club-table',
         '#crm-stylecomm-table', '#crm-ranking-table', '#imao-province-table',
-        '#imao-city-table', '#imao-city-requests-table', '#crm-wallet-table'
+        '#imao-city-table', '#imao-city-requests-table', '#crm-wallet-table', '#crm-payout-audit-table'
     ];
 
     const text = {

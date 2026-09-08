@@ -13,6 +13,7 @@ class DataGrid
         'crm-points-manager',
         'imao-province-reps',
         'crm-wallet-manager',
+        'crm-payout-audit',
     ];
 
     public function register(): void
