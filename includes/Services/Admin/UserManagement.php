@@ -30,8 +30,10 @@ class UserManagement {
         wp_enqueue_script( 'imao-datatables', $base . 'js/jquery.dataTables.min.js', [ 'jquery' ], null, true );
         wp_enqueue_style( 'imao-select2', $base . 'css/select2.min.css' );
         wp_enqueue_script( 'imao-select2', $base . 'js/select2.min.js', [ 'jquery' ], null, true );
-        wp_enqueue_style( 'imao-admin', $base . 'css/crm-admin.css' );
-        wp_enqueue_script( 'imao-admin', $base . 'js/crm-admin.js', [ 'jquery', 'imao-datatables', 'imao-select2' ], null, true );
+        $admin_css = dirname( __DIR__, 2 ) . '/assets/css/crm-admin.css';
+        $admin_js  = dirname( __DIR__, 2 ) . '/assets/js/crm-admin.js';
+        wp_enqueue_style( 'imao-admin', $base . 'css/crm-admin.css', [], is_file( $admin_css ) ? (string) filemtime( $admin_css ) : null );
+        wp_enqueue_script( 'imao-admin', $base . 'js/crm-admin.js', [ 'jquery', 'imao-datatables', 'imao-select2' ], is_file( $admin_js ) ? (string) filemtime( $admin_js ) : null, true );
         wp_localize_script( 'imao-admin', 'CRM_ADMIN', [
             'ajax'  => admin_url( 'admin-ajax.php' ),
             'nonce' => wp_create_nonce( 'crm_admin_nonce' ),

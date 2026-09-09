@@ -1,3 +1,23 @@
 /* --- assets/css/crm-admin.css --- */
 .cbif-spinner .spin{animation:rotate 1s linear infinite}
 @keyframes rotate{100%{transform:rotate(360deg)}}
+.role-save-status {
+    display: block;
+    min-height: 20px;
+    margin-top: 5px;
+    font-size: 12px;
+    color: #646970;
+}
+
+.role-save-status.is-success {
+    color: #008a20;
+}
+
+.role-save-status.is-error {
+    color: #b32d2e;
+}
+
+#crm-prof-table .select2-container {
+    min-width: 180px;
+    max-width: 100%;
+}
