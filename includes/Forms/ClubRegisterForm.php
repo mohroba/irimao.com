@@ -2,6 +2,7 @@
 namespace IMAOCustom\Forms;
 
 use IMAOCustom\Helpers\CityMap;
+use IMAOCustom\Helpers\UserRoles;
 use IMAOCustom\Services\Validation;
 
 class ClubRegisterForm extends BaseForm {
@@ -23,7 +24,7 @@ class ClubRegisterForm extends BaseForm {
             return;
         }
         $user = wp_get_current_user();
-        if ( ! in_array( 'coach', $user->roles, true ) || count( $user->roles ) !== 1 ) {
+        if ( ! UserRoles::has( $user, 'coach' ) ) {
             return;
         }
         $data = [
@@ -107,7 +108,7 @@ class ClubRegisterForm extends BaseForm {
             return '<p style="text-align:center;color:#c00;">لطفاً ابتدا وارد شوید.</p>';
         }
         $user = wp_get_current_user();
-        if ( ! in_array( 'coach', $user->roles, true ) || count( $user->roles ) !== 1 ) {
+        if ( ! UserRoles::has( $user, 'coach' ) ) {
             return '<p style="text-align:center;color:#c00;">فقط مربیان می‌توانند درخواست ثبت باشگاه ارسال کنند.</p>';
         }
         $f         = $this->fields();

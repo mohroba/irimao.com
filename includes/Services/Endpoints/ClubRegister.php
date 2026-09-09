@@ -2,6 +2,7 @@
 namespace IMAOCustom\Services\Endpoints;
 
 use IMAOCustom\Forms\ClubRegisterForm;
+use IMAOCustom\Helpers\UserRoles;
 
 class ClubRegister {
     public function register(): void {
@@ -17,7 +18,7 @@ class ClubRegister {
 
     public function menu_item( array $items ): array {
         $user = wp_get_current_user();
-        if ( is_user_logged_in() && in_array( 'coach', $user->roles, true ) && count( $user->roles ) === 1 ) {
+        if ( is_user_logged_in() && UserRoles::has( $user, 'coach' ) ) {
             $items['club-register'] = 'ثبت باشگاه';
         }
         return $items;
