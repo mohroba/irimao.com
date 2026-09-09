@@ -157,6 +157,7 @@ class Competitions
             'address' => 'آدرس محل برگزاری',
             'min_degree' => 'حداقل درجه فنی',
             'price' => 'هزینه ثبت نام مسابقه (تومان)',
+            'competition_card_background' => 'تصویر پس‌زمینه کارت مسابقه (URL، اختیاری)',
         ];
     }
 
@@ -1332,7 +1333,9 @@ class Competitions
                     continue;
                 }
 
-                $rows[] = ['competition_id' => $comp_id, 'order_id' => $order->get_id(), 'order_date' => $order->get_date_created()->date_i18n('Y/m/d'), 'amount' => $item->get_total(), 'status' => wc_get_order_status_name($order->get_status()), 'weight_class' => $item->get_meta('دسته وزنی', true), 'age_category' => $item->get_meta('رده سنی', true),];
+                $card_ready = CompetitionCards::item_is_ready( $order, $item );
+                $card_url = $card_ready ? CompetitionCards::card_url( (int) $order->get_id(), (int) $item->get_id() ) : '';
+                $rows[] = ['competition_id' => $comp_id, 'order_id' => $order->get_id(), 'order_date' => $order->get_date_created()->date_i18n('Y/m/d'), 'amount' => $item->get_total(), 'status' => wc_get_order_status_name($order->get_status()), 'weight_class' => $item->get_meta('دسته وزنی', true), 'age_category' => $item->get_meta('رده سنی', true), 'card_ready' => $card_ready, 'card_url' => $card_url,];
             }
         }
 
@@ -1373,6 +1376,11 @@ class Competitions
                         <td><?php echo wc_price($r['amount']); ?></td>
                         <td><?php echo esc_html($r['status']); ?></td>
                         <td><a href="<?php echo esc_url('/my-account/competition-details/?competition_id=' . $cid); ?>">جزئیات</a>
+                            <?php if ( $r['card_ready'] ) : ?>
+                                | <a class="button" target="_blank" rel="noopener" href="<?php echo esc_url( $r['card_url'] ); ?>">دانلود / چاپ کارت</a>
+                            <?php else : ?>
+                                <span title="کارت پس از پرداخت موفق و تأیید وزن‌کشی صادر می‌شود."> | کارت در انتظار وزن‌کشی</span>
+                            <?php endif; ?>
                         </td>
                     </tr>
                 <?php endforeach; ?>
