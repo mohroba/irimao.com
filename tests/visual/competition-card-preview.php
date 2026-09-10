@@ -19,5 +19,6 @@ echo $method->invoke( $service, [
     'city' => 'تهران - الف',
     'photo' => '',
     'background' => '/assets/images/competition-card-template.png',
-    'verification' => '9A0C47E29C88D12F',
+    'verification_url' => 'https://irimao.com/?verify=preview',
+    'qr_data_uri' => IMAOCustom\Services\CompetitionCards::qr_data_uri( 'https://irimao.com/?verify=preview' ),
 ] );

@@ -21,5 +21,11 @@ namespace {
             $item->meta['_imao_actual_weight'] = 0;
             $this->assertFalse( CompetitionCards::item_is_ready( $order, $item ) );
         }
+
+        public function test_qr_is_generated_as_an_embedded_svg(): void {
+            $uri = CompetitionCards::qr_data_uri( 'https://irimao.com/card/test' );
+            $this->assertStringStartsWith( 'data:image/svg+xml;base64,', $uri );
+            $this->assertStringContainsString( '<svg', base64_decode( substr( $uri, strlen( 'data:image/svg+xml;base64,' ) ) ) );
+        }
     }
 }
