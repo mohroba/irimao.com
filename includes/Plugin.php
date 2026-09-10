@@ -46,6 +46,7 @@ use IMAOCustom\Services\OrderStatus;
 use IMAOCustom\Services\ProvinceRepresentatives;
 use IMAOCustom\Services\PayoutManager;
 use IMAOCustom\Services\CompetitionCards;
+use IMAOCustom\Services\CompetitionBrackets;
 use IMAOCustom\ServiceManager;
 
 
@@ -84,6 +85,7 @@ class Plugin {
         CoachStudents::class,
         Competitions::class,
         CompetitionCards::class,
+        CompetitionBrackets::class,
         CompetitionsList::class,
         CompetitionDetails::class,
         UserCompetitionList::class,

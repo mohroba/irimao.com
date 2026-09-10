@@ -1049,7 +1049,11 @@ class Competitions
             }
             $price = get_post_meta( $pid, 'price', true );
             echo '<td>' . wc_price( $price ) . '</td>';
-            echo '<td><a href="' . esc_url( '/my-account/competition-details/?competition_id=' . $pid ) . '">جزئیات / ثبت‌نام</a></td></tr>';
+            echo '<td><a href="' . esc_url( '/my-account/competition-details/?competition_id=' . $pid ) . '">جزئیات / ثبت‌نام</a>';
+            if ( get_post_meta( $pid, '_imao_competition_bracket', true ) ) {
+                echo ' | <a target="_blank" rel="noopener" href="' . esc_url( CompetitionBrackets::page_url( $pid ) ) . '">جدول مسابقات</a>';
+            }
+            echo '</td></tr>';
         endforeach;
         echo '</tbody></table></div>';
         return ob_get_clean();
@@ -1380,6 +1384,9 @@ class Competitions
                                 | <a class="button" target="_blank" rel="noopener" href="<?php echo esc_url( $r['card_url'] ); ?>">دانلود / چاپ کارت</a>
                             <?php else : ?>
                                 <span title="کارت پس از پرداخت موفق و تأیید وزن‌کشی صادر می‌شود."> | کارت در انتظار وزن‌کشی</span>
+                            <?php endif; ?>
+                            <?php if ( get_post_meta( $cid, '_imao_competition_bracket', true ) ) : ?>
+                                | <a target="_blank" rel="noopener" href="<?php echo esc_url( CompetitionBrackets::page_url( $cid ) ); ?>">جدول مسابقات</a>
                             <?php endif; ?>
                         </td>
                     </tr>
