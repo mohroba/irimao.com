@@ -2,23 +2,27 @@
 
 require dirname( __DIR__, 2 ) . '/vendor/autoload.php';
 
-$participants = [];
-for ( $i = 1; $i <= 13; $i++ ) {
-    $participants[] = [
-        'entry_id' => 'entry-' . $i,
-        'user_id' => $i,
-        'name' => 'شرکت‌کننده ' . $i,
-        'club' => 'باشگاه ' . ( ( $i % 4 ) + 1 ),
-    ];
+$divisions = [];
+foreach ( [ '۶۵ کیلوگرم' => 8, '۷۰ کیلوگرم' => 6 ] as $weight => $count ) {
+    $participants = [];
+    for ( $i = 1; $i <= $count; $i++ ) {
+        $participants[] = [
+            'entry_id' => $weight . '-entry-' . $i,
+            'user_id' => $i,
+            'name' => 'شرکت‌کننده ' . $i,
+            'club' => 'باشگاه ' . ( ( $i % 4 ) + 1 ),
+            'seed_rank' => $i <= 4 ? $i : 0,
+        ];
+    }
+    $key = hash( 'sha256', $weight );
+    $slots = IMAOCustom\Services\CompetitionBrackets::seed_participants( $participants, 8, 'club', 'visual-preview-seed|' . $key );
+    $divisions[ $key ] = [ 'label' => 'بزرگسالان — ' . $weight, 'weight_term_id' => 100 + count( $divisions ), 'size' => 8, 'slots' => $slots, 'winners' => [] ];
 }
-$slots = IMAOCustom\Services\CompetitionBrackets::seed_participants( $participants, 16, 'club', 'visual-preview-seed' );
 $GLOBALS['preview_bracket'] = [
-    'version' => 1,
-    'size' => 16,
+    'version' => 2,
     'criterion' => 'club',
     'seed' => 'visual-preview-seed',
-    'slots' => $slots,
-    'winners' => [],
+    'divisions' => $divisions,
     'generated_at' => '1405/06/19 12:00',
     'audit' => [],
 ];

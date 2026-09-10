@@ -56,5 +56,26 @@ namespace {
             $second = CompetitionBrackets::seed_participants( $participants, 4, 'province', 'audit-seed' );
             $this->assertSame( $first, $second );
         }
+
+        public function test_top_four_ranked_fighters_are_protected_until_semifinals_and_final(): void {
+            $participants = [];
+            for ( $rank = 1; $rank <= 8; $rank++ ) {
+                $participants[] = [
+                    'entry_id' => 'fighter-' . $rank,
+                    'name' => 'Fighter ' . $rank,
+                    'club' => 'club-' . $rank,
+                    'seed_rank' => $rank <= 4 ? $rank : 0,
+                ];
+            }
+            $slots = CompetitionBrackets::seed_participants( $participants, 8, 'club', 'ranking-seed' );
+            $positions = [];
+            foreach ( $slots as $slot => $entry ) {
+                if ( ! empty( $entry['seed_rank'] ) ) $positions[ $entry['seed_rank'] ] = $slot;
+            }
+            $this->assertSame( 3, CompetitionBrackets::encounter_round( $positions[1], $positions[2] ) );
+            $this->assertSame( 2, CompetitionBrackets::encounter_round( $positions[1], $positions[3] ) );
+            $this->assertSame( 2, CompetitionBrackets::encounter_round( $positions[2], $positions[4] ) );
+            $this->assertSame( 3, CompetitionBrackets::encounter_round( $positions[3], $positions[4] ) );
+        }
     }
 }

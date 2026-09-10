@@ -44,8 +44,11 @@ class CompetitionCartDataTest extends TestCase {
             'competition_type_term' => 5,
         ], null );
         $this->assertSame( 'WeightName', $item->meta['دسته وزنی'] );
+        $this->assertSame( 10, $item->meta['_imao_weight_class_term'] );
         $this->assertSame( 'AgeName', $item->meta['رده سنی'] );
+        $this->assertSame( 20, $item->meta['_imao_age_category_term'] );
         $this->assertSame( 'TypeName', $item->meta['نوع مسابقه'] );
+        $this->assertSame( 5, $item->meta['_imao_competition_type_term'] );
         unset( $_REQUEST['competition_type_term'], $_REQUEST['weight_class_term'], $GLOBALS['mock_terms'] );
     }
 

@@ -953,18 +953,21 @@ class Competitions
             $term = get_term($cart_item['weight_class_term'], 'age_category');
             if ($term && (!function_exists('is_wp_error') || !is_wp_error($term))) {
                 $item->add_meta_data('دسته وزنی', $term->name, true);
+                $item->add_meta_data('_imao_weight_class_term', (int) $term->term_id, true);
             }
         }
         if (!empty($cart_item['age_category_term'])) {
             $term = get_term($cart_item['age_category_term'], 'age_category');
             if ($term && (!function_exists('is_wp_error') || !is_wp_error($term))) {
                 $item->add_meta_data('رده سنی', $term->name, true);
+                $item->add_meta_data('_imao_age_category_term', (int) $term->term_id, true);
             }
         }
         if (!empty($cart_item['competition_type_term'])) {
             $term = get_term($cart_item['competition_type_term'], 'competition_type');
             if ($term && (!function_exists('is_wp_error') || !is_wp_error($term))) {
                 $item->add_meta_data('نوع مسابقه', $term->name, true);
+                $item->add_meta_data('_imao_competition_type_term', (int) $term->term_id, true);
             }
         }
     }
