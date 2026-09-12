@@ -1386,7 +1386,7 @@ class Competitions
                             <?php if ( $r['card_ready'] ) : ?>
                                 | <a class="button" target="_blank" rel="noopener" href="<?php echo esc_url( $r['card_url'] ); ?>">دانلود / چاپ کارت</a>
                             <?php else : ?>
-                                <span title="کارت پس از پرداخت موفق و تأیید وزن‌کشی صادر می‌شود."> | کارت در انتظار وزن‌کشی</span>
+                                <span title="کارت پس از پرداخت موفق صادر می‌شود."> | کارت در انتظار پرداخت موفق</span>
                             <?php endif; ?>
                             <?php if ( get_post_meta( $cid, '_imao_competition_bracket', true ) ) : ?>
                                 | <a target="_blank" rel="noopener" href="<?php echo esc_url( CompetitionBrackets::page_url( $cid ) ); ?>">جدول مسابقات</a>

@@ -38,7 +38,7 @@ class CompetitionCards {
             echo '<p>هنوز پرداخت موفقی برای این مسابقه ثبت نشده است.</p>';
             return;
         }
-        echo '<p>پس از وارد کردن وزن واقعی و تأیید وزن‌کشی، کارت بلافاصله در پنل همان ورزشکار قابل دانلود و چاپ خواهد بود.</p>';
+        echo '<p>کارت پس از پرداخت موفق، بلافاصله در پنل ورزشکار قابل دانلود و چاپ است. تأیید وزن‌کشی فقط برای ورود به جدول حذفی مسابقه لازم است.</p>';
         echo '<div style="overflow:auto"><table class="widefat striped"><thead><tr><th>ورزشکار</th><th>سفارش</th><th>دسته ثبت‌نامی</th><th>وزن واقعی (KG)</th><th>تاریخ بیمه ورزشی</th><th>تأیید وزن‌کشی</th><th>کارت</th></tr></thead><tbody>';
         foreach ( $entries as $entry ) {
             $item = $entry['item'];
@@ -88,10 +88,15 @@ class CompetitionCards {
 
     public static function item_is_ready( $order, $item ): bool {
         if ( ! is_object( $order ) || ! is_object( $item ) ) return false;
-        $paid = method_exists( $order, 'has_status' ) && $order->has_status( [ 'processing', 'completed' ] );
+        return method_exists( $order, 'has_status' ) && $order->has_status( [ 'processing', 'completed' ] );
+    }
+
+    /** A confirmed, positive weigh-in is required for a competition bracket, not a card. */
+    public static function item_is_weighed_in( $item ): bool {
+        if ( ! is_object( $item ) || ! method_exists( $item, 'get_meta' ) ) return false;
         $confirmed = method_exists( $item, 'get_meta' ) && $item->get_meta( self::META_CONFIRMED, true ) === 'yes';
         $weight = method_exists( $item, 'get_meta' ) ? (float) $item->get_meta( self::META_WEIGHT, true ) : 0.0;
-        return $paid && $confirmed && $weight > 0;
+        return $confirmed && $weight > 0;
     }
 
     public static function card_url( int $order_id, int $item_id ): string {
@@ -144,7 +149,7 @@ class CompetitionCards {
         status_header( $valid ? 200 : 404 );
         header( 'Content-Type: text/html; charset=' . get_bloginfo( 'charset' ) );
         ?>
-<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>استعلام کارت مسابقه</title><style>body{margin:0;padding:24px;background:#f4f5f7;color:#17134b;font-family:Tahoma,Arial,sans-serif}.result{max-width:520px;margin:10vh auto;padding:32px;border-radius:16px;background:#fff;box-shadow:0 10px 35px #0001;text-align:center}.status{font-size:22px;font-weight:700;color:<?php echo $valid ? '#16833b' : '#b42318'; ?>}.details{margin-top:22px;line-height:2}</style></head><body><main class="result"><div class="status"><?php echo $valid ? '✓ کارت مسابقه معتبر است' : 'کارت مسابقه معتبر نیست یا هنوز صادر نشده است'; ?></div><?php if ( $valid ) : ?><div class="details"><div><?php echo esc_html( $name ); ?></div><div><?php echo esc_html( get_the_title( $competition_id ) ); ?></div><div>وزن تأییدشده: <?php echo esc_html( (string) $item->get_meta( self::META_WEIGHT, true ) ); ?> KG</div></div><?php endif; ?></main></body></html>
+<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>استعلام کارت مسابقه</title><style>body{margin:0;padding:24px;background:#f4f5f7;color:#17134b;font-family:Tahoma,Arial,sans-serif}.result{max-width:520px;margin:10vh auto;padding:32px;border-radius:16px;background:#fff;box-shadow:0 10px 35px #0001;text-align:center}.status{font-size:22px;font-weight:700;color:<?php echo $valid ? '#16833b' : '#b42318'; ?>}.details{margin-top:22px;line-height:2}</style></head><body><main class="result"><div class="status"><?php echo $valid ? '✓ کارت مسابقه معتبر است' : 'کارت مسابقه معتبر نیست یا هنوز صادر نشده است'; ?></div><?php if ( $valid ) : ?><div class="details"><div><?php echo esc_html( $name ); ?></div><div><?php echo esc_html( get_the_title( $competition_id ) ); ?></div><?php if ( self::item_is_weighed_in( $item ) ) : ?><div>وزن تأییدشده: <?php echo esc_html( (string) $item->get_meta( self::META_WEIGHT, true ) ); ?> KG</div><?php endif; ?></div><?php endif; ?></main></body></html>
         <?php
         exit;
     }
@@ -161,10 +166,15 @@ class CompetitionCards {
         $background = (string) get_post_meta( $competition_id, 'competition_card_background', true );
         if ( $background === '' ) $background = plugin_dir_url( IMAO_PLUGIN_FILE ) . 'assets/images/competition-card-template.png';
         $verification_url = self::verification_url( (int) $order->get_id(), (int) $item->get_id(), $user_id );
+        $actual_weight = (float) $item->get_meta( self::META_WEIGHT, true );
+        $registered_weight = trim( (string) $item->get_meta( 'دسته وزنی', true ) );
+        $weight = $actual_weight > 0
+            ? rtrim( rtrim( number_format( $actual_weight, 2, '.', '' ), '0' ), '.' ) . ' KG'
+            : ( $registered_weight ?: '—' );
         return [
             'name' => trim( $first . ' ' . $last ) ?: ( $user ? $user->display_name : '' ),
             'insurance_date' => (string) $item->get_meta( self::META_INSURANCE_DATE, true ),
-            'weight' => rtrim( rtrim( number_format( (float) $item->get_meta( self::META_WEIGHT, true ), 2, '.', '' ), '0' ), '.' ) . ' KG',
+            'weight' => $weight,
             'age' => (string) $item->get_meta( 'رده سنی', true ),
             'city' => trim( $province . ( $province && $city ? ' - ' : '' ) . $city ),
             'photo' => (string) get_user_meta( $user_id, 'personal_photo', true ),

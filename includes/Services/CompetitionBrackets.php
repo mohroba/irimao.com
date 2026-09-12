@@ -32,7 +32,8 @@ class CompetitionBrackets {
         $snapshot = self::snapshot( $post->ID );
         $count = count( $this->participants( $post->ID ) );
         wp_nonce_field( 'imao_save_bracket_' . $post->ID, 'imao_bracket_nonce' );
-        echo '<p>ثبت‌نام‌های پرداخت‌شده فعلی: <strong>' . (int) $count . '</strong></p>';
+        echo '<p>شرکت‌کنندگانِ پرداخت‌شده با وزن‌کشی تأییدشده: <strong>' . (int) $count . '</strong></p>';
+        echo '<p class="description">فقط ورزشکارانی که وزن واقعی‌شان ثبت و تأیید شده است وارد جدول حذفی می‌شوند.</p>';
         echo '<p><button type="submit" class="button button-primary" name="imao_bracket_action" value="generate">' . ( $snapshot ? 'تولید مجدد جدول' : 'تولید جدول' ) . '</button> ';
         if ( $snapshot ) {
             echo '<a class="button" target="_blank" rel="noopener" href="' . esc_url( self::page_url( $post->ID ) ) . '">مشاهده جدول</a></p>';
@@ -282,16 +283,11 @@ class CompetitionBrackets {
             foreach ( $order_ids ? wc_get_orders( [ 'limit' => -1, 'status' => [ 'processing', 'completed' ], 'include' => array_map( 'intval', $order_ids ) ] ) : [] as $order ) {
                 foreach ( $order->get_items() as $item ) {
                     if ( ! $item instanceof WC_Order_Item_Product || (int) $item->get_product_id() !== $product_id ) continue;
+                    if ( ! CompetitionCards::item_is_weighed_in( $item ) ) continue;
                     $entry = $this->participant( (int) $order->get_customer_id(), 'order-' . $order->get_id() . '-item-' . $item->get_id(), $item );
                     if ( $entry ) $entries[] = $entry;
                 }
             }
-        }
-        $seen_users = array_fill_keys( array_column( $entries, 'user_id' ), true );
-        foreach ( array_map( 'intval', (array) get_post_meta( $competition_id, self::META_MANUAL, true ) ) as $user_id ) {
-            if ( isset( $seen_users[ $user_id ] ) ) continue;
-            $entry = $this->participant( $user_id, 'manual-' . $user_id, null );
-            if ( $entry ) $entries[] = $entry;
         }
         return $entries;
     }

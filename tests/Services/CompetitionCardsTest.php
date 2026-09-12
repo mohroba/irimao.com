@@ -15,11 +15,13 @@ namespace {
                 public function get_meta( string $key, bool $single = true ) { return $this->meta[ $key ] ?? ''; }
             };
             $this->assertTrue( CompetitionCards::item_is_ready( $order, $item ) );
+            $this->assertTrue( CompetitionCards::item_is_weighed_in( $item ) );
             $order->status = 'pending';
             $this->assertFalse( CompetitionCards::item_is_ready( $order, $item ) );
             $order->status = 'completed';
             $item->meta['_imao_actual_weight'] = 0;
-            $this->assertFalse( CompetitionCards::item_is_ready( $order, $item ) );
+            $this->assertTrue( CompetitionCards::item_is_ready( $order, $item ) );
+            $this->assertFalse( CompetitionCards::item_is_weighed_in( $item ) );
         }
 
         public function test_qr_is_generated_as_an_embedded_svg(): void {
