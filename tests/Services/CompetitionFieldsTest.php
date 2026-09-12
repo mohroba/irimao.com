@@ -10,6 +10,8 @@ class CompetitionFieldsTest extends TestCase {
             'end_date',
             'registration_start',
             'registration_end',
+            'sports_insurance_expiry_date',
+            'federation_membership_expiry_date',
             'weigh_in_start_date',
             'weigh_in_start',
             'weigh_in_end_date',
@@ -18,7 +20,8 @@ class CompetitionFieldsTest extends TestCase {
             'organizer_tel',
             'address',
             'min_degree',
-            'price'
+            'price',
+            'competition_card_background'
         ];
         $this->assertSame($expected, array_keys(Competitions::detail_fields()));
     }

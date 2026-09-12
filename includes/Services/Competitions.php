@@ -112,7 +112,7 @@ class Competitions
         $fields = self::detail_fields();
         $number_field = [];
         $tel_fields = ['organizer_tel'];
-        $date_fields = ['start_date', 'end_date', 'registration_start', 'registration_end', 'weigh_in_start_date', 'weigh_in_end_date'];
+        $date_fields = ['start_date', 'end_date', 'registration_start', 'registration_end', 'sports_insurance_expiry_date', 'federation_membership_expiry_date', 'weigh_in_start_date', 'weigh_in_end_date'];
         $time_fields = ['weigh_in_start', 'weigh_in_end'];
         echo '<table class="form-table striped"><tbody>';
         foreach ($fields as $k => $label) {
@@ -148,6 +148,8 @@ class Competitions
             'end_date' => 'تاریخ پایان مسابقه',
             'registration_start' => 'شروع ثبت‌نام',
             'registration_end' => 'پایان ثبت‌نام',
+            'sports_insurance_expiry_date' => 'پایان اعتبار بیمه ورزشی',
+            'federation_membership_expiry_date' => 'پایان اعتبار کارت عضویت فدراسیون',
             'weigh_in_start_date' => 'تاریخ شروع وزن‌کشی',
             'weigh_in_start' => 'ساعت شروع وزن‌کشی',
             'weigh_in_end_date' => 'تاریخ پایان وزن‌کشی',

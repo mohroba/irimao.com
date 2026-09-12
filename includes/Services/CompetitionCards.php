@@ -39,6 +39,12 @@ class CompetitionCards {
             return;
         }
         echo '<p>کارت پس از پرداخت موفق، بلافاصله در پنل ورزشکار قابل دانلود و چاپ است. تأیید وزن‌کشی فقط برای ورود به جدول حذفی مسابقه لازم است.</p>';
+        $insurance_expiry = (string) get_post_meta( $post->ID, 'sports_insurance_expiry_date', true );
+        $membership_expiry = (string) get_post_meta( $post->ID, 'federation_membership_expiry_date', true );
+        echo '<table class="widefat striped" style="max-width:680px;margin:12px 0"><tbody>';
+        echo '<tr><th>پایان اعتبار بیمه ورزشی</th><td>' . esc_html( $insurance_expiry ?: 'ثبت نشده' ) . '</td></tr>';
+        echo '<tr><th>پایان اعتبار کارت عضویت فدراسیون</th><td>' . esc_html( $membership_expiry ?: 'ثبت نشده' ) . '</td></tr>';
+        echo '</tbody></table>';
         echo '<div style="overflow:auto"><table class="widefat striped"><thead><tr><th>ورزشکار</th><th>سفارش</th><th>دسته ثبت‌نامی</th><th>وزن واقعی (KG)</th><th>تاریخ بیمه ورزشی</th><th>تأیید وزن‌کشی</th><th>کارت</th></tr></thead><tbody>';
         foreach ( $entries as $entry ) {
             $item = $entry['item'];
