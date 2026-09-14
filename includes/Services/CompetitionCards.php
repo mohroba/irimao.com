@@ -40,13 +40,7 @@ class CompetitionCards {
             return;
         }
         echo '<p>کارت پس از پرداخت موفق، بلافاصله در پنل ورزشکار قابل دانلود و چاپ است. تأیید وزن‌کشی فقط برای ورود به جدول حذفی مسابقه لازم است.</p>';
-        $insurance_expiry = (string) get_post_meta( $post->ID, 'sports_insurance_expiry_date', true );
-        $membership_expiry = (string) get_post_meta( $post->ID, 'federation_membership_expiry_date', true );
-        echo '<table class="widefat striped" style="max-width:680px;margin:12px 0"><tbody>';
-        echo '<tr><th>پایان اعتبار بیمه ورزشی</th><td>' . esc_html( $insurance_expiry ?: 'ثبت نشده' ) . '</td></tr>';
-        echo '<tr><th>پایان اعتبار کارت عضویت فدراسیون</th><td>' . esc_html( $membership_expiry ?: 'ثبت نشده' ) . '</td></tr>';
-        echo '</tbody></table>';
-        echo '<div style="overflow:auto"><table class="widefat striped"><thead><tr><th>ورزشکار</th><th>سفارش</th><th>دسته ثبت‌نامی</th><th>وزن واقعی (KG)</th><th>تاریخ بیمه ورزشی</th><th>تأیید وزن‌کشی</th><th>کارت</th></tr></thead><tbody>';
+        echo '<div style="overflow:auto"><table class="widefat striped"><thead><tr><th>ورزشکار</th><th>سفارش</th><th>دسته ثبت‌نامی</th><th>پایان اعتبار بیمه ورزشی</th><th>پایان اعتبار کارت عضویت فدراسیون</th><th>وزن واقعی (KG)</th><th>تاریخ بیمه ورزشی</th><th>تأیید وزن‌کشی</th><th>کارت</th></tr></thead><tbody>';
         foreach ( $entries as $entry ) {
             $item = $entry['item'];
             $order = $entry['order'];
@@ -55,6 +49,8 @@ class CompetitionCards {
             $ready = self::item_is_ready( $order, $item );
             echo '<tr><td>' . esc_html( $user ? $user->display_name : '#' . $order->get_customer_id() ) . '</td>';
             echo '<td>#' . (int) $order->get_id() . '</td><td>' . esc_html( (string) $item->get_meta( 'دسته وزنی', true ) ) . '</td>';
+            echo '<td>' . esc_html( (string) $item->get_meta( 'پایان اعتبار بیمه ورزشی', true ) ?: '—' ) . '</td>';
+            echo '<td>' . esc_html( (string) $item->get_meta( 'پایان اعتبار کارت عضویت فدراسیون', true ) ?: '—' ) . '</td>';
             echo '<td><input type="number" min="1" max="300" step="0.01" name="imao_weigh_ins[' . $item_id . '][weight]" value="' . esc_attr( (string) $item->get_meta( self::META_WEIGHT, true ) ) . '" style="width:100px"></td>';
             echo '<td><input type="text" class="crm-date" data-jdp data-jdp-only-date inputmode="numeric" placeholder="۱۴۰۵/۰۵/۱۷" name="imao_weigh_ins[' . $item_id . '][insurance_date]" value="' . esc_attr( (string) $item->get_meta( self::META_INSURANCE_DATE, true ) ) . '" style="width:130px"></td>';
             echo '<td><label><input type="checkbox" name="imao_weigh_ins[' . $item_id . '][confirmed]" value="1" ' . checked( 'yes', $item->get_meta( self::META_CONFIRMED, true ), false ) . '> تأیید شد</label></td>';
@@ -195,7 +191,7 @@ class CompetitionCards {
             : ( $registered_weight ?: '—' );
         return [
             'name' => trim( $first . ' ' . $last ) ?: ( $user ? $user->display_name : '' ),
-            'insurance_date' => (string) $item->get_meta( self::META_INSURANCE_DATE, true ),
+            'insurance_date' => (string) $item->get_meta( 'پایان اعتبار بیمه ورزشی', true ) ?: (string) $item->get_meta( self::META_INSURANCE_DATE, true ),
             'weight' => $weight,
             'age' => (string) $item->get_meta( 'رده سنی', true ),
             'city' => trim( $province . ( $province && $city ? ' - ' : '' ) . $city ),
@@ -242,7 +238,7 @@ class CompetitionCards {
 @page{size:A4 portrait;margin:0}@media print{html,body{width:100%;height:100%;background:#fff}.toolbar{display:none}.page{width:100%;height:100%;padding:0;align-items:center}.card{height:100vh;width:auto;max-width:100vw;box-shadow:none;print-color-adjust:exact;-webkit-print-color-adjust:exact}}
 </style></head><body><div class="toolbar"><button type="button" onclick="window.print()">چاپ / ذخیره PDF</button></div><main class="page"><section class="card" style="background-image:url('<?php echo esc_url( $data['background'] ); ?>')">
 <div class="field name"><b>اسم و فامیل</b><span><?php echo $e( $data['name'] ); ?></span></div>
-<div class="field insurance"><b>تاریخ بیمه ورزشی</b><span><?php echo $e( $data['insurance_date'] ); ?></span></div>
+<div class="field insurance"><b>پایان اعتبار بیمه</b><span><?php echo $e( $data['insurance_date'] ); ?></span></div>
 <div class="field weight"><b>وزن</b><span><?php echo $e( $data['weight'] ); ?></span></div>
 <div class="field age"><b>رده سنی</b><span><?php echo $e( $data['age'] ); ?></span></div>
 <div class="field city"><b>شهر</b><span><?php echo $e( $data['city'] ); ?></span></div>

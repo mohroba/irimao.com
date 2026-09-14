@@ -112,7 +112,7 @@ class Competitions
         $fields = self::detail_fields();
         $number_field = [];
         $tel_fields = ['organizer_tel'];
-        $date_fields = ['start_date', 'end_date', 'registration_start', 'registration_end', 'sports_insurance_expiry_date', 'federation_membership_expiry_date', 'weigh_in_start_date', 'weigh_in_end_date'];
+        $date_fields = ['start_date', 'end_date', 'registration_start', 'registration_end', 'weigh_in_start_date', 'weigh_in_end_date'];
         $time_fields = ['weigh_in_start', 'weigh_in_end'];
         echo '<table class="form-table striped"><tbody>';
         foreach ($fields as $k => $label) {
@@ -148,8 +148,6 @@ class Competitions
             'end_date' => 'تاریخ پایان مسابقه',
             'registration_start' => 'شروع ثبت‌نام',
             'registration_end' => 'پایان ثبت‌نام',
-            'sports_insurance_expiry_date' => 'پایان اعتبار بیمه ورزشی',
-            'federation_membership_expiry_date' => 'پایان اعتبار کارت عضویت فدراسیون',
             'weigh_in_start_date' => 'تاریخ شروع وزن‌کشی',
             'weigh_in_start' => 'ساعت شروع وزن‌کشی',
             'weigh_in_end_date' => 'تاریخ پایان وزن‌کشی',
@@ -546,7 +544,11 @@ class Competitions
                     break;
                 case 'weight_class':
                 case 'age_category':
-                    $row[$key] = isset($extra[$key]) ? (string)$extra[$key] : '';
+                    $value = isset($extra[$key]) ? (string)$extra[$key] : '';
+                    if ( $value === '' ) {
+                        [ $value ] = $this->profile_age_category_value( (int) $u->ID, $key );
+                    }
+                    $row[$key] = $value;
                     break;
                 default:
                     $meta = get_user_meta($u->ID, $key, true);
@@ -735,6 +737,7 @@ class Competitions
                 if ((int) $item->get_product_id() !== $product_id) {
                     continue;
                 }
+                $this->backfill_registration_item_meta( $item, $uid );
                 $weight = trim((string) $item->get_meta('دسته وزنی', true));
                 $age    = trim((string) $item->get_meta('رده سنی', true));
                 if (!isset($meta_map[$uid])) {
@@ -908,6 +911,12 @@ class Competitions
         if (isset($_REQUEST['competition_type_term'])) {
             $data['competition_type_term'] = (int)$_REQUEST['competition_type_term'];
         }
+        foreach ( [ 'sports_insurance_expiry_date', 'federation_membership_expiry_date' ] as $key ) {
+            $date = $this->jalali_date_from_request( $key );
+            if ( $date !== '' ) {
+                $data[ $key ] = $date;
+            }
+        }
         return $data;
     }
 
@@ -920,6 +929,11 @@ class Competitions
         foreach (['weight_class_term', 'age_category_term', 'competition_type_term'] as $key) {
             if (isset($values[$key])) {
                 $cart[$key] = (int)$values[$key];
+            }
+        }
+        foreach ( [ 'sports_insurance_expiry_date', 'federation_membership_expiry_date' ] as $key ) {
+            if ( isset( $values[ $key ] ) ) {
+                $cart[ $key ] = $this->sanitize_competition_date( (string) $values[ $key ] );
             }
         }
         return $cart;
@@ -943,6 +957,14 @@ class Competitions
             $term = get_term($cart_item['competition_type_term'], 'competition_type');
             if ($term && (!function_exists('is_wp_error') || !is_wp_error($term))) {
                 $data[] = ['name' => 'نوع مسابقه', 'value' => $term->name];
+            }
+        }
+        foreach ( [
+            'sports_insurance_expiry_date'     => 'پایان اعتبار بیمه ورزشی',
+            'federation_membership_expiry_date' => 'پایان اعتبار کارت عضویت فدراسیون',
+        ] as $key => $label ) {
+            if ( ! empty( $cart_item[ $key ] ) ) {
+                $data[] = [ 'name' => $label, 'value' => $cart_item[ $key ] ];
             }
         }
         return $data;
@@ -972,6 +994,101 @@ class Competitions
                 $item->add_meta_data('_imao_competition_type_term', (int) $term->term_id, true);
             }
         }
+        foreach ( [
+            'sports_insurance_expiry_date'     => 'پایان اعتبار بیمه ورزشی',
+            'federation_membership_expiry_date' => 'پایان اعتبار کارت عضویت فدراسیون',
+        ] as $key => $label ) {
+            if ( ! empty( $cart_item[ $key ] ) ) {
+                $item->add_meta_data( $label, $this->sanitize_competition_date( (string) $cart_item[ $key ] ), true );
+            }
+        }
+    }
+
+    /** Fill missing historical order-item classifications from the registrant profile. */
+    private function backfill_registration_item_meta( $item, int $user_id ): void
+    {
+        if ( ! is_object( $item ) || ! method_exists( $item, 'get_meta' ) || ! method_exists( $item, 'update_meta_data' ) ) {
+            return;
+        }
+
+        $weight = trim( (string) $item->get_meta( 'دسته وزنی', true ) );
+        $age = trim( (string) $item->get_meta( 'رده سنی', true ) );
+        $weight_term_id = (int) $item->get_meta( '_imao_weight_class_term', true );
+        $age_term_id = (int) $item->get_meta( '_imao_age_category_term', true );
+        $changed = false;
+
+        if ( $weight === '' ) {
+            [ $weight, $profile_weight_term_id ] = $this->profile_age_category_value( $user_id, 'weight_class' );
+            $weight_term_id = $weight_term_id ?: $profile_weight_term_id;
+            if ( $weight !== '' ) {
+                $item->update_meta_data( 'دسته وزنی', $weight );
+                $changed = true;
+            }
+        }
+
+        if ( $age === '' ) {
+            [ $age, $profile_age_term_id ] = $this->profile_age_category_value( $user_id, 'age_category' );
+            $age_term_id = $age_term_id ?: $profile_age_term_id;
+            if ( $age === '' && $weight_term_id > 0 ) {
+                $weight_term = get_term( $weight_term_id, 'age_category' );
+                if ( $weight_term && ! is_wp_error( $weight_term ) && ! empty( $weight_term->parent ) ) {
+                    $parent = get_term( (int) $weight_term->parent, 'age_category' );
+                    if ( $parent && ! is_wp_error( $parent ) ) {
+                        $age = (string) $parent->name;
+                        $age_term_id = (int) $parent->term_id;
+                    }
+                }
+            }
+            if ( $age !== '' ) {
+                $item->update_meta_data( 'رده سنی', $age );
+                $changed = true;
+            }
+        }
+
+        if ( $weight_term_id > 0 && ! $item->get_meta( '_imao_weight_class_term', true ) ) {
+            $item->update_meta_data( '_imao_weight_class_term', $weight_term_id );
+            $changed = true;
+        }
+        if ( $age_term_id > 0 && ! $item->get_meta( '_imao_age_category_term', true ) ) {
+            $item->update_meta_data( '_imao_age_category_term', $age_term_id );
+            $changed = true;
+        }
+        if ( $changed && method_exists( $item, 'save' ) ) {
+            $item->save();
+        }
+    }
+
+    /** @return array{0:string,1:int} */
+    private function profile_age_category_value( int $user_id, string $meta_key ): array
+    {
+        $value = trim( (string) get_user_meta( $user_id, $meta_key, true ) );
+        if ( $value === '' ) {
+            return [ '', 0 ];
+        }
+        if ( ! ctype_digit( $value ) ) {
+            return [ $value, 0 ];
+        }
+        $term = get_term( (int) $value, 'age_category' );
+        if ( ! $term || is_wp_error( $term ) ) {
+            return [ '', 0 ];
+        }
+        return [ (string) $term->name, (int) $term->term_id ];
+    }
+
+    private function jalali_date_from_request( string $key ): string
+    {
+        $value = isset( $_REQUEST[ $key ] ) ? $_REQUEST[ $key ] : '';
+        if ( function_exists( 'wp_unslash' ) ) {
+            $value = wp_unslash( $value );
+        }
+        $raw = $this->sanitize_competition_date( $value );
+        return $raw !== '' && Date::is_between( $raw, $raw, $raw ) ? $raw : '';
+    }
+
+    private function sanitize_competition_date( $value ): string
+    {
+        $value = is_scalar( $value ) ? (string) $value : '';
+        return function_exists( 'sanitize_text_field' ) ? sanitize_text_field( $value ) : trim( $value );
     }
 
     public function competitions_list_shortcode(): string
@@ -1232,11 +1349,7 @@ class Competitions
             $prod_id = $this->sync_product($cid);
         }
 
-        $document_expiry_fields = [
-            'sports_insurance_expiry_date'     => 'پایان اعتبار بیمه ورزشی',
-            'federation_membership_expiry_date' => 'پایان اعتبار کارت عضویت فدراسیون',
-        ];
-        $fields     = array_diff_key( self::detail_fields(), $document_expiry_fields ) + [
+        $fields     = self::detail_fields() + [
             'board'  => 'استان',
             'gender' => 'جنسیت',
             'level'  => 'سطح',
@@ -1300,12 +1413,14 @@ class Competitions
                             <td><?php echo esc_html($type_display); ?></td>
                         </tr>
                     <?php endif; ?>
-                    <?php foreach ( $document_expiry_fields as $key => $label ) : ?>
-                        <tr>
-                            <th><?php echo esc_html( $label ); ?></th>
-                            <td><?php echo esc_html( (string) get_post_meta( $cid, $key, true ) ?: '—' ); ?></td>
-                        </tr>
-                    <?php endforeach; ?>
+                    <tr>
+                        <th><label for="sports_insurance_expiry_date">پایان اعتبار بیمه ورزشی</label></th>
+                        <td><input type="text" id="sports_insurance_expiry_date" name="sports_insurance_expiry_date" class="crm-date" data-jdp data-jdp-only-date inputmode="numeric" placeholder="۱۴۰۵/۰۵/۱۷" required></td>
+                    </tr>
+                    <tr>
+                        <th><label for="federation_membership_expiry_date">پایان اعتبار کارت عضویت فدراسیون</label></th>
+                        <td><input type="text" id="federation_membership_expiry_date" name="federation_membership_expiry_date" class="crm-date" data-jdp data-jdp-only-date inputmode="numeric" placeholder="۱۴۰۵/۰۵/۱۷" required></td>
+                    </tr>
                     <tr>
                         <th>دسته وزنی</th>
                         <td>
