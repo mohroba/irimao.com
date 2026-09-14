@@ -23,6 +23,7 @@ class CompetitionCards {
         add_action( 'add_meta_boxes', [ $this, 'add_meta_box' ] );
         add_action( 'save_post_competition', [ $this, 'save_weigh_ins' ], 20, 2 );
         add_action( 'admin_post_imao_competition_card', [ $this, 'render_card' ] );
+        add_action( 'template_redirect', [ $this, 'render_frontend_card' ], 0 );
         add_action( 'admin_post_imao_verify_competition_card', [ $this, 'verify_card' ] );
         add_action( 'admin_post_nopriv_imao_verify_competition_card', [ $this, 'verify_card' ] );
     }
@@ -106,15 +107,30 @@ class CompetitionCards {
     }
 
     public static function card_url( int $order_id, int $item_id ): string {
-        $url = add_query_arg( [ 'action' => 'imao_competition_card', 'order_id' => $order_id, 'item_id' => $item_id ], admin_url( 'admin-post.php' ) );
-        return wp_nonce_url( $url, 'imao_competition_card_' . $order_id . '_' . $item_id );
+        return add_query_arg(
+            [
+                'imao_competition_card' => 1,
+                'order_id'              => $order_id,
+                'item_id'               => $item_id,
+                'token'                 => self::card_access_token( $order_id, $item_id ),
+            ],
+            home_url( '/' )
+        );
+    }
+
+    public function render_frontend_card(): void {
+        if ( (int) ( $_GET['imao_competition_card'] ?? 0 ) !== 1 ) return;
+        $this->render_card();
     }
 
     public function render_card(): void {
         if ( ! is_user_logged_in() ) auth_redirect();
         $order_id = (int) ( $_GET['order_id'] ?? 0 );
         $item_id = (int) ( $_GET['item_id'] ?? 0 );
-        check_admin_referer( 'imao_competition_card_' . $order_id . '_' . $item_id );
+        $token = sanitize_text_field( wp_unslash( $_GET['token'] ?? '' ) );
+        if ( ! hash_equals( self::card_access_token( $order_id, $item_id ), $token ) ) {
+            wp_die( 'لینک کارت معتبر نیست. لطفاً از پنل کاربری دوباره تلاش کنید.', 'لینک نامعتبر', [ 'response' => 403 ] );
+        }
         $order = wc_get_order( $order_id );
         $item = $order && method_exists( $order, 'get_item' ) ? $order->get_item( $item_id ) : null;
         $allowed = $order && ( (int) $order->get_customer_id() === get_current_user_id() || current_user_can( 'manage_options' ) );
@@ -192,6 +208,10 @@ class CompetitionCards {
 
     private static function verification_token( int $order_id, int $item_id, int $user_id ): string {
         return hash_hmac( 'sha256', $order_id . '|' . $item_id . '|' . $user_id, wp_salt( 'auth' ) );
+    }
+
+    private static function card_access_token( int $order_id, int $item_id ): string {
+        return hash_hmac( 'sha256', 'competition-card|' . $order_id . '|' . $item_id, wp_salt( 'auth' ) );
     }
 
     private static function verification_url( int $order_id, int $item_id, int $user_id ): string {

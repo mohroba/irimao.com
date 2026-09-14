@@ -1232,7 +1232,11 @@ class Competitions
             $prod_id = $this->sync_product($cid);
         }
 
-        $fields     = self::detail_fields() + [
+        $document_expiry_fields = [
+            'sports_insurance_expiry_date'     => 'پایان اعتبار بیمه ورزشی',
+            'federation_membership_expiry_date' => 'پایان اعتبار کارت عضویت فدراسیون',
+        ];
+        $fields     = array_diff_key( self::detail_fields(), $document_expiry_fields ) + [
             'board'  => 'استان',
             'gender' => 'جنسیت',
             'level'  => 'سطح',
@@ -1296,6 +1300,12 @@ class Competitions
                             <td><?php echo esc_html($type_display); ?></td>
                         </tr>
                     <?php endif; ?>
+                    <?php foreach ( $document_expiry_fields as $key => $label ) : ?>
+                        <tr>
+                            <th><?php echo esc_html( $label ); ?></th>
+                            <td><?php echo esc_html( (string) get_post_meta( $cid, $key, true ) ?: '—' ); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
                     <tr>
                         <th>دسته وزنی</th>
                         <td>
@@ -1386,7 +1396,7 @@ class Competitions
                         <td><?php echo esc_html($r['status']); ?></td>
                         <td><a href="<?php echo esc_url('/my-account/competition-details/?competition_id=' . $cid); ?>">جزئیات</a>
                             <?php if ( $r['card_ready'] ) : ?>
-                                | <a class="button" target="_blank" rel="noopener" href="<?php echo esc_url( $r['card_url'] ); ?>">دانلود / چاپ کارت</a>
+                                | <a class="button" style="padding:4px 8px;font-size:11px;line-height:1.5" target="_blank" rel="noopener" href="<?php echo esc_url( $r['card_url'] ); ?>">دانلود / چاپ کارت</a>
                             <?php else : ?>
                                 <span title="کارت پس از پرداخت موفق صادر می‌شود."> | کارت در انتظار پرداخت موفق</span>
                             <?php endif; ?>

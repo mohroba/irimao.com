@@ -4,7 +4,7 @@ namespace IMAOCustom\Services;
 use IMAOCustom\Logger;
 
 class Registration {
-    private const REPAIR_OPTION = 'imao_display_names_repaired_v2';
+    private const REPAIR_OPTION = 'imao_display_names_repaired_v3';
     private const RETRY_HOOK = 'imao_sync_digits_registration';
     private bool $syncing = false;
 
@@ -78,14 +78,16 @@ class Registration {
                 continue;
             }
             $label   = trim( $entry['label'] ?? '' );
-            $metaKey = $entry['meta_key'];
+            $metaKey = (string) $entry['meta_key'];
             $value   = get_user_meta( $user_id, $metaKey, true );
+            $normalized_label = preg_replace( '/[^\\p{L}]+/u', '', $label );
+            $normalized_key = strtolower( preg_replace( '/[^a-z0-9]+/', '', $metaKey ) );
 
-            if ( $label === 'کدملی' ) {
+            if ( in_array( $normalized_label, [ 'کدملی', 'nationalid' ], true ) || str_contains( $normalized_key, 'nationalid' ) ) {
                 $out['national_id'] = $value;
-            } elseif ( $label === 'نام' || preg_match( '/^first_name_/', $metaKey ) ) {
+            } elseif ( in_array( $normalized_label, [ 'نام', 'نامفا', 'firstname', 'firstnamefa' ], true ) || str_contains( $normalized_key, 'firstname' ) ) {
                 $out['first_name'] = $value;
-            } elseif ( $label === 'نامخانوادگی' || preg_match( '/^last_name_/', $metaKey ) ) {
+            } elseif ( in_array( $normalized_label, [ 'نامخانوادگی', 'نامخانوادگیفا', 'lastname', 'lastnamefa' ], true ) || str_contains( $normalized_key, 'lastname' ) ) {
                 $out['last_name'] = $value;
             }
         }

@@ -100,4 +100,20 @@ class RegistrationTest extends TestCase {
         $this->assertSame( 'فاطمه', get_user_meta( $user_id, 'billing_first_name', true ) );
         $this->assertSame( 'غرابی', get_user_meta( $user_id, 'billing_last_name', true ) );
     }
+
+    public function test_uses_digits_persian_name_labels_with_fa_suffix(): void {
+        $user_id = 4;
+        $GLOBALS['test_user_meta'][$user_id] = [
+            'digits_form_data' => serialize([
+                [ 'label' => 'نام (فا)', 'meta_key' => 'digits_first_name_fa' ],
+                [ 'label' => 'نام خانوادگی (فا)', 'meta_key' => 'digits_last_name_fa' ],
+            ]),
+            'digits_first_name_fa' => 'فاطمه',
+            'digits_last_name_fa'  => 'غرابی',
+        ];
+
+        ( new Registration() )->set_national_id_and_wc_names( $user_id );
+
+        $this->assertSame( 'فاطمه غرابی', $GLOBALS['updated_user']['display_name'] );
+    }
 }
