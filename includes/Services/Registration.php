@@ -4,7 +4,7 @@ namespace IMAOCustom\Services;
 use IMAOCustom\Logger;
 
 class Registration {
-    private const REPAIR_OPTION = 'imao_display_names_repaired_v3';
+    private const REPAIR_OPTION = 'imao_display_names_repaired_v4';
     private const RETRY_HOOK = 'imao_sync_digits_registration';
     private bool $syncing = false;
 

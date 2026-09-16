@@ -42,7 +42,7 @@ class CompetitionCards {
             return;
         }
         echo '<p>کارت پس از پرداخت موفق، بلافاصله در پنل ورزشکار قابل دانلود و چاپ است. تأیید وزن‌کشی فقط برای ورود به جدول حذفی مسابقه لازم است.</p>';
-        echo '<div style="overflow:auto"><table class="widefat striped"><thead><tr><th>ردیف</th><th>ورزشکار</th><th>سفارش</th><th>دسته ثبت‌نامی</th><th>پایان اعتبار بیمه ورزشی</th><th>پایان اعتبار کارت عضویت فدراسیون</th><th>وزن واقعی (KG)</th><th>تاریخ بیمه ورزشی</th><th>تأیید وزن‌کشی</th><th>کارت</th></tr></thead><tbody>';
+        echo '<div style="overflow:auto"><table class="widefat striped"><thead><tr><th>ردیف</th><th>ورزشکار</th><th>کد ملی</th><th>سفارش</th><th>دسته ثبت‌نامی</th><th>پایان اعتبار بیمه ورزشی</th><th>پایان اعتبار کارت عضویت فدراسیون</th><th>وزن واقعی (KG)</th><th>تأیید وزن‌کشی</th><th>کارت</th></tr></thead><tbody>';
         $row_number = 1;
         foreach ( $entries as $entry ) {
             $item = $entry['item'];
@@ -51,11 +51,11 @@ class CompetitionCards {
             $user = get_userdata( (int) $order->get_customer_id() );
             $ready = self::item_is_ready( $order, $item );
             echo '<tr><td>' . (int) $row_number++ . '</td><td>' . esc_html( $user ? $user->display_name : '#' . $order->get_customer_id() ) . '</td>';
+            echo '<td>' . esc_html( (string) get_user_meta( (int) $order->get_customer_id(), 'national_id', true ) ?: '—' ) . '</td>';
             echo '<td>#' . (int) $order->get_id() . '</td><td>' . esc_html( (string) $item->get_meta( 'دسته وزنی', true ) ) . '</td>';
             echo '<td><input type="text" class="crm-date" data-jdp data-jdp-only-date inputmode="numeric" placeholder="۱۴۰۵/۰۵/۱۷" name="imao_weigh_ins[' . $item_id . '][sports_insurance_expiry]" value="' . esc_attr( (string) $item->get_meta( self::ITEM_META_SPORTS_INSURANCE_EXPIRY, true ) ) . '" style="width:130px"></td>';
             echo '<td><input type="text" class="crm-date" data-jdp data-jdp-only-date inputmode="numeric" placeholder="۱۴۰۵/۰۵/۱۷" name="imao_weigh_ins[' . $item_id . '][federation_membership_expiry]" value="' . esc_attr( (string) $item->get_meta( self::ITEM_META_FEDERATION_MEMBERSHIP_EXPIRY, true ) ) . '" style="width:130px"></td>';
             echo '<td><input type="number" min="1" max="300" step="0.01" name="imao_weigh_ins[' . $item_id . '][weight]" value="' . esc_attr( (string) $item->get_meta( self::META_WEIGHT, true ) ) . '" style="width:100px"></td>';
-            echo '<td><input type="text" class="crm-date" data-jdp data-jdp-only-date inputmode="numeric" placeholder="۱۴۰۵/۰۵/۱۷" name="imao_weigh_ins[' . $item_id . '][insurance_date]" value="' . esc_attr( (string) $item->get_meta( self::META_INSURANCE_DATE, true ) ) . '" style="width:130px"></td>';
             echo '<td><label><input type="checkbox" name="imao_weigh_ins[' . $item_id . '][confirmed]" value="1" ' . checked( 'yes', $item->get_meta( self::META_CONFIRMED, true ), false ) . '> تأیید شد</label></td>';
             echo '<td>' . ( $ready ? '<a class="button" target="_blank" href="' . esc_url( self::card_url( (int) $order->get_id(), $item_id ) ) . '">مشاهده کارت</a>' : 'در انتظار' ) . '</td></tr>';
         }
@@ -76,12 +76,10 @@ class CompetitionCards {
             }
             $row = isset( $submitted[ $item_id ] ) && is_array( $submitted[ $item_id ] ) ? $submitted[ $item_id ] : [];
             $weight = max( 0.0, min( 300.0, (float) ( $row['weight'] ?? 0 ) ) );
-            $insurance_date = sanitize_text_field( $row['insurance_date'] ?? '' );
             $sports_insurance_expiry = $this->sanitize_admin_date( $row['sports_insurance_expiry'] ?? '' );
             $federation_membership_expiry = $this->sanitize_admin_date( $row['federation_membership_expiry'] ?? '' );
             $confirmed = ! empty( $row['confirmed'] ) && $weight > 0;
             $item->update_meta_data( self::META_WEIGHT, $weight > 0 ? $weight : '' );
-            $item->update_meta_data( self::META_INSURANCE_DATE, $insurance_date );
             $item->update_meta_data( self::ITEM_META_SPORTS_INSURANCE_EXPIRY, $sports_insurance_expiry );
             $item->update_meta_data( self::ITEM_META_FEDERATION_MEMBERSHIP_EXPIRY, $federation_membership_expiry );
             $item->update_meta_data( self::META_CONFIRMED, $confirmed ? 'yes' : 'no' );

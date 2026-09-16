@@ -43,7 +43,7 @@ class UserManagement {
     public static function basic_fields(): array {
         return [
             'billing_phone'      => 'شماره موبایل',
-            'billing_email'      => 'ایمیل',
+            'birth_date'         => 'تاریخ تولد',
             'national_id'        => 'کد ملی',
             'first_name_fa'      => 'نام (فا)',
             'last_name_fa'       => 'نام‌خانوادگی (فا)',
@@ -51,7 +51,7 @@ class UserManagement {
             'last_name_en'       => 'نام‌خانوادگی (En)',
             'gender'             => 'جنسیت',
             'father_name'        => 'نام پدر',
-            'birth_date'         => 'تاریخ تولد',
+            'billing_email'      => 'ایمیل',
             'marital_status'     => 'وضعیت تاهل',
             'education_status'   => 'وضعیت تحصیلی',
             'military_status'    => 'وضعیت خدمت',
@@ -78,6 +78,20 @@ class UserManagement {
             return $u ? $u->display_name : '';
         }
         return FieldLabel::get( $key, $value );
+    }
+
+    private function user_display_name( $user ): string {
+        $display = trim( (string) ( $user->display_name ?? '' ) );
+        $compact = preg_replace( '/[^0-9۰-۹٠-٩]+/u', '', $display );
+        if ( $compact !== '' && preg_match( '/^[0-9۰-۹٠-٩]{7,}$/u', $compact ) ) {
+            $first = trim( (string) get_user_meta( (int) $user->ID, 'first_name_fa', true ) );
+            $last  = trim( (string) get_user_meta( (int) $user->ID, 'last_name_fa', true ) );
+            $fallback = trim( $first . ' ' . $last );
+            if ( $fallback !== '' ) {
+                return $fallback;
+            }
+        }
+        return $display;
     }
 
     public function login_as_user(): void {
@@ -117,7 +131,7 @@ class UserManagement {
         foreach ( $users as $u ) {
             echo '<tr>';
             $user_status = get_user_meta( $u->ID, 'imao_banned', true ) ? 'مسدود' : 'فعال';
-            echo '<td>' . esc_html( $u->ID ) . '</td><td>' . esc_html( $u->display_name ) . '</td><td>' . esc_html( $user_status ) . '</td><td>' . esc_html( Date::to_jalali( (string) ( $u->user_registered ?? '' ) ) ?: '—' ) . '</td>';
+            echo '<td>' . esc_html( $u->ID ) . '</td><td>' . esc_html( $this->user_display_name( $u ) ) . '</td><td>' . esc_html( $user_status ) . '</td><td>' . esc_html( Date::to_jalali( (string) ( $u->user_registered ?? '' ) ) ?: '—' ) . '</td>';
             foreach ( $fields as $k => $lbl ) {
                 $raw = get_user_meta( $u->ID, $k, true );
                 if ( $k === 'billing_email' && ! $raw ) {
@@ -155,10 +169,10 @@ class UserManagement {
         echo '<form method="post">';
         wp_nonce_field( 'imao_basic_admin', 'imao_nonce' );
         echo '<table class="form-table striped">';
-        $email_val = esc_attr( get_user_meta( $user_id, 'billing_email', true ) ?: get_userdata( $user_id )->user_email );
-        echo '<tr><th>ایمیل</th><td><input type="email" name="billing_email" value="' . $email_val . '" class="regular-text"/></td></tr>';
         foreach ( $fields as $k => $lbl ) {
             if ( $k === 'billing_email' ) {
+                $email_val = esc_attr( get_user_meta( $user_id, 'billing_email', true ) ?: get_userdata( $user_id )->user_email );
+                echo '<tr><th>' . esc_html( $lbl ) . '</th><td><input type="email" name="billing_email" value="' . $email_val . '" class="regular-text"/></td></tr>';
                 continue;
             }
             $val = esc_attr( get_user_meta( $user_id, $k, true ) );
