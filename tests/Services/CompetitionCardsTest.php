@@ -29,5 +29,15 @@ namespace {
             $this->assertStringStartsWith( 'data:image/svg+xml;base64,', $uri );
             $this->assertStringContainsString( '<svg', base64_decode( substr( $uri, strlen( 'data:image/svg+xml;base64,' ) ) ) );
         }
+
+        public function test_admin_date_sanitizer_accepts_jalali_date_only(): void {
+            $service = new CompetitionCards();
+            $method = new \ReflectionMethod( CompetitionCards::class, 'sanitize_admin_date' );
+            $method->setAccessible( true );
+
+            $this->assertSame( '1405/05/17', $method->invoke( $service, '1405/05/17' ) );
+            $this->assertSame( '۱۴۰۵/۰۵/۱۷', $method->invoke( $service, '۱۴۰۵/۰۵/۱۷' ) );
+            $this->assertSame( '', $method->invoke( $service, '<script>alert(1)</script>' ) );
+        }
     }
 }

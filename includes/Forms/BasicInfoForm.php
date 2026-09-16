@@ -64,6 +64,12 @@ class BasicInfoForm extends BaseForm {
             }
         }
         $data['birth_date'] = $this->read_date( 'birth_date' );
+        $selected_gender = $locked ? $this->normalize_gender( (string) get_user_meta( $uid, 'gender', true ) ) : $this->normalize_gender( (string) ( $data['gender'] ?? '' ) );
+        if ( ! $this->coach_matches_gender( (int) ( $data['coach_id'] ?? 0 ), $selected_gender ) ) {
+            $this->errors[] = 'مربی انتخاب‌شده با جنسیت شما مطابقت ندارد.';
+            $this->posted = $data;
+            return;
+        }
 
         if ( $locked ) {
             foreach ( [ 'coach_id', 'club_id' ] as $k ) {
@@ -152,7 +158,25 @@ class BasicInfoForm extends BaseForm {
     /**
      * Coaches approved for selection.
      */
-    private function coach_options(): array {
+    private function coach_options( string $gender = '' ): array {
+        $gender = $this->normalize_gender( $gender );
+        $records = $this->coach_records();
+        $out = [ '' => '— انتخاب مربی —' ];
+        foreach ( $records as $id => $record ) {
+            if ( $gender !== '' && $record['gender'] !== $gender ) {
+                continue;
+            }
+            $out[ $id ] = $record['name'];
+        }
+        return $out;
+    }
+
+    /**
+     * Approved coaches indexed by user ID.
+     *
+     * @return array<int,array{name:string,gender:string}>
+     */
+    private function coach_records(): array {
         $current = get_current_user_id();
         $users   = get_users( [
             'role'       => 'coach',
@@ -160,14 +184,36 @@ class BasicInfoForm extends BaseForm {
             'meta_value' => 'approved',
             'fields'     => [ 'ID', 'display_name' ],
         ] );
-        $out = [ '' => '— انتخاب مربی —' ];
+        $out = [];
         foreach ( $users as $u ) {
             if ( (int) $u->ID === $current ) {
                 continue;
             }
-            $out[ $u->ID ] = $u->display_name;
+            $out[ (int) $u->ID ] = [
+                'name'   => (string) $u->display_name,
+                'gender' => $this->normalize_gender( (string) get_user_meta( (int) $u->ID, 'gender', true ) ),
+            ];
         }
         return $out;
+    }
+
+    private function coach_matches_gender( int $coach_id, string $gender ): bool {
+        if ( $coach_id <= 0 || $gender === '' ) {
+            return true;
+        }
+        $coach_gender = $this->normalize_gender( (string) get_user_meta( $coach_id, 'gender', true ) );
+        return $coach_gender !== '' && $coach_gender === $gender;
+    }
+
+    private function normalize_gender( string $gender ): string {
+        $gender = strtolower( trim( $gender ) );
+        if ( in_array( $gender, [ 'male', 'men' ], true ) ) {
+            return 'male';
+        }
+        if ( in_array( $gender, [ 'female', 'women' ], true ) ) {
+            return 'female';
+        }
+        return '';
     }
 
     /**
@@ -205,7 +251,8 @@ class BasicInfoForm extends BaseForm {
         $provinces = CityMap::get_provinces();
         $birth     = CityMap::get_cities( (string) $f['birth_province'] );
         $res       = CityMap::get_cities( (string) $f['residence_province'] );
-        $coaches   = $this->coach_options();
+        $coaches   = $this->coach_options( (string) $f['gender'] );
+        $coach_records = $this->coach_records();
         $club_data = $this->club_data();
         $clubs     = array_filter(
             $club_data,
@@ -221,6 +268,7 @@ class BasicInfoForm extends BaseForm {
         }
         if ( function_exists( 'wp_localize_script' ) ) {
             wp_localize_script( 'imao-edit-basic-info', 'CBIF_CLUBS', $clubs_map );
+            wp_localize_script( 'imao-edit-basic-info', 'CBIF_COACHES', $coach_records );
         }
 
         $html = '';

@@ -31,6 +31,7 @@ jQuery(function($){
   const $club  = $('#club_id');
   const initialCoach = $coach.val();
   const initialClub  = $club.val();
+  const coachPlaceholder = $coach.find('option[value=""]').first().text() || '— انتخاب مربی —';
 
   function clubTpl(state){
     if(!state.id){ return state.text; }
@@ -57,7 +58,29 @@ jQuery(function($){
     }
   }
 
-  fillClubs(initialCoach);
+  function filterCoaches(){
+    if (!$coach.length) { return; }
+    const gender = $('#gender').val();
+    const current = $coach.val();
+    $coach.empty();
+    $coach.append(new Option(coachPlaceholder, ''));
+    Object.entries(typeof CBIF_COACHES !== 'undefined' ? CBIF_COACHES : {}).forEach(([id, coach]) => {
+      if (!gender || coach.gender === gender) {
+        const selected = current && current === String(id);
+        $coach.append(new Option(coach.name, id, selected, selected));
+      }
+    });
+    if (current && !$coach.find('option[value="' + current.replace(/"/g, '\\"') + '"]').length) {
+      $coach.val('');
+      fillClubs('');
+    }
+    if($coach.data('select2')){
+      $coach.trigger('change.select2');
+    }
+  }
+
+  filterCoaches();
+  fillClubs($coach.val() || initialCoach);
   if($club.data('select2')){ $club.select2('destroy'); }
   $club.select2({ dir: 'rtl', width: 'resolve', templateResult: clubTpl, templateSelection: clubTpl });
   $coach.on('change', function(){ fillClubs(this.value); });
@@ -74,7 +97,11 @@ jQuery(function($){
           $wrap.show();
       }
     }
-    $('#gender').on('change', toggleMilitary);
+    $('#gender').on('change', function(){
+      toggleMilitary();
+      filterCoaches();
+      fillClubs($coach.val());
+    });
     toggleMilitary(); // run on load
 
     const sdData = (typeof IMAOSD !== 'undefined') ? IMAOSD : {};

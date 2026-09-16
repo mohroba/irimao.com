@@ -98,21 +98,32 @@ class SelfDeclarations {
     public function ajax_change_status(): void {
         check_ajax_referer( 'crm_selfdec_nonce', 'nonce' );
         if ( ! current_user_can( 'manage_options' ) ) {
-            wp_send_json_error();
+            wp_send_json_error( [ 'message' => 'Access denied' ], 403 );
         }
         $post_id  = intval( $_POST['post_id'] ?? 0 );
         $decision = sanitize_text_field( $_POST['decision'] ?? '' );
         $reason   = sanitize_text_field( $_POST['reason'] ?? '' );
-        if ( $decision === 'approve' ) {
-            wp_update_post( [ 'ID' => $post_id, 'post_status' => 'publish' ] );
-            delete_post_meta( $post_id, 'selfdec_rejection_reason' );
-        } elseif ( $decision === 'disapprove' ) {
-            wp_update_post( [ 'ID' => $post_id, 'post_status' => 'draft' ] );
-            update_post_meta( $post_id, 'selfdec_rejection_reason', $reason );
-        } else {
-            wp_send_json_error();
+        if ( ! $post_id || get_post_type( $post_id ) !== 'self_declaration' ) {
+            wp_send_json_error( [ 'message' => 'درخواست خوداظهاری معتبر نیست.' ], 404 );
         }
-        wp_send_json_success();
+        if ( $decision === 'approve' ) {
+            $updated = wp_update_post( [ 'ID' => $post_id, 'post_status' => 'publish' ], true );
+            if ( is_wp_error( $updated ) ) {
+                wp_send_json_error( [ 'message' => $updated->get_error_message() ], 500 );
+            }
+            delete_post_meta( $post_id, 'selfdec_rejection_reason' );
+            $status_label = 'تأیید شده';
+        } elseif ( $decision === 'disapprove' ) {
+            $updated = wp_update_post( [ 'ID' => $post_id, 'post_status' => 'draft' ], true );
+            if ( is_wp_error( $updated ) ) {
+                wp_send_json_error( [ 'message' => $updated->get_error_message() ], 500 );
+            }
+            update_post_meta( $post_id, 'selfdec_rejection_reason', $reason );
+            $status_label = 'رد شده';
+        } else {
+            wp_send_json_error( [ 'message' => 'تصمیم معتبر نیست.' ], 400 );
+        }
+        wp_send_json_success( [ 'status_label' => $status_label ] );
     }
 
     public function ajax_delete(): void {

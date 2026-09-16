@@ -20,8 +20,10 @@ namespace IMAOCustom\Forms {
         if ( isset( $GLOBALS['wp_update_user_error'] ) ) {
             return new WP_Error( 'error', $GLOBALS['wp_update_user_error'] );
         }
-        $GLOBALS['current_user_email'] = $args['user_email'];
-        \IMAOCustom\Helpers\update_user_meta( 0, 'billing_email', $args['user_email'] );
+        if ( isset( $args['user_email'] ) ) {
+            $GLOBALS['current_user_email'] = $args['user_email'];
+            \IMAOCustom\Helpers\update_user_meta( 0, 'billing_email', $args['user_email'] );
+        }
         return 1;
     }
     function is_wp_error( $thing ) { return $thing instanceof WP_Error; }
@@ -31,6 +33,7 @@ namespace IMAOCustom\Forms {
     function sanitize_email($str) { return $str; }
     function is_email($str) { return strpos($str, '@') !== false; }
     function wp_nonce_field($action, $name, $referer = true, $echo = true) { return '<input type="hidden" name="' . $name . '" value="nonce">'; }
+    function clean_user_cache($uid) { return true; }
     function __($text, $domain = 'default') { return $text; }
     function esc_attr($text) { return $text; }
     function esc_html($text) { return $text; }
@@ -45,6 +48,9 @@ namespace IMAOCustom\Helpers {
     $GLOBALS['user_meta'] = [];
     if (!function_exists(__NAMESPACE__.'\\get_user_meta')) {
         function get_user_meta($uid, $key, $single = true) {
+            if ( isset( $GLOBALS['user_meta_by_user'][ $uid ][ $key ] ) ) {
+                return $GLOBALS['user_meta_by_user'][ $uid ][ $key ];
+            }
             return $GLOBALS['user_meta'][$key] ?? '';
         }
     }
@@ -55,7 +61,7 @@ namespace IMAOCustom\Helpers {
 
 namespace {
     function wp_localize_script($handle, $name, $data) {
-        if ($name === 'CBIF_CLUBS') {
+        if ( in_array( $name, [ 'CBIF_CLUBS', 'CBIF_COACHES' ], true ) ) {
             $GLOBALS['localized_scripts'][$name] = $data;
         }
         return true;
@@ -74,6 +80,7 @@ class BasicInfoFormSubmissionTest extends TestCase {
         $_SERVER['REQUEST_METHOD']  = 'GET';
         unset($GLOBALS['get_users_return'], $GLOBALS['get_posts_return']);
         $GLOBALS['post_meta'] = [];
+        $GLOBALS['user_meta_by_user'] = [];
         $GLOBALS['localized_scripts'] = [];
     }
 
@@ -178,6 +185,8 @@ class BasicInfoFormSubmissionTest extends TestCase {
 
     public function test_coach_select_excludes_current_user(): void {
         $_SERVER['REQUEST_METHOD'] = 'GET';
+        $GLOBALS['user_meta']['gender'] = 'male';
+        $GLOBALS['user_meta_by_user'][2]['gender'] = 'male';
         $GLOBALS['get_users_return'] = [
             (object) ['ID' => 1, 'display_name' => 'خودم'],
             (object) ['ID' => 2, 'display_name' => 'مربی دیگر'],
@@ -188,6 +197,39 @@ class BasicInfoFormSubmissionTest extends TestCase {
         $this->assertNotEmpty($m[1] ?? '');
         $this->assertStringNotContainsString('value="1"', $m[1]);
         $this->assertStringContainsString('value="2"', $m[1]);
+    }
+
+    public function test_coach_select_filters_by_user_gender(): void {
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $GLOBALS['user_meta']['gender'] = 'female';
+        $GLOBALS['user_meta_by_user'][2]['gender'] = 'male';
+        $GLOBALS['user_meta_by_user'][3]['gender'] = 'female';
+        $GLOBALS['get_users_return'] = [
+            (object) ['ID' => 2, 'display_name' => 'مربی آقا'],
+            (object) ['ID' => 3, 'display_name' => 'مربی بانو'],
+        ];
+
+        $form = new BasicInfoForm();
+        $html = $form->render();
+        preg_match('/<select id="coach_id"[^>]*>(.*?)<\/select>/s', $html, $m);
+        $this->assertStringNotContainsString('value="2"', $m[1]);
+        $this->assertStringContainsString('value="3"', $m[1]);
+        $this->assertSame('female', $GLOBALS['localized_scripts']['CBIF_COACHES'][3]['gender'] ?? '');
+    }
+
+    public function test_submission_rejects_coach_gender_mismatch(): void {
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+        $data = $this->validPostData();
+        $data['gender'] = 'female';
+        $data['coach_id'] = '2';
+        $_POST = $data;
+        $GLOBALS['user_meta_by_user'][2]['gender'] = 'male';
+
+        $form = new BasicInfoForm();
+        $html = $form->render();
+
+        $this->assertStringContainsString('مربی انتخاب‌شده با جنسیت شما مطابقت ندارد.', $html);
+        $this->assertArrayNotHasKey('coach_id', $GLOBALS['user_meta']);
     }
 
     public function test_club_mapping_localized(): void {
