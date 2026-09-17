@@ -5,6 +5,7 @@ namespace IMAOCustom\Services\Admin;
 class Settings
 {
     public const OPTION_ADD_TO_CART_MESSAGE = 'imao_enable_add_to_cart_message';
+    public const OPTION_SHOW_COMPETITION_CARD_BUTTON = 'imao_show_competition_card_button';
 
     public function register(): void
     {
@@ -36,6 +37,15 @@ class Settings
                 'sanitize_callback' => [$this, 'sanitize_checkbox'],
             ]
         );
+        register_setting(
+            'imao_plugin_settings',
+            self::OPTION_SHOW_COMPETITION_CARD_BUTTON,
+            [
+                'type'              => 'boolean',
+                'default'           => true,
+                'sanitize_callback' => [$this, 'sanitize_checkbox'],
+            ]
+        );
 
         add_settings_section(
             'imao_woocommerce_messages',
@@ -51,6 +61,21 @@ class Settings
             'imao-plugin-settings',
             'imao_woocommerce_messages'
         );
+
+        add_settings_section(
+            'imao_competition_cards',
+            'کارت مسابقه',
+            '__return_false',
+            'imao-plugin-settings'
+        );
+
+        add_settings_field(
+            self::OPTION_SHOW_COMPETITION_CARD_BUTTON,
+            'دکمه دانلود / چاپ کارت',
+            [$this, 'render_competition_card_button_field'],
+            'imao-plugin-settings',
+            'imao_competition_cards'
+        );
     }
 
     public function sanitize_checkbox($value): string
@@ -61,6 +86,11 @@ class Settings
     public function is_add_to_cart_message_enabled(): bool
     {
         return get_option(self::OPTION_ADD_TO_CART_MESSAGE, '0') === '1';
+    }
+
+    public function is_competition_card_button_visible(): bool
+    {
+        return get_option(self::OPTION_SHOW_COMPETITION_CARD_BUTTON, '1') === '1';
     }
 
     public function configure_add_to_cart_message(): void
@@ -90,6 +120,17 @@ class Settings
         echo ' نمایش پیام استاندارد ووکامرس پس از افزودن محصول به سبد خرید';
         echo '</label>';
         echo '<p class="description">این گزینه به‌صورت پیش‌فرض غیرفعال است.</p>';
+    }
+
+    public function render_competition_card_button_field(): void
+    {
+        $visible = $this->is_competition_card_button_visible();
+        echo '<input type="hidden" name="' . esc_attr(self::OPTION_SHOW_COMPETITION_CARD_BUTTON) . '" value="0">';
+        echo '<label for="' . esc_attr(self::OPTION_SHOW_COMPETITION_CARD_BUTTON) . '">';
+        echo '<input type="checkbox" id="' . esc_attr(self::OPTION_SHOW_COMPETITION_CARD_BUTTON) . '" name="' . esc_attr(self::OPTION_SHOW_COMPETITION_CARD_BUTTON) . '" value="1" ' . checked($visible, true, false) . '>';
+        echo ' نمایش دکمهٔ «دانلود / چاپ کارت» در پنل ورزشکار';
+        echo '</label>';
+        echo '<p class="description">این گزینه به‌صورت پیش‌فرض فعال است و فقط نمایش دکمه را کنترل می‌کند؛ صدور کارت و لینک اعتبارسنجی حذف نمی‌شود.</p>';
     }
 
     public function render_page(): void

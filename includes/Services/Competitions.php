@@ -8,6 +8,7 @@ use IMAOCustom\Helpers\AgeCategory;
 use IMAOCustom\Helpers\CompetitionTypeAssignments;
 use IMAOCustom\Helpers\UserMeta;
 use IMAOCustom\Services\Widgets\CompetitionCountdownWidget;
+use IMAOCustom\Services\Admin\Settings;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use WC_Product_Simple;
@@ -1510,9 +1511,9 @@ class Competitions
                         <td><?php echo wc_price($r['amount']); ?></td>
                         <td><?php echo esc_html($r['status']); ?></td>
                         <td><a href="<?php echo esc_url('/my-account/competition-details/?competition_id=' . $cid); ?>">جزئیات</a>
-                            <?php if ( $r['card_ready'] ) : ?>
+                            <?php if ( $r['card_ready'] && (new Settings())->is_competition_card_button_visible() ) : ?>
                                 | <a class="button" style="padding:4px 8px;font-size:11px;line-height:1.5" target="_blank" rel="noopener" href="<?php echo esc_url( $r['card_url'] ); ?>">دانلود / چاپ کارت</a>
-                            <?php else : ?>
+                            <?php elseif ( ! $r['card_ready'] && (new Settings())->is_competition_card_button_visible() ) : ?>
                                 <span title="کارت پس از پرداخت موفق صادر می‌شود."> | کارت در انتظار پرداخت موفق</span>
                             <?php endif; ?>
                             <?php if ( get_post_meta( $cid, '_imao_competition_bracket', true ) ) : ?>

@@ -16,6 +16,8 @@ class AdminSettingsTest extends TestCase
     protected function setUp(): void
     {
         $GLOBALS['test_admin_options'][Settings::OPTION_ADD_TO_CART_MESSAGE] = '0';
+        $GLOBALS['test_admin_options'][Settings::OPTION_SHOW_COMPETITION_CARD_BUTTON] = '1';
+        $GLOBALS['test_currency'] = '0';
         $GLOBALS['filters']['wc_add_to_cart_message_html'] = [];
     }
 
@@ -38,7 +40,19 @@ class AdminSettingsTest extends TestCase
     public function test_enabled_option_is_detected(): void
     {
         $GLOBALS['test_admin_options'][Settings::OPTION_ADD_TO_CART_MESSAGE] = '1';
+        $GLOBALS['test_currency'] = '1';
 
         $this->assertTrue((new Settings())->is_add_to_cart_message_enabled());
+    }
+
+    public function test_competition_card_button_visibility_option_is_detected(): void
+    {
+        $settings = new Settings();
+        $GLOBALS['test_currency'] = '1';
+        $this->assertTrue($settings->is_competition_card_button_visible());
+
+        $GLOBALS['test_admin_options'][Settings::OPTION_SHOW_COMPETITION_CARD_BUTTON] = '0';
+        $GLOBALS['test_currency'] = '0';
+        $this->assertFalse($settings->is_competition_card_button_visible());
     }
 }

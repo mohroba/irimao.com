@@ -7,6 +7,7 @@ use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
 use IMAOCustom\Helpers\CityMap;
+use IMAOCustom\Helpers\Date;
 use WC_Order;
 use WC_Order_Item_Product;
 use WP_Post;
@@ -191,7 +192,9 @@ class CompetitionCards {
         $user = get_userdata( $user_id );
         $province_code = (string) get_user_meta( $user_id, 'residence_province', true );
         $province = CityMap::get_provinces()[ $province_code ] ?? $province_code;
-        $city = (string) get_user_meta( $user_id, 'residence_city', true );
+        $national_id = (string) get_user_meta( $user_id, 'national_id', true );
+        $start_date = (string) get_post_meta( $competition_id, 'start_date', true );
+        $end_date = (string) get_post_meta( $competition_id, 'end_date', true );
         $background = (string) get_post_meta( $competition_id, 'competition_card_background', true );
         if ( $background === '' ) $background = plugin_dir_url( IMAO_PLUGIN_FILE ) . 'assets/images/competition-card-template.png';
         $verification_url = self::verification_url( (int) $order->get_id(), (int) $item->get_id(), $user_id );
@@ -202,15 +205,47 @@ class CompetitionCards {
             : ( $registered_weight ?: '—' );
         return [
             'name' => trim( $first . ' ' . $last ) ?: ( $user ? $user->display_name : '' ),
+            'national_id' => $national_id,
+            'competition_dates' => self::format_competition_date_range( $start_date, $end_date ),
             'insurance_date' => (string) $item->get_meta( self::ITEM_META_SPORTS_INSURANCE_EXPIRY, true ) ?: (string) $item->get_meta( self::META_INSURANCE_DATE, true ),
             'weight' => $weight,
             'age' => (string) $item->get_meta( 'رده سنی', true ),
-            'city' => trim( $province . ( $province && $city ? ' - ' : '' ) . $city ),
+            'province' => $province,
             'photo' => (string) get_user_meta( $user_id, 'personal_photo', true ),
             'background' => esc_url_raw( $background ),
             'verification_url' => $verification_url,
             'qr_data_uri' => self::qr_data_uri( $verification_url ),
         ];
+    }
+
+    public static function format_competition_date_range( string $start, string $end ): string {
+        $start = self::format_card_date( $start );
+        $end = self::format_card_date( $end );
+        if ( $start !== '' && $end !== '' ) {
+            return $start . ' لغایت ' . $end;
+        }
+        return $start ?: $end;
+    }
+
+    private static function format_card_date( string $date ): string {
+        $date = trim( str_replace( '-', '/', $date ) );
+        if ( $date === '' ) {
+            return '';
+        }
+        $parts = Date::split( $date );
+        if ( count( $parts ) !== 3 || ! ctype_digit( str_replace( ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'], range(0, 9), $parts[0] ) ) ) {
+            return self::persian_digits( $date );
+        }
+        $month_names = [1 => 'فروردین', 2 => 'اردیبهشت', 3 => 'خرداد', 4 => 'تیر', 5 => 'مرداد', 6 => 'شهریور', 7 => 'مهر', 8 => 'آبان', 9 => 'آذر', 10 => 'دی', 11 => 'بهمن', 12 => 'اسفند'];
+        $month = (int) $parts[1];
+        if ( ! isset( $month_names[ $month ] ) ) {
+            return self::persian_digits( $date );
+        }
+        return self::persian_digits( ltrim( $parts[2], '0' ) ?: '0' ) . ' ' . $month_names[ $month ] . ' ' . self::persian_digits( $parts[0] );
+    }
+
+    private static function persian_digits( string $value ): string {
+        return strtr( $value, ['0'=>'۰','1'=>'۱','2'=>'۲','3'=>'۳','4'=>'۴','5'=>'۵','6'=>'۶','7'=>'۷','8'=>'۸','9'=>'۹'] );
     }
 
     private static function verification_token( int $order_id, int $item_id, int $user_id ): string {
@@ -245,14 +280,16 @@ class CompetitionCards {
         ob_start(); ?>
 <!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>کارت مسابقه</title>
 <style>
-*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#202124;font-family:Tahoma,Arial,sans-serif}.toolbar{position:sticky;top:0;z-index:2;padding:10px;text-align:center;background:#fff}.toolbar button{padding:9px 24px;border:0;border-radius:5px;background:#17134b;color:#fff;font:700 15px Tahoma;cursor:pointer}.page{display:flex;justify-content:center;padding:18px}.card{position:relative;width:min(92vw,574px);aspect-ratio:881/1280;background:center/100% 100% no-repeat;overflow:hidden;box-shadow:0 8px 30px #0008}.field{position:absolute;right:8.9%;width:51.8%;height:4.3%;display:flex;align-items:center;border-radius:999px;background:#fff;color:#050505;padding:0 3%;font-weight:700;font-size:clamp(12px,2.4vw,21px);line-height:1}.field b{font-size:.55em;margin-left:1.4%;white-space:nowrap}.field span{flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.name{top:32.5%}.insurance{top:37.35%}.weight{top:42.25%}.age{top:47.15%}.city{top:51.7%}.photo{position:absolute;left:9.1%;top:33.35%;width:28.5%;height:23.4%;background:#fff;border:3px solid #070707;object-fit:cover}.qr{position:absolute;left:9.1%;top:57.45%;width:26.3%;height:18.2%;display:block;background:#fff;object-fit:contain}.print-note{display:none}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#202124;font-family:Tahoma,Arial,sans-serif}.toolbar{position:sticky;top:0;z-index:2;padding:10px;text-align:center;background:#fff}.toolbar button{padding:8px 20px;border:0;border-radius:5px;background:#17134b;color:#fff;font:700 14px Tahoma;cursor:pointer}.page{display:flex;justify-content:center;padding:18px}.card{position:relative;width:min(92vw,574px);aspect-ratio:565/776;background:center/100% 100% no-repeat;overflow:hidden;box-shadow:0 8px 30px #0008}.competition-date{position:absolute;z-index:2;top:35.5%;left:2%;width:70%;height:7.5%;display:flex;align-items:center;justify-content:center;background:#fff;color:#c32921;font-size:clamp(12px,2.7vw,20px);font-weight:700;white-space:nowrap}.field{position:absolute;z-index:3;right:27%;width:26%;height:4.3%;display:flex;align-items:center;color:#050505;padding:0;font-weight:700;font-size:clamp(11px,2.1vw,18px);line-height:1}.field b{display:none}.field span{width:100%;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.name{top:47.5%}.national-id{top:53.0%}.province{top:58.5%}.weight{top:64.0%}.age{top:69.5%}.insurance{top:75.0%}.photo{position:absolute;z-index:3;left:3.5%;top:45.2%;width:28%;height:24%;background:#fff;border:3px solid #070707;object-fit:cover}.qr{position:absolute;z-index:3;left:2.3%;top:86.1%;width:17%;height:10.5%;display:block;background:#fff;object-fit:contain}.print-note{display:none}
 @page{size:A4 portrait;margin:0}@media print{html,body{width:100%;height:100%;background:#fff}.toolbar{display:none}.page{width:100%;height:100%;padding:0;align-items:center}.card{height:100vh;width:auto;max-width:100vw;box-shadow:none;print-color-adjust:exact;-webkit-print-color-adjust:exact}}
 </style></head><body><div class="toolbar"><button type="button" onclick="window.print()">چاپ / ذخیره PDF</button></div><main class="page"><section class="card" style="background-image:url('<?php echo esc_url( $data['background'] ); ?>')">
-<div class="field name"><b>اسم و فامیل</b><span><?php echo $e( $data['name'] ); ?></span></div>
-<div class="field insurance"><b>پایان اعتبار بیمه</b><span><?php echo $e( $data['insurance_date'] ); ?></span></div>
+<div class="competition-date"><?php echo $e( $data['competition_dates'] ); ?></div>
+<div class="field name"><b>نام و نام خانوادگی</b><span><?php echo $e( $data['name'] ); ?></span></div>
+<div class="field national-id"><b>کد ملی</b><span><?php echo $e( $data['national_id'] ); ?></span></div>
+<div class="field province"><b>استان</b><span><?php echo $e( $data['province'] ); ?></span></div>
 <div class="field weight"><b>وزن</b><span><?php echo $e( $data['weight'] ); ?></span></div>
 <div class="field age"><b>رده سنی</b><span><?php echo $e( $data['age'] ); ?></span></div>
-<div class="field city"><b>شهر</b><span><?php echo $e( $data['city'] ); ?></span></div>
+<div class="field insurance"><b>تاریخ اعتبار بیمه</b><span><?php echo $e( $data['insurance_date'] ); ?></span></div>
 <?php if ( $data['photo'] !== '' ) : ?><img class="photo" src="<?php echo esc_url( $data['photo'] ); ?>" alt="عکس ورزشکار"><?php else : ?><div class="photo"></div><?php endif; ?>
 <img class="qr" src="<?php echo esc_attr( $data['qr_data_uri'] ); ?>" alt="QR استعلام اصالت کارت">
 </section></main><script>window.addEventListener('load',function(){document.documentElement.classList.add('ready');if(!new URLSearchParams(location.search).has('preview'))window.setTimeout(function(){window.print()},250)});</script></body></html>

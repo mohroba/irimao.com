@@ -39,5 +39,12 @@ namespace {
             $this->assertSame( '۱۴۰۵/۰۵/۱۷', $method->invoke( $service, '۱۴۰۵/۰۵/۱۷' ) );
             $this->assertSame( '', $method->invoke( $service, '<script>alert(1)</script>' ) );
         }
+
+        public function test_competition_date_range_is_formatted_for_the_card(): void {
+            $this->assertSame(
+                '۳۱ شهریور ۱۴۰۵ لغایت ۳ مهر ۱۴۰۵',
+                CompetitionCards::format_competition_date_range( '۱۴۰۵/۰۶/۳۱', '1405/07/03' )
+            );
+        }
     }
 }
