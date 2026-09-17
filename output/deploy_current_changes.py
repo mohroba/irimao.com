@@ -60,6 +60,7 @@ elif "--weighin-basic-admin-displayname" in sys.argv:
         "includes/Services/Registration.php",
     ]
 elif "--competition-card-templates" in sys.argv:
+    BACKUP_ROOT = LOCAL_ROOT / "output" / "production-backups" / "competition-card-templates-14050626"
     FILES = [
         "includes/Plugin.php",
         "includes/Services/CompetitionCardTemplates.php",
