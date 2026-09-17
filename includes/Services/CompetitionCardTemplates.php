@@ -15,6 +15,7 @@ class CompetitionCardTemplates {
     public function register(): void {
         add_action( 'init', [ $this, 'register_post_type' ] );
         add_action( 'add_meta_boxes', [ $this, 'add_meta_box' ] );
+        add_action( 'add_meta_boxes_' . self::POST_TYPE, [ $this, 'add_template_meta_boxes' ] );
         add_action( 'save_post_competition', [ $this, 'save_competition_template' ], 15, 2 );
         add_shortcode( 'imao_card_user', [ $this, 'user_shortcode' ] );
         add_shortcode( 'imao_card_competition', [ $this, 'competition_shortcode' ] );
@@ -49,6 +50,33 @@ class CompetitionCardTemplates {
 
     public function add_meta_box(): void {
         add_meta_box( 'imao_competition_card_template', 'قالب کارت مسابقه', [ $this, 'render_competition_template_box' ], 'competition', 'side', 'default' );
+    }
+
+    public function add_template_meta_boxes(): void {
+        add_meta_box( 'imao_competition_card_shortcodes', 'شورت‌کدهای کارت مسابقه', [ $this, 'render_shortcodes_box' ], self::POST_TYPE, 'side', 'high' );
+    }
+
+    public function render_shortcodes_box(): void {
+        $shortcodes = [
+            '[imao_card_user field="full_name"]'              => 'نام ورزشکار',
+            '[imao_card_user field="national_id"]'            => 'کد ملی (هر کلید متای کاربر قابل استفاده است)',
+            '[imao_card_user field="personal_photo"]'         => 'آدرس عکس پرسنلی',
+            '[imao_card_competition field="title"]'           => 'عنوان مسابقه',
+            '[imao_card_competition field="date_range"]'      => 'بازه تاریخ مسابقه',
+            '[imao_card_competition field="competition_code"]' => 'جزئیات مسابقه (هر کلید متای مسابقه)',
+            '[imao_card_registration field="weight"]'         => 'وزن یا دسته وزنی',
+            '[imao_card_registration field="age_category"]'   => 'رده سنی',
+            '[imao_card_qr]'                                    => 'تصویر QR استعلام',
+            '[imao_card_verify_url]'                            => 'آدرس استعلام',
+        ];
+
+        echo '<p>این شورت‌کدها را در ویرایشگر، Elementor یا صفحه‌ساز خود قرار دهید. خروجی فیلدها فقط متن یا آدرس تصویر است.</p>';
+        echo '<dl style="margin:0">';
+        foreach ( $shortcodes as $shortcode => $description ) {
+            echo '<dt><code style="display:block;direction:ltr;white-space:normal">' . esc_html( $shortcode ) . '</code></dt>';
+            echo '<dd style="margin:3px 0 12px;color:#646970">' . esc_html( $description ) . '</dd>';
+        }
+        echo '</dl>';
     }
 
     public function render_competition_template_box( WP_Post $post ): void {
@@ -163,15 +191,12 @@ class CompetitionCardTemplates {
     }
 
     public function qr_shortcode( $atts = [] ): string {
-        $atts = shortcode_atts( [ 'type' => 'url', 'alt' => 'QR استعلام اصالت کارت', 'class' => 'imao-card-qr' ], (array) $atts, 'imao_card_qr' );
+        $atts = shortcode_atts( [ 'alt' => 'QR استعلام اصالت کارت', 'class' => 'imao-card-qr' ], (array) $atts, 'imao_card_qr' );
         $src = $this->context_value( 'qr_data_uri' );
         if ( $src === '' ) {
             return '';
         }
-        if ( (string) $atts['type'] === 'image' || (string) $atts['type'] === 'img' ) {
-            return '<img src="' . esc_attr( $src ) . '" alt="' . esc_attr( (string) $atts['alt'] ) . '" class="' . esc_attr( (string) $atts['class'] ) . '">';
-        }
-        return esc_url( $src );
+        return '<img src="' . esc_attr( $src ) . '" alt="' . esc_attr( (string) $atts['alt'] ) . '" class="' . esc_attr( (string) $atts['class'] ) . '">';
     }
 
     public function verify_url_shortcode(): string {
@@ -194,6 +219,12 @@ class CompetitionCardTemplates {
         if ( $field === 'email' || $field === 'user_email' ) {
             return $user ? (string) $user->user_email : '';
         }
+        if ( $field === 'login' || $field === 'user_login' ) {
+            return $user ? (string) $user->user_login : '';
+        }
+        if ( $field === 'url' || $field === 'user_url' ) {
+            return $user ? (string) $user->user_url : '';
+        }
         if ( $field === 'full_name' || $field === 'name' ) {
             $first = (string) get_user_meta( $user_id, 'first_name_fa', true );
             $last = (string) get_user_meta( $user_id, 'last_name_fa', true );
@@ -202,6 +233,10 @@ class CompetitionCardTemplates {
         if ( $field === 'province' ) {
             $province_code = (string) get_user_meta( $user_id, 'residence_province', true );
             return CityMap::get_provinces()[ $province_code ] ?? $province_code;
+        }
+        if ( $field === 'profile_image' || $field === 'profile_photo' || $field === 'avatar' ) {
+            $photo = (string) get_user_meta( $user_id, 'personal_photo', true );
+            return $photo !== '' ? $photo : ( function_exists( 'get_avatar_url' ) ? (string) get_avatar_url( $user_id ) : '' );
         }
         return (string) get_user_meta( $user_id, $field, true );
     }
@@ -218,6 +253,9 @@ class CompetitionCardTemplates {
                 (string) get_post_meta( $competition_id, 'start_date', true ),
                 (string) get_post_meta( $competition_id, 'end_date', true )
             );
+        }
+        if ( $field === 'url' || $field === 'permalink' ) {
+            return (string) get_permalink( $competition_id );
         }
         return (string) get_post_meta( $competition_id, $field, true );
     }
