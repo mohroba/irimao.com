@@ -8,6 +8,7 @@ use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
 use IMAOCustom\Helpers\CityMap;
 use IMAOCustom\Helpers\Date;
+use IMAOCustom\Services\CompetitionCardTemplates;
 use WC_Order;
 use WC_Order_Item_Product;
 use WP_Post;
@@ -150,6 +151,11 @@ class CompetitionCards {
         $data = $this->card_data( $order, $item, $competition_id );
         nocache_headers();
         header( 'Content-Type: text/html; charset=' . get_bloginfo( 'charset' ) );
+        $template_id = CompetitionCardTemplates::selected_template_id( $competition_id );
+        if ( $template_id > 0 ) {
+            echo CompetitionCardTemplates::render_document( $template_id, $data );
+            exit;
+        }
         echo $this->card_document( $data );
         exit;
     }
@@ -205,9 +211,17 @@ class CompetitionCards {
             : ( $registered_weight ?: '—' );
         return [
             'name' => trim( $first . ' ' . $last ) ?: ( $user ? $user->display_name : '' ),
+            'user_id' => (string) $user_id,
+            'order_id' => (string) $order->get_id(),
+            'item_id' => (string) $item->get_id(),
+            'competition_id' => (string) $competition_id,
+            'competition_title' => (string) get_the_title( $competition_id ),
+            'start_date' => $start_date,
+            'end_date' => $end_date,
             'national_id' => $national_id,
             'competition_dates' => self::format_competition_date_range( $start_date, $end_date ),
             'insurance_date' => (string) $item->get_meta( self::ITEM_META_SPORTS_INSURANCE_EXPIRY, true ) ?: (string) $item->get_meta( self::META_INSURANCE_DATE, true ),
+            'federation_membership_expiry' => (string) $item->get_meta( self::ITEM_META_FEDERATION_MEMBERSHIP_EXPIRY, true ),
             'weight' => $weight,
             'age' => (string) $item->get_meta( 'رده سنی', true ),
             'province' => $province,
@@ -280,7 +294,7 @@ class CompetitionCards {
         ob_start(); ?>
 <!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>کارت مسابقه</title>
 <style>
-*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#202124;font-family:Tahoma,Arial,sans-serif}.toolbar{position:sticky;top:0;z-index:2;padding:10px;text-align:center;background:#fff}.toolbar button{padding:8px 20px;border:0;border-radius:5px;background:#17134b;color:#fff;font:700 14px Tahoma;cursor:pointer}.page{display:flex;justify-content:center;padding:18px}.card{position:relative;width:min(92vw,574px);aspect-ratio:565/776;background:center/100% 100% no-repeat;overflow:hidden;box-shadow:0 8px 30px #0008}.competition-date{position:absolute;z-index:2;top:39.5%;left:2%;width:86%;height:6%;display:flex;align-items:center;justify-content:flex-end;color:#c32921;font-size:clamp(12px,2.7vw,20px);font-weight:700;white-space:nowrap}.field{position:absolute;z-index:3;right:40%;width:22%;height:4.3%;display:flex;align-items:center;color:#050505;padding:0;font-weight:700;font-size:clamp(11px,2.1vw,18px);line-height:1}.field b{display:none}.field span{width:100%;text-align:right;white-space:nowrap}.name{top:48.85%;right:40%;width:30%}.national-id{top:54.85%}.province{top:60.85%}.weight{top:66.85%}.age{top:72.85%}.insurance{top:78.85%;right:37%;width:15%}.photo{position:absolute;z-index:3;left:3.5%;top:45.2%;width:28%;height:24%;background:#fff;border:3px solid #070707;object-fit:cover}.qr{position:absolute;z-index:3;left:2%;top:86%;width:15%;height:11%;display:block;background:#fff;object-fit:contain}.print-note{display:none}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#202124;font-family:Tahoma,Arial,sans-serif}.toolbar{position:sticky;top:0;z-index:2;padding:10px;text-align:center;background:#fff}.toolbar button{padding:8px 20px;border:0;border-radius:5px;background:#17134b;color:#fff;font:700 14px Tahoma;cursor:pointer}.page{display:flex;justify-content:center;padding:18px}.card{position:relative;width:min(92vw,574px);aspect-ratio:565/776;background:center/100% 100% no-repeat;overflow:hidden;box-shadow:0 8px 30px #0008}.competition-date{position:absolute;z-index:4;top:35.5%;left:2%;width:86%;height:7.5%;display:flex;align-items:center;justify-content:center;background:#fff;color:#c32921;font-size:clamp(12px,2.7vw,20px);font-weight:700;white-space:nowrap}.field{position:absolute;z-index:3;right:40%;width:22%;height:4.3%;display:flex;align-items:center;color:#050505;padding:0;font-weight:700;font-size:clamp(11px,2.1vw,18px);line-height:1}.field b{display:none}.field span{width:100%;text-align:right;white-space:nowrap}.name{top:48.85%;right:40%;width:30%}.national-id{top:54.85%}.province{top:60.85%}.weight{top:66.85%}.age{top:72.85%}.insurance{top:78.85%;right:37%;width:15%}.photo{position:absolute;z-index:3;left:3.5%;top:45.2%;width:28%;height:24%;background:#fff;border:3px solid #070707;object-fit:cover}.qr{position:absolute;z-index:3;left:2%;top:86%;width:15%;height:11%;display:block;background:#fff;object-fit:contain}.print-note{display:none}
 @page{size:A4 portrait;margin:0}@media print{html,body{width:100%;height:100%;background:#fff}.toolbar{display:none}.page{width:100%;height:100%;padding:0;align-items:center}.card{height:100vh;width:auto;max-width:100vw;box-shadow:none;print-color-adjust:exact;-webkit-print-color-adjust:exact}}
 </style></head><body><div class="toolbar"><button type="button" onclick="window.print()">چاپ / ذخیره PDF</button></div><main class="page"><section class="card" style="background-image:url('<?php echo esc_url( $data['background'] ); ?>')">
 <div class="competition-date"><?php echo $e( $data['competition_dates'] ); ?></div>

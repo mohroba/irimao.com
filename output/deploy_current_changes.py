@@ -59,6 +59,13 @@ elif "--weighin-basic-admin-displayname" in sys.argv:
         "includes/Services/CompetitionCards.php",
         "includes/Services/Registration.php",
     ]
+elif "--competition-card-templates" in sys.argv:
+    FILES = [
+        "includes/Plugin.php",
+        "includes/Services/CompetitionCardTemplates.php",
+        "includes/Services/CompetitionCards.php",
+        "includes/Services/Competitions.php",
+    ]
 
 
 def ensure_remote_dir(ftp, remote_dir):

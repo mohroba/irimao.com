@@ -46,6 +46,7 @@ use IMAOCustom\Services\OrderStatus;
 use IMAOCustom\Services\ProvinceRepresentatives;
 use IMAOCustom\Services\PayoutManager;
 use IMAOCustom\Services\CompetitionCards;
+use IMAOCustom\Services\CompetitionCardTemplates;
 use IMAOCustom\Services\CompetitionBrackets;
 use IMAOCustom\ServiceManager;
 
@@ -103,6 +104,7 @@ class Plugin {
         LoginTracking::class,
         RoleCleanup::class,
         ProvinceRepresentatives::class,
+        CompetitionCardTemplates::class,
     ];
 
     private function __construct() {
