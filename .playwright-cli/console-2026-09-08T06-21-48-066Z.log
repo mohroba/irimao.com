@@ -1,0 +1,7 @@
+[    1507ms] [LOG] JQMIGRATE: Migrate is installed with logging active, version 3.4.1 @ https://irimao.com/wp-includes/js/jquery/jquery-migrate.js?ver=3.4.1:103
+[    1564ms] [INFO] Slow network is detected. See https://www.chromestatus.com/feature/5636954674692096 for more details. Fallback font will be used while loading: https://irimao.com/wp-content/uploads/Vazirmatn-SemiBold.woff2 @ https://irimao.com/competition-registration/:724
+[    3326ms] [WARNING] JQMIGRATE: jQuery.fn.change() event shorthand is deprecated @ https://irimao.com/wp-includes/js/jquery/jquery-migrate.js?ver=3.4.1:135
+[    3326ms] [WARNING] JQMIGRATE: jQuery.fn.click() event shorthand is deprecated @ https://irimao.com/wp-includes/js/jquery/jquery-migrate.js?ver=3.4.1:135
+[    3377ms] [WARNING] JQMIGRATE: jQuery.trim is deprecated; use String.prototype.trim @ https://irimao.com/wp-includes/js/jquery/jquery-migrate.js?ver=3.4.1:135
+[    3443ms] [WARNING] JQMIGRATE: jQuery.fn.focus() event shorthand is deprecated @ https://irimao.com/wp-includes/js/jquery/jquery-migrate.js?ver=3.4.1:135
+[  209088ms] [WARNING] JQMIGRATE: Number-typed values are deprecated for jQuery.fn.css( "--menu-height", value ) @ https://irimao.com/wp-includes/js/jquery/jquery-migrate.js?ver=3.4.1:135

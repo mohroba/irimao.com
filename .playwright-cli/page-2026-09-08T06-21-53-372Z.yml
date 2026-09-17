@@ -1,0 +1,248 @@
+- generic [active] [ref=e1]:
+  - link "پرش به محتوا" [ref=e2] [cursor=pointer]:
+    - /url: "#content"
+  - generic [ref=e3]:
+    - banner:
+      - banner [ref=e4]:
+        - generic [ref=e7]:
+          - generic [ref=e9]:
+            - link [ref=e14] [cursor=pointer]:
+              - /url: https://irimao.com/
+              - img "PhotoRoom-20240702_002300.png" [ref=e15]
+            - navigation "منو" [ref=e20]:
+              - list [ref=e21]:
+                - listitem [ref=e22]:
+                  - link "صفحه اصلی" [ref=e23] [cursor=pointer]:
+                    - /url: https://irimao.com/
+                - listitem [ref=e24]:
+                  - link [ref=e25] [cursor=pointer]:
+                    - /url: "#"
+                    - text: دوره‌ها
+                    - button "تغییر وضعیت فهرست"
+                - listitem [ref=e29]:
+                  - link [ref=e30] [cursor=pointer]:
+                    - /url: "#"
+                    - text: مسابقات
+                    - button "تغییر وضعیت فهرست"
+                - listitem [ref=e34]:
+                  - link [ref=e35] [cursor=pointer]:
+                    - /url: "#"
+                    - text: رنکینگ
+                    - button "تغییر وضعیت فهرست"
+                - listitem [ref=e39]:
+                  - link [ref=e40] [cursor=pointer]:
+                    - /url: "#"
+                    - text: مربیان و باشگاه‌ها
+                    - button "تغییر وضعیت فهرست"
+                - listitem [ref=e44]:
+                  - link [ref=e45] [cursor=pointer]:
+                    - /url: https://irimao.com/contact-us/
+                    - text: تماس با ما
+                    - button "تغییر وضعیت فهرست"
+                - listitem [ref=e49]:
+                  - link [ref=e50] [cursor=pointer]:
+                    - /url: https://irimao.com/about-us/
+                    - text: درباره ما
+                    - button "تغییر وضعیت فهرست"
+                - listitem [ref=e54]:
+                  - link [ref=e55] [cursor=pointer]:
+                    - /url: https://irimao.com/news/
+                    - text: اخبار
+                    - button "تغییر وضعیت فهرست"
+                - listitem [ref=e59]:
+                  - link [ref=e60] [cursor=pointer]:
+                    - /url: "#"
+                    - text: بخش آموزش
+                    - button "تغییر وضعیت فهرست"
+                - listitem [ref=e64]:
+                  - link [ref=e65] [cursor=pointer]:
+                    - /url: https://irimao.com/store/
+                    - text: فروشگاه
+                    - button "تغییر وضعیت فهرست"
+            - link [ref=e74] [cursor=pointer]:
+              - /url: "#elementor-action%3Aaction%3Dpopup%3Aopen%26settings%3DeyJpZCI6IjEwODQiLCJ0b2dnbGUiOmZhbHNlfQ%3D%3D"
+            - generic [ref=e78]:
+              - generic [ref=e80]:
+                - button "0 تومان" [ref=e82] [cursor=pointer]:
+                  - generic [ref=e83]:
+                    - generic [ref=e84]: 0 تومان
+                    - generic [aria-hidden] [ref=e90]: 
+                - text: 
+              - link "ثبت نام/ورود" [ref=e94] [cursor=pointer]:
+                - /url: https://irimao.com/my-account/
+          - generic [ref=e102]:
+            - generic [ref=e103]: جدیدترین اخبار و اطلاعیه ها
+            - list [ref=e106]:
+              - listitem [ref=e107]:
+                - link "جلسه هم اندیشی داوران منتخب ، کمیته مهاجرین کیک‌بوکسینگ IMAO تاریخ 1405/05/09" [ref=e108] [cursor=pointer]:
+                  - /url: https://irimao.com/nwez-14050509/
+    - generic [ref=e111]:
+      - generic [ref=e114]:
+        - heading "ثبت نام مسابقات" [level=2] [ref=e119]
+        - list [ref=e124]:
+          - listitem [ref=e125]:
+            - generic [ref=e126]: صفحه اصلی
+          - listitem [ref=e127]:
+            - generic [ref=e131]: ثبت نام مسابقات
+      - generic [ref=e135]:
+        - heading "ثبت نام در مسابقات سازمان کیک بوکسینگ IMAO" [level=2] [ref=e138]: ثبت نام در مسابقاتسازمان کیک بوکسینگ IMAO
+        - paragraph [ref=e141]:
+          - strong [ref=e142]: "مهم :"
+          - text: جهت ثبت نام در مسابقات ابتدا می بایست در سایت عضو شده و بخش اطلاعات پایه را پر نموده و در بخش بارگزاری مستندات مدارک هویتی خود را بارگزاری نمایید و پس از آن مسابقه مدنظر خود را انتخاب نموده و در آن مسابقه شرکت نمایید.
+      - generic [ref=e146]:
+        - generic [ref=e147]: چگونه در مسابقات شرکت کنیم؟
+        - heading "مراحل ثبت نام و شرکت در مسابقات" [level=2] [ref=e154]
+        - generic [ref=e156]:
+          - generic [ref=e158]:
+            - heading "01" [level=2] [ref=e163]
+            - heading "ثبت نام در سایت" [level=3] [ref=e168]
+          - generic [ref=e170]:
+            - heading "02" [level=2] [ref=e173]
+            - heading "وارد کردن اطلاعات پایه" [level=3] [ref=e180]
+          - generic [ref=e182]:
+            - heading "03" [level=2] [ref=e185]
+            - heading "بارگزاری مستندات" [level=3] [ref=e192]
+          - generic [ref=e194]:
+            - heading "04" [level=2] [ref=e197]
+            - heading "ثبت نام در مسابقه" [level=3] [ref=e202]
+      - heading "لطفا از لیـست زیـر، مسابقه مورد نـظر خود را انتخـاب و بر روی آن کلیـک 👇 نمایید.👇" [level=2] [ref=e209]
+      - generic [ref=e211]:
+        - generic [ref=e212] [cursor=pointer]:
+          - heading "مسابقات قهرمانی کشور سبک کیک بوکسینگ IMAO >>آقایان<< چهار رده سنی تاریخ 1405/07/02" [level=2] [ref=e215]
+          - timer [ref=e219]:
+            - generic [ref=e221]:
+              - generic [ref=e222]: "15"
+              - generic [ref=e223]: روز
+            - generic [ref=e225]:
+              - generic [ref=e226]: "21"
+              - generic [ref=e227]: ساعت‌
+            - generic [ref=e229]:
+              - generic [ref=e230]: "28"
+              - generic [ref=e231]: دقیقه
+            - generic [ref=e233]:
+              - generic [ref=e234]: "08"
+              - generic [ref=e235]: ثانیه
+        - generic [ref=e236] [cursor=pointer]:
+          - heading "مسابقات هنرهای فردی و موزیکال فرم قهرمانی کشور سبک کیک بوکسینگ IMAO >>آقایان<< چهار رده سنی تاریخ 02 و 1405/07/03" [level=2] [ref=e239]
+          - timer [ref=e243]:
+            - generic [ref=e245]:
+              - generic [ref=e246]: "15"
+              - generic [ref=e247]: روز
+            - generic [ref=e249]:
+              - generic [ref=e250]: "21"
+              - generic [ref=e251]: ساعت‌
+            - generic [ref=e253]:
+              - generic [ref=e254]: "28"
+              - generic [ref=e255]: دقیقه
+            - generic [ref=e257]:
+              - generic [ref=e258]: "07"
+              - generic [ref=e259]: ثانیه
+        - generic [ref=e260] [cursor=pointer]:
+          - heading "مسابقات قهرمانی کشور سبک کیک بوکسینگ IMAO >>بانوان<< چهار رده سنی تاریخ 1405/07/01" [level=2] [ref=e263]
+          - timer [ref=e267]:
+            - generic [ref=e269]:
+              - generic [ref=e270]: "14"
+              - generic [ref=e271]: روز
+            - generic [ref=e273]:
+              - generic [ref=e274]: "21"
+              - generic [ref=e275]: ساعت‌
+            - generic [ref=e277]:
+              - generic [ref=e278]: "28"
+              - generic [ref=e279]: دقیقه
+            - generic [ref=e281]:
+              - generic [ref=e282]: "07"
+              - generic [ref=e283]: ثانیه
+        - generic [ref=e284] [cursor=pointer]:
+          - heading "مسابقات هنرهای فردی و موزیکال فرم قهرمانی کشور سبک کیک بوکسینگ IMAO >>بانوان<< چهار رده سنی تاریخ 1405/07/01" [level=2] [ref=e287]
+          - timer [ref=e291]:
+            - generic [ref=e293]:
+              - generic [ref=e294]: "14"
+              - generic [ref=e295]: روز
+            - generic [ref=e297]:
+              - generic [ref=e298]: "21"
+              - generic [ref=e299]: ساعت‌
+            - generic [ref=e301]:
+              - generic [ref=e302]: "28"
+              - generic [ref=e303]: دقیقه
+            - generic [ref=e305]:
+              - generic [ref=e306]: "07"
+              - generic [ref=e307]: ثانیه
+    - contentinfo [ref=e308]:
+      - generic [ref=e316]:
+        - generic [ref=e318]:
+          - generic [ref=e320]:
+            - heading "به خبرنامه ما بپیوندید" [level=3] [ref=e323]
+            - heading "جهت اطلاع از آخرین اخبار و برنامه دوره‌ها آموزشی فرم مقابل با پر نمایید." [level=6] [ref=e328]
+          - form "فرم جدید" [ref=e333]:
+            - generic [ref=e334]:
+              - generic [ref=e335]:
+                - generic [ref=e336] [cursor=pointer]: شماره تماس
+                - textbox "شماره تماس" [ref=e337]
+              - button "ارسال" [ref=e339] [cursor=pointer]
+        - generic [ref=e343]:
+          - generic [ref=e345]:
+            - link [ref=e348] [cursor=pointer]:
+              - /url: https://irimao.com/
+            - link [ref=e351] [cursor=pointer]:
+              - /url: https://trustseal.enamad.ir/?id=540218&Code=gW39633XZ2gI7gqBy1zRjeUtrsnoPd6S
+          - generic [ref=e353]:
+            - heading "دسترسی سریع" [level=4] [ref=e356]
+            - list [ref=e363]:
+              - listitem [ref=e364]:
+                - link "آموزش استفاده از سایت" [ref=e365] [cursor=pointer]:
+                  - /url: https://irimao.com/guide-to-using-the-irimao-site
+              - listitem [ref=e367]:
+                - link "گالری تصاویر" [ref=e368] [cursor=pointer]:
+                  - /url: https://irimao.com/image-gallery/
+              - listitem [ref=e370]:
+                - link "نحوه محاسبه رنکینگ" [ref=e371] [cursor=pointer]:
+                  - /url: https://irimao.com/how-to-calculate-the-ranking/
+              - listitem [ref=e373]:
+                - link "شرح وظایف مسئولین" [ref=e374] [cursor=pointer]:
+                  - /url: https://irimao.com/description-of-committee-duties/
+              - listitem [ref=e376]:
+                - link "آئين نامه انضباطي مسابقات IMAO" [ref=e377] [cursor=pointer]:
+                  - /url: https://irimao.com/disciplinary-regulations-of-imao-competitions/
+          - generic [ref=e380]:
+            - heading "لینک های مفید" [level=4] [ref=e383]
+            - list [ref=e390]:
+              - listitem [ref=e391]:
+                - link "ثبت نام دوره‌ها" [ref=e392] [cursor=pointer]:
+                  - /url: https://irimao.com/my-account/course-list
+              - listitem [ref=e394]:
+                - link "ثبت نام مسابقات" [ref=e395] [cursor=pointer]:
+                  - /url: https://irimao.com/my-account/competitions-list
+              - listitem [ref=e397]:
+                - link "فدراسیون هنرهای رزمی" [ref=e398] [cursor=pointer]:
+                  - /url: https://irmaaf.ir/
+              - listitem [ref=e400]:
+                - link "کارت بیمه ورزشی سازمان IMAO" [ref=e401] [cursor=pointer]:
+                  - /url: https://athlete.ifsm.ir/Login
+              - listitem [ref=e403]:
+                - link "کارت عضویت فدراسیون ورزش‌های رزمی" [ref=e404] [cursor=pointer]:
+                  - /url: https://irmaaf.ir/smartcard-login/
+          - generic [ref=e407]:
+            - heading "تماس با ما" [level=4] [ref=e410]
+            - list [ref=e417]:
+              - listitem [ref=e418]:
+                - generic [ref=e422]: تهران - اتوبان بعثت - خیابان بخارایی شمالی مجتمع ورزشی کارگران معتمدی
+            - link "تماس با ما" [ref=e426] [cursor=pointer]:
+              - /url: https://irimao.com/contact-us/
+            - list [ref=e431]:
+              - listitem [ref=e432]:
+                - link "Telegram" [ref=e433] [cursor=pointer]:
+                  - /url: https://t.me/imao_kickboxing
+              - listitem [ref=e437]:
+                - link "Whatsapp" [ref=e438] [cursor=pointer]:
+                  - /url: https://chat.whatsapp.com/Ha2Jat7i006K6d9cNuGxGK
+              - listitem [ref=e442]:
+                - link "Instagram" [ref=e443] [cursor=pointer]:
+                  - /url: https://instagram.com/imao-kickboxing
+              - listitem [ref=e447]:
+                - link "Rocketchat" [ref=e448] [cursor=pointer]:
+                  - /url: https://eitaa.com/imaokickboxing
+        - generic [ref=e453]:
+          - paragraph [ref=e458]: تمام حقوق این سایت متعلق به سازمان بین المللی IMAO می‌باشد.
+          - paragraph [ref=e463]: Designed and Developed © 2024 by Vahid Amirpour.
+  - generic [ref=e464]: desktop
+  - status [ref=e465]

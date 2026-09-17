@@ -1,0 +1,13 @@
+[Thu Sep 17 09:27:55 2026] PHP 8.3.3 Development Server (http://127.0.0.1:8899) started
+[Thu Sep 17 09:27:56 2026] 127.0.0.1:57250 Accepted
+[Thu Sep 17 09:27:56 2026] 127.0.0.1:57250 [200]: GET /tests/visual/competition-card-preview.php
+[Thu Sep 17 09:27:56 2026] 127.0.0.1:57250 Closing
+[Thu Sep 17 09:28:01 2026] 127.0.0.1:57267 Accepted
+[Thu Sep 17 09:28:01 2026] 127.0.0.1:57267 [200]: GET /tests/visual/competition-card-preview.php
+[Thu Sep 17 09:28:01 2026] 127.0.0.1:57267 Closing
+[Thu Sep 17 09:28:01 2026] 127.0.0.1:57268 Accepted
+[Thu Sep 17 09:28:01 2026] 127.0.0.1:57268 [200]: GET /assets/images/competition-card-template.png
+[Thu Sep 17 09:28:01 2026] 127.0.0.1:57268 Closing
+[Thu Sep 17 09:28:01 2026] 127.0.0.1:57269 Accepted
+[Thu Sep 17 09:28:01 2026] 127.0.0.1:57269 [404]: GET /favicon.ico - No such file or directory
+[Thu Sep 17 09:28:01 2026] 127.0.0.1:57269 Closing
