@@ -118,21 +118,24 @@ class CompetitionCards {
     public static function card_url( int $order_id, int $item_id ): string {
         return add_query_arg(
             [
-                'imao_competition_card' => 1,
-                'order_id'              => $order_id,
-                'item_id'               => $item_id,
-                'token'                 => self::card_access_token( $order_id, $item_id ),
+                'action'   => 'imao_competition_card',
+                'order_id' => $order_id,
+                'item_id'  => $item_id,
+                'token'    => self::card_access_token( $order_id, $item_id ),
             ],
-            home_url( '/' )
+            admin_url( 'admin-post.php' )
         );
     }
 
+    /** Kept so card links printed before the admin-post.php switch keep working. */
     public function render_frontend_card(): void {
         if ( (int) ( $_GET['imao_competition_card'] ?? 0 ) !== 1 ) return;
         $this->render_card();
     }
 
     public function render_card(): void {
+        if ( ! defined( 'DONOTCACHEPAGE' ) ) define( 'DONOTCACHEPAGE', true );
+        if ( ! defined( 'DONOTCACHEOBJECT' ) ) define( 'DONOTCACHEOBJECT', true );
         if ( ! is_user_logged_in() ) auth_redirect();
         $order_id = (int) ( $_GET['order_id'] ?? 0 );
         $item_id = (int) ( $_GET['item_id'] ?? 0 );
@@ -161,6 +164,8 @@ class CompetitionCards {
     }
 
     public function verify_card(): void {
+        if ( ! defined( 'DONOTCACHEPAGE' ) ) define( 'DONOTCACHEPAGE', true );
+        if ( ! defined( 'DONOTCACHEOBJECT' ) ) define( 'DONOTCACHEOBJECT', true );
         $order_id = (int) ( $_GET['order_id'] ?? 0 );
         $item_id = (int) ( $_GET['item_id'] ?? 0 );
         $token = sanitize_text_field( wp_unslash( $_GET['token'] ?? '' ) );
