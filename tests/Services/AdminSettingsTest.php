@@ -55,4 +55,15 @@ class AdminSettingsTest extends TestCase
         $GLOBALS['test_currency'] = '0';
         $this->assertFalse($settings->is_competition_card_button_visible());
     }
+
+    public function test_shortcode_catalog_documents_custom_card_shortcodes(): void
+    {
+        $tags = array_column(Settings::shortcode_catalog(), 'tag');
+
+        $this->assertContains('imao_card_user', $tags);
+        $this->assertContains('imao_card_competition', $tags);
+        $this->assertContains('imao_card_registration', $tags);
+        $this->assertContains('imao_card_qr', $tags);
+        $this->assertContains('crm_competition_bracket', $tags);
+    }
 }

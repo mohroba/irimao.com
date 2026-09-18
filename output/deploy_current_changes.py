@@ -67,6 +67,11 @@ elif "--competition-card-templates" in sys.argv:
         "includes/Services/CompetitionCards.php",
         "includes/Services/Competitions.php",
     ]
+elif "--shortcode-explorer" in sys.argv:
+    BACKUP_ROOT = LOCAL_ROOT / "output" / "production-backups" / "shortcode-explorer-14050626"
+    FILES = [
+        "includes/Services/Admin/Settings.php",
+    ]
 
 
 def ensure_remote_dir(ftp, remote_dir):
