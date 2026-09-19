@@ -22,6 +22,7 @@ class CompetitionCards {
     private const META_WEIGHED_BY = '_imao_weighed_by';
     private const ITEM_META_SPORTS_INSURANCE_EXPIRY = 'پایان اعتبار بیمه ورزشی';
     private const ITEM_META_FEDERATION_MEMBERSHIP_EXPIRY = 'پایان اعتبار کارت عضویت فدراسیون';
+    private const ITEM_META_WEIGHT_CLASS_AUDIT = '_imao_weight_class_audit';
 
     public function register(): void {
         add_action( 'add_meta_boxes', [ $this, 'add_meta_box' ] );
@@ -44,7 +45,9 @@ class CompetitionCards {
             return;
         }
         echo '<p>کارت پس از پرداخت موفق، بلافاصله در پنل ورزشکار قابل دانلود و چاپ است. تأیید وزن‌کشی فقط برای ورود به جدول حذفی مسابقه لازم است.</p>';
-        echo '<div style="overflow:auto"><table class="widefat striped"><thead><tr><th>ردیف</th><th>ورزشکار</th><th>کد ملی</th><th>سفارش</th><th>دسته ثبت‌نامی</th><th>پایان اعتبار بیمه ورزشی</th><th>پایان اعتبار کارت عضویت فدراسیون</th><th>وزن واقعی (KG)</th><th>تأیید وزن‌کشی</th><th>کارت</th></tr></thead><tbody>';
+        $weight_options = $this->competition_weight_options( $post->ID );
+        echo '<p><label for="imao-weigh-in-search"><strong>جستجوی شرکت‌کننده</strong></label> <input type="search" id="imao-weigh-in-search" placeholder="نام، موبایل، کد ملی، سفارش یا دسته وزنی..." style="min-width:320px"></p>';
+        echo '<div style="overflow:auto"><table id="imao-weigh-in-table" class="widefat striped"><thead><tr><th>ردیف</th><th>ورزشکار</th><th>موبایل</th><th>کد ملی</th><th>سفارش</th><th>دسته ثبت‌نامی</th><th>دسته حضور پس از وزن‌کشی</th><th>پایان اعتبار بیمه ورزشی</th><th>پایان اعتبار کارت عضویت فدراسیون</th><th>وزن واقعی (KG)</th><th>تأیید وزن‌کشی</th><th>کارت</th><th>سوابق دسته</th></tr></thead><tbody>';
         $row_number = 1;
         foreach ( $entries as $entry ) {
             $item = $entry['item'];
@@ -52,16 +55,34 @@ class CompetitionCards {
             $item_id = (int) $item->get_id();
             $user = get_userdata( (int) $order->get_customer_id() );
             $ready = self::item_is_ready( $order, $item );
-            echo '<tr><td>' . (int) $row_number++ . '</td><td>' . esc_html( $user ? $user->display_name : '#' . $order->get_customer_id() ) . '</td>';
-            echo '<td>' . esc_html( (string) get_user_meta( (int) $order->get_customer_id(), 'national_id', true ) ?: '—' ) . '</td>';
-            echo '<td>#' . (int) $order->get_id() . '</td><td>' . esc_html( (string) $item->get_meta( 'دسته وزنی', true ) ) . '</td>';
+            $user_id = (int) $order->get_customer_id();
+            $display_name = $user ? $this->user_display_name( $user, $user_id ) : '#' . $user_id;
+            $mobile = (string) (
+                get_user_meta( $user_id, 'billing_phone', true )
+                ?: get_user_meta( $user_id, 'mobile', true )
+                ?: get_user_meta( $user_id, 'mobile_number', true )
+                ?: get_user_meta( $user_id, 'phone', true )
+            );
+            $national_id = (string) get_user_meta( $user_id, 'national_id', true );
+            $registered_weight = (string) $item->get_meta( 'دسته وزنی', true );
+            $attendance_weight_id = (int) $item->get_meta( '_imao_weight_class_term', true );
+            echo '<tr data-search="' . esc_attr( $display_name . ' ' . $mobile . ' ' . $national_id . ' ' . $order->get_id() . ' ' . $registered_weight ) . '"><td>' . (int) $row_number++ . '</td><td>' . esc_html( $display_name ) . '</td>';
+            echo '<td>' . esc_html( $mobile ?: '—' ) . '</td><td>' . esc_html( $national_id ?: '—' ) . '</td>';
+            echo '<td>#' . (int) $order->get_id() . '</td><td>' . esc_html( $registered_weight ?: '—' ) . '</td>';
+            echo '<td><select name="imao_weigh_ins[' . $item_id . '][attendance_weight_class]" style="min-width:180px"><option value="">— بدون تغییر —</option>';
+            foreach ( $weight_options as $option ) {
+                echo '<option value="' . (int) $option['id'] . '" ' . selected( $attendance_weight_id, $option['id'], false ) . '>' . esc_html( $option['label'] ) . '</option>';
+            }
+            echo '</select></td>';
             echo '<td><input type="text" class="crm-date" data-jdp data-jdp-only-date inputmode="numeric" placeholder="۱۴۰۵/۰۵/۱۷" name="imao_weigh_ins[' . $item_id . '][sports_insurance_expiry]" value="' . esc_attr( (string) $item->get_meta( self::ITEM_META_SPORTS_INSURANCE_EXPIRY, true ) ) . '" style="width:130px"></td>';
             echo '<td><input type="text" class="crm-date" data-jdp data-jdp-only-date inputmode="numeric" placeholder="۱۴۰۵/۰۵/۱۷" name="imao_weigh_ins[' . $item_id . '][federation_membership_expiry]" value="' . esc_attr( (string) $item->get_meta( self::ITEM_META_FEDERATION_MEMBERSHIP_EXPIRY, true ) ) . '" style="width:130px"></td>';
             echo '<td><input type="number" min="1" max="300" step="0.01" name="imao_weigh_ins[' . $item_id . '][weight]" value="' . esc_attr( (string) $item->get_meta( self::META_WEIGHT, true ) ) . '" style="width:100px"></td>';
             echo '<td><label><input type="checkbox" name="imao_weigh_ins[' . $item_id . '][confirmed]" value="1" ' . checked( 'yes', $item->get_meta( self::META_CONFIRMED, true ), false ) . '> تأیید شد</label></td>';
-            echo '<td>' . ( $ready ? '<a class="button" target="_blank" href="' . esc_url( self::card_url( (int) $order->get_id(), $item_id ) ) . '">مشاهده کارت</a>' : 'در انتظار' ) . '</td></tr>';
+            $audit = (array) $item->get_meta( self::ITEM_META_WEIGHT_CLASS_AUDIT, true );
+            echo '<td>' . ( $ready ? '<a class="button" target="_blank" href="' . esc_url( self::card_url( (int) $order->get_id(), $item_id ) ) . '">مشاهده کارت</a>' : 'در انتظار' ) . '</td>';
+            echo '<td>' . ( $audit ? '<details><summary>' . count( $audit ) . ' تغییر</summary><ol style="margin:6px 18px 0 0">' . $this->render_weight_audit( $audit ) . '</ol></details>' : '—' ) . '</td></tr>';
         }
-        echo '</tbody></table></div><p><strong>توجه:</strong> برای اعمال تغییرات، دکمه «به‌روزرسانی» مسابقه را بزنید.</p>';
+        echo '</tbody></table></div><p><strong>توجه:</strong> دسته حضور، روی همین ثبت‌نام ذخیره می‌شود و در جدول حذفی، کارت و رده‌بندی‌های بعدی استفاده خواهد شد. برای اعمال تغییرات، دکمه «به‌روزرسانی» مسابقه را بزنید.</p>';
     }
 
     public function save_weigh_ins( int $competition_id, WP_Post $post ): void {
@@ -81,6 +102,7 @@ class CompetitionCards {
             $sports_insurance_expiry = $this->sanitize_admin_date( $row['sports_insurance_expiry'] ?? '' );
             $federation_membership_expiry = $this->sanitize_admin_date( $row['federation_membership_expiry'] ?? '' );
             $confirmed = ! empty( $row['confirmed'] ) && $weight > 0;
+            $this->save_attendance_weight_class( $entry['order'], $item, $competition_id, $row['attendance_weight_class'] ?? '' );
             $item->update_meta_data( self::META_WEIGHT, $weight > 0 ? $weight : '' );
             $item->update_meta_data( self::ITEM_META_SPORTS_INSURANCE_EXPIRY, $sports_insurance_expiry );
             $item->update_meta_data( self::ITEM_META_FEDERATION_MEMBERSHIP_EXPIRY, $federation_membership_expiry );
@@ -94,6 +116,68 @@ class CompetitionCards {
             }
             $item->save();
         }
+    }
+
+    private function user_display_name( $user, int $user_id ): string {
+        $first = (string) get_user_meta( $user_id, 'first_name_fa', true );
+        $last = (string) get_user_meta( $user_id, 'last_name_fa', true );
+        return trim( $first . ' ' . $last ) ?: (string) $user->display_name;
+    }
+
+    /** @return array<int,array{id:int,label:string}> */
+    private function competition_weight_options( int $competition_id ): array {
+        $terms = get_terms( [ 'taxonomy' => 'age_category', 'hide_empty' => false, 'orderby' => 'term_id', 'order' => 'ASC' ] );
+        $selected = wp_get_post_terms( $competition_id, 'age_category' );
+        $parents = [];
+        foreach ( (array) $selected as $term ) {
+            $parent = (int) ( $term->parent ?? 0 );
+            if ( $parent > 0 ) $parents[ $parent ] = true;
+            elseif ( isset( $term->term_id ) ) $parents[ (int) $term->term_id ] = true;
+        }
+        $options = [];
+        foreach ( (array) $terms as $term ) {
+            $parent = (int) ( $term->parent ?? 0 );
+            if ( ! isset( $term->term_id ) || ! $parent || ! isset( $parents[ $parent ] ) ) continue;
+            $parent_term = get_term( $parent, 'age_category' );
+            $label = ( $parent_term && ! is_wp_error( $parent_term ) ? $parent_term->name . ' — ' : '' ) . $term->name;
+            $options[] = [ 'id' => (int) $term->term_id, 'label' => (string) $label ];
+        }
+        return $options;
+    }
+
+    private function save_attendance_weight_class( $order, $item, int $competition_id, $submitted_id ): void {
+        $submitted_id = absint( $submitted_id );
+        if ( ! $submitted_id ) return;
+        $options = array_column( $this->competition_weight_options( $competition_id ), null, 'id' );
+        if ( ! isset( $options[ $submitted_id ] ) ) return;
+        $old_id = (int) $item->get_meta( '_imao_weight_class_term', true );
+        $old_name = (string) $item->get_meta( 'دسته وزنی', true );
+        $new_name = (string) $options[ $submitted_id ]['label'];
+        if ( $old_id === $submitted_id && $old_name === $new_name ) return;
+        $audit = (array) $item->get_meta( self::ITEM_META_WEIGHT_CLASS_AUDIT, true );
+        $audit[] = [
+            'at' => current_time( 'mysql' ),
+            'user_id' => get_current_user_id(),
+            'from_id' => $old_id,
+            'from' => $old_name,
+            'to_id' => $submitted_id,
+            'to' => $new_name,
+            'competition_id' => $competition_id,
+        ];
+        $item->update_meta_data( self::ITEM_META_WEIGHT_CLASS_AUDIT, $audit );
+        $item->update_meta_data( '_imao_weight_class_term', $submitted_id );
+        $item->update_meta_data( 'دسته وزنی', $new_name );
+        if ( is_object( $order ) && method_exists( $order, 'add_order_note' ) ) {
+            $order->add_order_note( sprintf( 'دسته حضور مسابقه #%d برای قلم #%d تغییر کرد: %s ← %s (کاربر مدیر #%d).', $competition_id, (int) $item->get_id(), $old_name ?: '—', $new_name, get_current_user_id() ) );
+        }
+    }
+
+    private function render_weight_audit( array $audit ): string {
+        $html = '';
+        foreach ( array_reverse( $audit ) as $row ) {
+            $html .= '<li>' . esc_html( (string) ( $row['at'] ?? '' ) . ' — ' . (string) ( $row['from'] ?? '—' ) . ' ← ' . (string) ( $row['to'] ?? '—' ) . ' — مدیر #' . (string) ( $row['user_id'] ?? '' ) ) . '</li>';
+        }
+        return $html;
     }
 
     private function sanitize_admin_date( $value ): string {
