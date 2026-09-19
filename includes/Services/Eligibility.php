@@ -40,8 +40,13 @@ class Eligibility {
         }
         if ( $type === 'competition' ) {
             $birth = (string) UserMeta::get( $uid, 'birth_date', '' );
-            $age   = $birth !== '' ? Date::age( $birth ) : null;
+            $start = (string) get_post_meta( $post_id, 'start_date', true );
+            $age   = $birth !== '' && $start !== '' ? Date::age( $birth, $start ) : null;
             $slug  = $age !== null ? AgeCategory::slug_from_age( $age ) : '';
+            if ( $slug === '' ) {
+                wc_add_notice( 'رده سنی مسابقه قابل تعیین نیست؛ تاریخ تولد و تاریخ برگزاری مسابقه را بررسی کنید.', 'error' );
+                return false;
+            }
             $age_terms = wp_get_post_terms( $post_id, 'age_category', [ 'fields' => 'slugs' ] );
             if ( $slug !== '' && $age_terms && ! in_array( $slug, $age_terms, true ) ) {
                 wc_add_notice( 'این مسابقات با رده ی سنی شما مطابقت ندارد، لطفا در انتخاب مسابقات دقت فرمایید.', 'error' );

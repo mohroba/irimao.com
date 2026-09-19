@@ -5,6 +5,7 @@ use IMAOCustom\Services\Competitions;
 class CompetitionsListAgeCategoryTest extends TestCase {
     public function test_list_shows_only_parent_age_terms(): void {
         require_once __DIR__ . '/stubs.php';
+        $GLOBALS['test_post_meta'][20]['start_date'] = '1405/06/28';
         if (!function_exists('get_user_meta')) {
             function get_user_meta($id, $key, $single = true) {
                 return $key === 'gender' ? 'male' : '1385/01/01';
@@ -25,6 +26,9 @@ class CompetitionsListAgeCategoryTest extends TestCase {
         if (!function_exists('wp_get_post_terms')) {
             function wp_get_post_terms($id, $tax, $args = []) {
                 if ($tax === 'age_category') {
+                    if (($args['fields'] ?? '') === 'slugs') {
+                        return ['adults-18-38'];
+                    }
                     if (isset($args['parent']) && $args['parent'] === 0) {
                         return ['Parent Age'];
                     }

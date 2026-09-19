@@ -46,6 +46,7 @@ class EligibilityTest extends TestCase {
 
     public function test_competition_uses_requested_age_message(): void {
         $GLOBALS['test_post_meta'][99]['_linked_post_id'] = 20;
+        $GLOBALS['test_post_meta'][20]['start_date'] = '1405/06/28';
         $GLOBALS['test_user_meta'][1]['gender'] = 'male';
         $GLOBALS['test_user_meta'][1]['birth_date'] = '1395/01/01';
         $GLOBALS['test_user_meta'][1]['identity_verified_professional'] = 'approved';
@@ -55,5 +56,24 @@ class EligibilityTest extends TestCase {
         ];
         $this->assertFalse((new Eligibility())->validate(true, 99, 1));
         $this->assertSame('این مسابقات با رده ی سنی شما مطابقت ندارد، لطفا در انتخاب مسابقات دقت فرمایید.', $GLOBALS['test_notices'][0][0]);
+    }
+
+    public function test_competition_age_is_determined_on_event_date(): void {
+        $GLOBALS['test_post_meta'][99]['_linked_post_id'] = 20;
+        $GLOBALS['test_post_meta'][20]['start_date'] = '1405/06/28';
+        $GLOBALS['test_user_meta'][1] = [
+            'gender' => 'male',
+            'birth_date' => '1393/06/28',
+            'identity_verified_professional' => 'approved',
+        ];
+        $GLOBALS['mock_post_terms_return'] = [
+            'gender' => [(object) ['slug' => 'men']],
+            'age_category' => [(object) ['slug' => 'teenagers-12-14']],
+        ];
+
+        $this->assertTrue((new Eligibility())->validate(true, 99, 1));
+
+        $GLOBALS['test_post_meta'][20]['start_date'] = '1405/06/27';
+        $this->assertFalse((new Eligibility())->validate(true, 99, 1));
     }
 }

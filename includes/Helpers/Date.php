@@ -64,12 +64,13 @@ class Date {
     /**
      * Calculate age in years from a Jalali birth date.
      */
-    public static function age(string $birth): ?int {
+    public static function age(string $birth, ?string $onDate = null): ?int {
         $birthDate = self::parse($birth);
-        if (! $birthDate) {
+        $referenceDate = $onDate !== null ? self::parse($onDate) : self::now();
+        if (! $birthDate || ! $referenceDate || $referenceDate->toCarbon()->lessThan($birthDate->toCarbon())) {
             return null;
         }
-        return $birthDate->toCarbon()->age;
+        return (int) $birthDate->toCarbon()->diffInYears($referenceDate->toCarbon());
     }
 
     /**

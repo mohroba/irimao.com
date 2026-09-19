@@ -1095,24 +1095,18 @@ class Competitions
     public function competitions_list_shortcode(): string
     {
         $gender   = '';
-        $age_slug = '';
+        $birth = '';
         if (function_exists('get_current_user_id')) {
             $uid = get_current_user_id();
             if ($uid) {
                 $gender = UserMeta::gender_slug($uid);
-                $birth  = UserMeta::get($uid, 'birth_date', '');
-                if ($birth) {
-                    $age = Date::age($birth);
-                    if ($age !== null) {
-                        $age_slug = AgeCategory::slug_from_age($age);
-                    }
-                }
+                $birth  = (string) UserMeta::get($uid, 'birth_date', '');
             }
         }
         if (!$gender) {
             return '<p>برای مشاهدهٔ لیست مسابقات ابتدا جنسیت خود را در بخش اطلاعات پایه ثبت کنید.</p>';
         }
-        if (!$age_slug) {
+        if (!$birth) {
             return '<p>رده سنی یافت نشد. برای مشاهدهٔ لیست مسابقات از درست بودن تاریخ تولد خود را در بخش اطلاعات پایه اطمینان حاصل نمایید.</p>';
         }
 
@@ -1127,17 +1121,19 @@ class Competitions
                     'field'    => 'slug',
                     'terms'    => $gender,
                 ],
-                [
-                    'taxonomy' => 'age_category',
-                    'field'    => 'slug',
-                    'terms'    => $age_slug,
-                ],
             ],
         ]);
         $posts = [];
         while ( $q->have_posts() ) {
             $q->the_post();
             $pid   = get_the_ID();
+            $competitionDate = (string) get_post_meta( $pid, 'start_date', true );
+            $competitionAge = $competitionDate !== '' ? Date::age( $birth, $competitionDate ) : null;
+            $competitionSlug = $competitionAge !== null ? AgeCategory::slug_from_age( $competitionAge ) : '';
+            $competitionTerms = wp_get_post_terms( $pid, 'age_category', [ 'fields' => 'slugs' ] );
+            if ( $competitionSlug === '' || ! is_array( $competitionTerms ) || ! in_array( $competitionSlug, $competitionTerms, true ) ) {
+                continue;
+            }
             $start = get_post_meta( $pid, 'registration_start', true );
             $end   = get_post_meta( $pid, 'registration_end', true );
             if ( Date::is_between( $start, $end ) ) {
@@ -1199,7 +1195,8 @@ class Competitions
         $birth  = UserMeta::get($uid, 'birth_date', '');
         $age_slug = '';
         if ($birth) {
-            $age_years = Date::age($birth);
+            $competitionDate = (string) get_post_meta( $cid, 'start_date', true );
+            $age_years = $competitionDate !== '' ? Date::age($birth, $competitionDate) : null;
             if ($age_years !== null) {
                 $age_slug = AgeCategory::slug_from_age($age_years);
             }

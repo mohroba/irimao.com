@@ -32,6 +32,12 @@ class DateTest extends TestCase {
         $this->assertSame(Date::age('1400/01/01'), Date::age('1400/01/01 08:00:00'));
     }
 
+    public function test_age_uses_competition_date_across_birthday_boundary(): void {
+        $this->assertSame(11, Date::age('1393/06/28', '1405/06/27'));
+        $this->assertSame(12, Date::age('1393/06/28', '1405/06/28'));
+        $this->assertNull(Date::age('1393/06/28', 'invalid'));
+    }
+
     public function test_is_between_with_time_range(): void {
         $this->assertTrue(Date::is_between('1402/01/01 00:00:00', '1402/01/31 23:59:59', '1402/01/15 12:30:00'));
     }
