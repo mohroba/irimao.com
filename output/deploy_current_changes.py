@@ -80,6 +80,11 @@ elif "--card-cache-age-date-fixes" in sys.argv:
         "includes/Services/Competitions.php",
         "includes/Services/Eligibility.php",
     ]
+elif "--card-route-fix" in sys.argv:
+    BACKUP_ROOT = LOCAL_ROOT / "output" / "production-backups" / "card-route-fix-14050628"
+    FILES = [
+        "includes/Services/CompetitionCards.php",
+    ]
 
 
 def ensure_remote_dir(ftp, remote_dir):

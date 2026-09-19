@@ -202,16 +202,17 @@ class CompetitionCards {
     public static function card_url( int $order_id, int $item_id ): string {
         return add_query_arg(
             [
-                'action'   => 'imao_competition_card',
-                'order_id' => $order_id,
-                'item_id'  => $item_id,
-                'token'    => self::card_access_token( $order_id, $item_id ),
+                'imao_competition_card' => 1,
+                'imao_card_endpoint'   => 1,
+                'order_id'             => $order_id,
+                'item_id'              => $item_id,
+                'token'                => self::card_access_token( $order_id, $item_id ),
             ],
-            admin_url( 'admin-post.php' )
+            home_url( '/competition-card/' )
         );
     }
 
-    /** Kept so card links printed before the admin-post.php switch keep working. */
+    /** Supports the dedicated route and previously printed card links. */
     public function render_frontend_card(): void {
         if ( (int) ( $_GET['imao_competition_card'] ?? 0 ) !== 1 ) return;
         $this->render_card();
