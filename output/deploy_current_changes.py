@@ -72,6 +72,14 @@ elif "--shortcode-explorer" in sys.argv:
     FILES = [
         "includes/Services/Admin/Settings.php",
     ]
+elif "--card-cache-age-date-fixes" in sys.argv:
+    BACKUP_ROOT = LOCAL_ROOT / "output" / "production-backups" / "card-cache-age-date-fixes-14050628"
+    FILES = [
+        "includes/Helpers/Date.php",
+        "includes/Services/CompetitionCards.php",
+        "includes/Services/Competitions.php",
+        "includes/Services/Eligibility.php",
+    ]
 
 
 def ensure_remote_dir(ftp, remote_dir):
