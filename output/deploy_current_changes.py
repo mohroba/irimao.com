@@ -85,6 +85,12 @@ elif "--card-route-fix" in sys.argv:
     FILES = [
         "includes/Services/CompetitionCards.php",
     ]
+elif "--weighin-column-default-card-fix" in sys.argv:
+    BACKUP_ROOT = LOCAL_ROOT / "output" / "production-backups" / "weighin-column-default-card-fix-14050630"
+    FILES = [
+        "includes/Services/CompetitionCards.php",
+        "includes/Services/Competitions.php",
+    ]
 
 
 def ensure_remote_dir(ftp, remote_dir):
