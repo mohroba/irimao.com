@@ -206,11 +206,11 @@ class BasicInfoForm extends BaseForm {
     }
 
     private function normalize_gender( string $gender ): string {
-        $gender = strtolower( trim( $gender ) );
-        if ( in_array( $gender, [ 'male', 'men' ], true ) ) {
+        $gender = str_replace( [ 'ي', 'ك' ], [ 'ی', 'ک' ], strtolower( trim( $gender ) ) );
+        if ( in_array( $gender, [ 'male', 'men', 'man', 'm', 'آقا', 'اقا', 'آقایان', 'اقایان', 'مرد', 'مردان', 'پسر' ], true ) ) {
             return 'male';
         }
-        if ( in_array( $gender, [ 'female', 'women' ], true ) ) {
+        if ( in_array( $gender, [ 'female', 'women', 'woman', 'f', 'خانم', 'بانو', 'بانوان', 'زن', 'زنان', 'دختر' ], true ) ) {
             return 'female';
         }
         return '';

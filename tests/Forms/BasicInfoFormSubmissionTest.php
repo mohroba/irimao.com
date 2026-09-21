@@ -217,6 +217,24 @@ class BasicInfoFormSubmissionTest extends TestCase {
         $this->assertSame('female', $GLOBALS['localized_scripts']['CBIF_COACHES'][3]['gender'] ?? '');
     }
 
+    public function test_coach_select_accepts_persian_gender_values(): void {
+        $_SERVER['REQUEST_METHOD'] = 'GET';
+        $GLOBALS['user_meta']['gender'] = 'بانوان';
+        $GLOBALS['user_meta_by_user'][2]['gender'] = 'مرد';
+        $GLOBALS['user_meta_by_user'][3]['gender'] = 'زن';
+        $GLOBALS['get_users_return'] = [
+            (object) ['ID' => 2, 'display_name' => 'مربی آقا'],
+            (object) ['ID' => 3, 'display_name' => 'مربی بانو'],
+        ];
+
+        $form = new BasicInfoForm();
+        $html = $form->render();
+        preg_match('/<select id="coach_id"[^>]*>(.*?)<\/select>/s', $html, $m);
+        $this->assertStringNotContainsString('value="2"', $m[1]);
+        $this->assertStringContainsString('value="3"', $m[1]);
+        $this->assertSame('female', $GLOBALS['localized_scripts']['CBIF_COACHES'][3]['gender'] ?? '');
+    }
+
     public function test_submission_rejects_coach_gender_mismatch(): void {
         $_SERVER['REQUEST_METHOD'] = 'POST';
         $data = $this->validPostData();
@@ -230,6 +248,22 @@ class BasicInfoFormSubmissionTest extends TestCase {
 
         $this->assertStringContainsString('مربی انتخاب‌شده با جنسیت شما مطابقت ندارد.', $html);
         $this->assertArrayNotHasKey('coach_id', $GLOBALS['user_meta']);
+    }
+
+    public function test_submission_accepts_persian_coach_gender_match(): void {
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+        $data = $this->validPostData();
+        $data['gender'] = 'female';
+        $data['coach_id'] = '3';
+        $_POST = $data;
+        $GLOBALS['user_meta_by_user'][3]['gender'] = 'زن';
+
+        $form = new BasicInfoForm();
+        $html = $form->render();
+
+        $this->assertStringNotContainsString('مربی انتخاب‌شده با جنسیت شما مطابقت ندارد.', $html);
+        $this->assertStringContainsString('اطلاعات شما با موفقیت ذخیره شد', $html);
+        $this->assertSame('3', $GLOBALS['user_meta']['coach_id']);
     }
 
     public function test_club_mapping_localized(): void {

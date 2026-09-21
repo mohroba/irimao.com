@@ -91,6 +91,11 @@ elif "--weighin-column-default-card-fix" in sys.argv:
         "includes/Services/CompetitionCards.php",
         "includes/Services/Competitions.php",
     ]
+elif "--coach-gender-normalization" in sys.argv:
+    BACKUP_ROOT = LOCAL_ROOT / "output" / "production-backups" / "coach-gender-normalization-14050630"
+    FILES = [
+        "includes/Forms/BasicInfoForm.php",
+    ]
 
 
 def ensure_remote_dir(ftp, remote_dir):
