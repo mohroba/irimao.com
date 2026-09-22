@@ -111,7 +111,7 @@ class CompetitionCards {
             $weight = max( 0.0, min( 300.0, (float) ( $row['weight'] ?? 0 ) ) );
             $sports_insurance_expiry = $this->sanitize_admin_date( $row['sports_insurance_expiry'] ?? '' );
             $federation_membership_expiry = $this->sanitize_admin_date( $row['federation_membership_expiry'] ?? '' );
-            $confirmed = ! empty( $row['confirmed'] ) && $weight > 0;
+            $confirmed = ! empty( $row['confirmed'] );
             $dormitory = ! empty( $row['dormitory'] );
             $this->save_attendance_weight_class( $entry['order'], $item, $competition_id, $row['attendance_weight_class'] ?? '' );
             $item->update_meta_data( self::META_WEIGHT, $weight > 0 ? $weight : '' );
