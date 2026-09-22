@@ -100,6 +100,7 @@ elif "--weighin-dormitory-guest-dedupe" in sys.argv:
     BACKUP_ROOT = LOCAL_ROOT / "output" / "production-backups" / "weighin-dormitory-guest-dedupe-14050631"
     FILES = [
         "includes/Services/CompetitionCards.php",
+        "includes/Services/Competitions.php",
         "includes/Services/Eligibility.php",
     ]
 
