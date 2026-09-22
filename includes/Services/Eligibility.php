@@ -8,6 +8,7 @@ use IMAOCustom\Helpers\Date;
 class Eligibility {
     public function register(): void {
         add_filter( 'woocommerce_add_to_cart_validation', [ $this, 'validate' ], 10, 3 );
+        add_action( 'woocommerce_checkout_process', [ $this, 'stop_guest_competition_checkout' ] );
     }
 
     public function validate( bool $passed, int $product_id, int $quantity ): bool {
@@ -54,5 +55,19 @@ class Eligibility {
             }
         }
         return $passed;
+    }
+
+    public function stop_guest_competition_checkout(): void {
+        if ( is_user_logged_in() || ! function_exists( 'WC' ) || ! WC()->cart ) {
+            return;
+        }
+        foreach ( WC()->cart->get_cart() as $cart_item ) {
+            $product_id = (int) ( $cart_item['product_id'] ?? 0 );
+            $post_id = $product_id > 0 ? (int) get_post_meta( $product_id, '_linked_post_id', true ) : 0;
+            if ( $post_id > 0 && get_post_type( $post_id ) === 'competition' ) {
+                wc_add_notice( 'برای ثبت‌نام در مسابقه ابتدا وارد حساب کاربری شوید.', 'error' );
+                return;
+            }
+        }
     }
 }

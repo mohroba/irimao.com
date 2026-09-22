@@ -96,6 +96,12 @@ elif "--coach-gender-normalization" in sys.argv:
     FILES = [
         "includes/Forms/BasicInfoForm.php",
     ]
+elif "--weighin-dormitory-guest-dedupe" in sys.argv:
+    BACKUP_ROOT = LOCAL_ROOT / "output" / "production-backups" / "weighin-dormitory-guest-dedupe-14050631"
+    FILES = [
+        "includes/Services/CompetitionCards.php",
+        "includes/Services/Eligibility.php",
+    ]
 
 
 def ensure_remote_dir(ftp, remote_dir):

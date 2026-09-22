@@ -23,6 +23,7 @@ class CompetitionCards {
     private const ITEM_META_SPORTS_INSURANCE_EXPIRY = 'پایان اعتبار بیمه ورزشی';
     private const ITEM_META_FEDERATION_MEMBERSHIP_EXPIRY = 'پایان اعتبار کارت عضویت فدراسیون';
     private const ITEM_META_WEIGHT_CLASS_AUDIT = '_imao_weight_class_audit';
+    private const ITEM_META_DORMITORY = '_imao_dormitory_requested';
 
     public function register(): void {
         add_action( 'add_meta_boxes', [ $this, 'add_meta_box' ] );
@@ -46,8 +47,14 @@ class CompetitionCards {
         }
         echo '<p>کارت پس از پرداخت موفق، بلافاصله در پنل ورزشکار قابل دانلود و چاپ است. تأیید وزن‌کشی فقط برای ورود به جدول حذفی مسابقه لازم است.</p>';
         $weight_options = $this->competition_weight_options( $post->ID );
-        echo '<p><label for="imao-weigh-in-search"><strong>جستجوی شرکت‌کننده</strong></label> <input type="search" id="imao-weigh-in-search" placeholder="نام، موبایل، کد ملی، سفارش یا دسته وزنی..." style="min-width:320px"></p>';
-        echo '<div style="overflow:auto"><table id="imao-weigh-in-table" class="widefat striped"><thead><tr><th>ردیف</th><th>نام ورزشکار</th><th>موبایل</th><th>کد ملی</th><th>سفارش</th><th>پایان اعتبار بیمه ورزشی</th><th>پایان اعتبار کارت عضویت فدراسیون</th><th>دسته ثبت‌نامی</th><th>وزن واقعی</th><th>دسته حضور پس از وزن‌کشی</th><th>تأیید وزن‌کشی</th><th>کارت</th><th>سوابق دسته</th></tr></thead><tbody>';
+        $dormitory_count = 0;
+        foreach ( $entries as $entry ) {
+            if ( $entry['item']->get_meta( self::ITEM_META_DORMITORY, true ) === 'yes' ) {
+                $dormitory_count++;
+            }
+        }
+        echo '<p><label for="imao-weigh-in-search"><strong>جستجوی شرکت‌کننده</strong></label> <input type="search" id="imao-weigh-in-search" placeholder="نام، کد ملی، سفارش، خوابگاه یا دسته وزنی..." style="min-width:320px"> <span style="margin-right:12px">آمار خوابگاه: <strong>' . (int) $dormitory_count . '</strong> نفر</span></p>';
+        echo '<div style="overflow:auto"><table id="imao-weigh-in-table" class="widefat striped"><thead><tr><th>ردیف</th><th>نام ورزشکار</th><th>کد ملی</th><th>سفارش</th><th>پایان اعتبار بیمه ورزشی</th><th>پایان اعتبار کارت عضویت فدراسیون</th><th>دسته ثبت‌نامی</th><th>وزن واقعی</th><th>دسته حضور پس از وزن‌کشی</th><th>خوابگاه</th><th>تأیید وزن‌کشی</th><th>کارت</th><th>سوابق دسته</th></tr></thead><tbody>';
         $row_number = 1;
         foreach ( $entries as $entry ) {
             $item = $entry['item'];
@@ -66,8 +73,9 @@ class CompetitionCards {
             $national_id = (string) get_user_meta( $user_id, 'national_id', true );
             $registered_weight = (string) $item->get_meta( 'دسته وزنی', true );
             $attendance_weight_id = (int) $item->get_meta( '_imao_weight_class_term', true );
-            echo '<tr data-search="' . esc_attr( $display_name . ' ' . $mobile . ' ' . $national_id . ' ' . $order->get_id() . ' ' . $registered_weight ) . '"><td>' . (int) $row_number++ . '</td><td>' . esc_html( $display_name ) . '</td>';
-            echo '<td>' . esc_html( $mobile ?: '—' ) . '</td><td>' . esc_html( $national_id ?: '—' ) . '</td>';
+            $dormitory = $item->get_meta( self::ITEM_META_DORMITORY, true ) === 'yes';
+            echo '<tr data-search="' . esc_attr( $display_name . ' ' . $mobile . ' ' . $national_id . ' ' . $order->get_id() . ' ' . $registered_weight . ' ' . ( $dormitory ? 'خوابگاه دارد dormitory yes' : 'بدون خوابگاه dormitory no' ) ) . '"><td>' . (int) $row_number++ . '</td><td>' . esc_html( $display_name ) . '</td>';
+            echo '<td>' . esc_html( $national_id ?: '—' ) . '</td>';
             echo '<td>#' . (int) $order->get_id() . '</td>';
             echo '<td><input type="text" class="crm-date" data-jdp data-jdp-only-date inputmode="numeric" placeholder="۱۴۰۵/۰۵/۱۷" name="imao_weigh_ins[' . $item_id . '][sports_insurance_expiry]" value="' . esc_attr( (string) $item->get_meta( self::ITEM_META_SPORTS_INSURANCE_EXPIRY, true ) ) . '" style="width:130px"></td>';
             echo '<td><input type="text" class="crm-date" data-jdp data-jdp-only-date inputmode="numeric" placeholder="۱۴۰۵/۰۵/۱۷" name="imao_weigh_ins[' . $item_id . '][federation_membership_expiry]" value="' . esc_attr( (string) $item->get_meta( self::ITEM_META_FEDERATION_MEMBERSHIP_EXPIRY, true ) ) . '" style="width:130px"></td>';
@@ -78,6 +86,7 @@ class CompetitionCards {
                 echo '<option value="' . (int) $option['id'] . '" ' . selected( $attendance_weight_id, $option['id'], false ) . '>' . esc_html( $option['label'] ) . '</option>';
             }
             echo '</select></td>';
+            echo '<td><label><input type="checkbox" name="imao_weigh_ins[' . $item_id . '][dormitory]" value="1" ' . checked( true, $dormitory, false ) . '> دارد</label></td>';
             echo '<td><label><input type="checkbox" name="imao_weigh_ins[' . $item_id . '][confirmed]" value="1" ' . checked( 'yes', $item->get_meta( self::META_CONFIRMED, true ), false ) . '> تأیید شد</label></td>';
             $audit = (array) $item->get_meta( self::ITEM_META_WEIGHT_CLASS_AUDIT, true );
             echo '<td>' . ( $ready ? '<a class="button" target="_blank" href="' . esc_url( self::card_url( (int) $order->get_id(), $item_id ) ) . '">مشاهده کارت</a>' : 'در انتظار' ) . '</td>';
@@ -103,10 +112,12 @@ class CompetitionCards {
             $sports_insurance_expiry = $this->sanitize_admin_date( $row['sports_insurance_expiry'] ?? '' );
             $federation_membership_expiry = $this->sanitize_admin_date( $row['federation_membership_expiry'] ?? '' );
             $confirmed = ! empty( $row['confirmed'] ) && $weight > 0;
+            $dormitory = ! empty( $row['dormitory'] );
             $this->save_attendance_weight_class( $entry['order'], $item, $competition_id, $row['attendance_weight_class'] ?? '' );
             $item->update_meta_data( self::META_WEIGHT, $weight > 0 ? $weight : '' );
             $item->update_meta_data( self::ITEM_META_SPORTS_INSURANCE_EXPIRY, $sports_insurance_expiry );
             $item->update_meta_data( self::ITEM_META_FEDERATION_MEMBERSHIP_EXPIRY, $federation_membership_expiry );
+            $item->update_meta_data( self::ITEM_META_DORMITORY, $dormitory ? 'yes' : 'no' );
             $item->update_meta_data( self::META_CONFIRMED, $confirmed ? 'yes' : 'no' );
             if ( $confirmed ) {
                 $item->update_meta_data( self::META_WEIGHED_AT, current_time( 'mysql' ) );
@@ -414,9 +425,22 @@ class CompetitionCards {
         if ( ! $order_ids ) return [];
         $orders = wc_get_orders( [ 'limit' => -1, 'status' => [ 'processing', 'completed' ], 'include' => array_map( 'intval', $order_ids ), 'orderby' => 'date', 'order' => 'DESC' ] );
         $entries = [];
+        $seen = [];
         foreach ( $orders as $order ) {
+            $user_id = (int) $order->get_customer_id();
+            if ( $user_id <= 0 ) {
+                continue;
+            }
             foreach ( $order->get_items() as $item ) {
-                if ( $item instanceof WC_Order_Item_Product && (int) $item->get_product_id() === $product_id ) $entries[] = [ 'order' => $order, 'item' => $item ];
+                if ( ! $item instanceof WC_Order_Item_Product || (int) $item->get_product_id() !== $product_id ) {
+                    continue;
+                }
+                $key = (int) $order->get_id() . ':' . $user_id . ':' . $product_id;
+                if ( isset( $seen[ $key ] ) ) {
+                    continue;
+                }
+                $seen[ $key ] = true;
+                $entries[] = [ 'order' => $order, 'item' => $item ];
             }
         }
         return $entries;
