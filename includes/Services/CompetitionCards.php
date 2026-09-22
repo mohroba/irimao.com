@@ -211,6 +211,12 @@ class CompetitionCards {
         return $confirmed && $weight > 0;
     }
 
+    /** Brackets are built from the admin confirmation checkbox; actual weight can be filled separately. */
+    public static function item_is_bracket_eligible( $item ): bool {
+        if ( ! is_object( $item ) || ! method_exists( $item, 'get_meta' ) ) return false;
+        return $item->get_meta( self::META_CONFIRMED, true ) === 'yes';
+    }
+
     public static function card_url( int $order_id, int $item_id ): string {
         return add_query_arg(
             [
