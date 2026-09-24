@@ -125,6 +125,7 @@ class CompetitionCards {
             } else {
                 $item->delete_meta_data( self::META_WEIGHED_AT );
                 $item->delete_meta_data( self::META_WEIGHED_BY );
+                CompetitionBrackets::remove_item_from_snapshot( $competition_id, (int) $entry['order']->get_id(), $item_id );
             }
             $item->save();
         }

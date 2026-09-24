@@ -32,8 +32,8 @@ class CompetitionBrackets {
         $snapshot = self::snapshot( $post->ID );
         $count = count( $this->participants( $post->ID ) );
         wp_nonce_field( 'imao_save_bracket_' . $post->ID, 'imao_bracket_nonce' );
-        echo '<p>شرکت‌کنندگانِ پرداخت‌شده با وزن‌کشی تأییدشده: <strong>' . (int) $count . '</strong></p>';
-        echo '<p class="description">فقط ورزشکارانی که وزن واقعی‌شان ثبت و تأیید شده است وارد جدول حذفی می‌شوند.</p>';
+        echo '<p>شرکت‌کنندگانِ پرداخت‌شده با تأیید وزن‌کشی: <strong>' . (int) $count . '</strong></p>';
+        echo '<p class="description">فقط ورزشکارانی که تأیید وزن‌کشی آن‌ها فعال است وارد جدول حذفی می‌شوند.</p>';
         echo '<p><button type="submit" class="button button-primary" name="imao_bracket_action" value="generate">' . ( $snapshot ? 'تولید مجدد جدول' : 'تولید جدول' ) . '</button> ';
         if ( $snapshot ) {
             echo '<a class="button" target="_blank" rel="noopener" href="' . esc_url( self::page_url( $post->ID ) ) . '">مشاهده جدول</a></p>';
@@ -138,6 +138,45 @@ class CompetitionBrackets {
                 update_post_meta( $competition_id, self::META_BRACKET, $snapshot );
             }
         }
+    }
+
+    /**
+     * Remove an unconfirmed order item from an already generated snapshot.
+     *
+     * The slot is intentionally kept as a BYE so the remaining bracket positions
+     * and previously stored results do not shift unexpectedly.
+     */
+    public static function remove_item_from_snapshot( int $competition_id, int $order_id, int $item_id ): void {
+        $snapshot = self::snapshot( $competition_id );
+        if ( ! $snapshot ) return;
+
+        $entry_id = 'order-' . $order_id . '-item-' . $item_id;
+        $changed = false;
+        foreach ( self::snapshot_divisions( $snapshot ) as $division_key => $division ) {
+            if ( empty( $division['slots'] ) || ! is_array( $division['slots'] ) ) continue;
+            foreach ( $division['slots'] as $slot_index => $entry ) {
+                if ( is_array( $entry ) && (string) ( $entry['entry_id'] ?? '' ) === $entry_id ) {
+                    $snapshot['divisions'][ $division_key ]['slots'][ $slot_index ] = null;
+                    $changed = true;
+                }
+            }
+            $winners = isset( $division['winners'] ) && is_array( $division['winners'] ) ? $division['winners'] : [];
+            foreach ( $winners as $match_key => $winner_id ) {
+                if ( (string) $winner_id === $entry_id ) {
+                    unset( $winners[ $match_key ] );
+                    $changed = true;
+                }
+            }
+            $snapshot['divisions'][ $division_key ]['winners'] = $winners;
+        }
+
+        if ( ! $changed ) return;
+        $snapshot['audit'][] = [
+            'at' => current_time( 'mysql' ),
+            'user_id' => get_current_user_id(),
+            'message' => sprintf( 'شرکت‌کننده سفارش #%d و قلم #%d به‌دلیل لغو تأیید وزن‌کشی از جدول حذف شد و جایگاه او BYE شد.', $order_id, $item_id ),
+        ];
+        update_post_meta( $competition_id, self::META_BRACKET, $snapshot );
     }
 
     public function render_page(): void {
