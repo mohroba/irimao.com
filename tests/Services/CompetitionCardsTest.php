@@ -5,6 +5,10 @@ namespace {
     use PHPUnit\Framework\TestCase;
 
     class CompetitionCardsTest extends TestCase {
+        public function test_weigh_in_search_normalizes_all_digit_scripts(): void {
+            $this->assertSame( '1234567890', CompetitionCards::normalize_search( ' ۱۲۳٤٥٦۷۸۹۰ ' ) );
+        }
+
         public function test_card_requires_paid_order_confirmed_weigh_in_and_positive_weight(): void {
             $order = new class {
                 public string $status = 'processing';

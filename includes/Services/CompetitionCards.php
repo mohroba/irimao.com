@@ -26,6 +26,7 @@ class CompetitionCards {
     private const ITEM_META_DORMITORY = '_imao_dormitory_requested';
 
     public function register(): void {
+        add_action( 'admin_post_imao_dormitory_export', [ $this, 'export_dormitory' ] );
         add_action( 'add_meta_boxes', [ $this, 'add_meta_box' ] );
         add_action( 'save_post_competition', [ $this, 'save_weigh_ins' ], 20, 2 );
         add_action( 'admin_post_imao_competition_card', [ $this, 'render_card' ] );
@@ -53,10 +54,22 @@ class CompetitionCards {
                 $dormitory_count++;
             }
         }
-        echo '<p><label for="imao-weigh-in-search"><strong>جستجوی شرکت‌کننده</strong></label> <input type="search" id="imao-weigh-in-search" placeholder="نام، کد ملی، سفارش، خوابگاه یا دسته وزنی..." style="min-width:320px"> <span style="margin-right:12px">آمار خوابگاه: <strong>' . (int) $dormitory_count . '</strong> نفر</span></p>';
+        $query = isset( $_GET['imao_weigh_search'] ) && is_string( $_GET['imao_weigh_search'] ) ? sanitize_text_field( wp_unslash( $_GET['imao_weigh_search'] ) ) : '';
+        $filtered = array_values( array_filter( $entries, function ( array $entry ) use ( $query ): bool {
+            if ( $query === '' ) return true;
+            $user_id = (int) $entry['order']->get_customer_id();
+            $user = get_userdata( $user_id );
+            $haystack = ( $user ? $this->user_display_name( $user, $user_id ) : '' ) . ' ' . get_user_meta( $user_id, 'national_id', true ) . ' ' . ( get_user_meta( $user_id, 'billing_phone', true ) ?: get_user_meta( $user_id, 'mobile', true ) ?: get_user_meta( $user_id, 'mobile_number', true ) ?: get_user_meta( $user_id, 'phone', true ) ) . ' ' . $entry['order']->get_id() . ' ' . $entry['item']->get_meta( 'دسته وزنی', true ) . ' ' . ( $entry['item']->get_meta( self::ITEM_META_DORMITORY, true ) === 'yes' ? 'خوابگاه دارد dormitory yes' : 'بدون خوابگاه dormitory no' );
+            return strpos( self::normalize_search( $haystack ), self::normalize_search( $query ) ) !== false;
+        } ) );
+        $pages = max( 1, (int) ceil( count( $filtered ) / 20 ) );
+        $page = max( 1, min( $pages, (int) ( $_GET['imao_weigh_page'] ?? 1 ) ) );
+        $export_url = wp_nonce_url( add_query_arg( [ 'action' => 'imao_dormitory_export', 'competition_id' => $post->ID ], admin_url( 'admin-post.php' ) ), 'imao_dormitory_export_' . $post->ID );
+        echo '<p><a class="button" href="' . esc_url( $export_url ) . '">خروجی اکسل اسامی متقاضیان خوابگاه</a> <span class="description">بر اساس اطلاعات ذخیره‌شده مسابقه</span></p>';
+        echo '<p><label for="imao-weigh-in-search"><strong>جستجوی شرکت‌کننده</strong></label> <input type="search" id="imao-weigh-in-search" value="' . esc_attr( $query ) . '" placeholder="نام، کد ملی، سفارش، خوابگاه یا دسته وزنی..." style="min-width:320px"> <button type="button" class="button" id="imao-weigh-search-button">جستجو</button> <span style="margin-right:12px">آمار خوابگاه: <strong>' . (int) $dormitory_count . '</strong> نفر</span></p>';
         echo '<div style="overflow:auto"><table id="imao-weigh-in-table" class="widefat striped"><thead><tr><th>ردیف</th><th>نام ورزشکار</th><th>کد ملی</th><th>سفارش</th><th>پایان اعتبار بیمه ورزشی</th><th>پایان اعتبار کارت عضویت فدراسیون</th><th>دسته ثبت‌نامی</th><th>وزن واقعی</th><th>دسته حضور پس از وزن‌کشی</th><th>خوابگاه</th><th>تأیید وزن‌کشی</th><th>کارت</th><th>سوابق دسته</th></tr></thead><tbody>';
-        $row_number = 1;
-        foreach ( $entries as $entry ) {
+        $row_number = ( $page - 1 ) * 20 + 1;
+        foreach ( array_slice( $filtered, ( $page - 1 ) * 20, 20 ) as $entry ) {
             $item = $entry['item'];
             $order = $entry['order'];
             $item_id = (int) $item->get_id();
@@ -92,7 +105,54 @@ class CompetitionCards {
             echo '<td>' . ( $ready ? '<a class="button" target="_blank" href="' . esc_url( self::card_url( (int) $order->get_id(), $item_id ) ) . '">مشاهده کارت</a>' : 'در انتظار' ) . '</td>';
             echo '<td>' . ( $audit ? '<details><summary>' . count( $audit ) . ' تغییر</summary><ol style="margin:6px 18px 0 0">' . $this->render_weight_audit( $audit ) . '</ol></details>' : '—' ) . '</td></tr>';
         }
-        echo '</tbody></table></div><p><strong>توجه:</strong> دسته حضور، روی همین ثبت‌نام ذخیره می‌شود و در جدول حذفی، کارت و رده‌بندی‌های بعدی استفاده خواهد شد. برای اعمال تغییرات، دکمه «به‌روزرسانی» مسابقه را بزنید.</p>';
+        echo '</tbody></table></div><p class="imao-weigh-pagination">';
+        foreach ( [ [ max( 1, $page - 1 ), 'قبلی' ], [ min( $pages, $page + 1 ), 'بعدی' ] ] as [ $target, $label ] ) {
+            $url = add_query_arg( [ 'post' => $post->ID, 'action' => 'edit', 'imao_weigh_page' => $target, 'imao_weigh_search' => $query ], admin_url( 'post.php' ) );
+            echo '<a class="button" href="' . esc_url( $url ) . '#imao_competition_cards">' . esc_html( $label ) . '</a> ';
+        }
+        echo ' صفحه ' . $page . ' از ' . $pages . ' | ' . count( $filtered ) . ' ثبت‌نام</p>';
+        echo '<p><strong>توجه:</strong> دسته حضور، روی همین ثبت‌نام ذخیره می‌شود و در جدول حذفی، کارت و رده‌بندی‌های بعدی استفاده خواهد شد. برای اعمال تغییرات، دکمه «به‌روزرسانی» مسابقه را بزنید.</p>';
+    }
+
+    public static function normalize_search( string $value ): string {
+        return strtolower( trim( strtr( str_replace( [ 'ي', 'ك' ], [ 'ی', 'ک' ], $value ), array_combine( preg_split( '//u', '۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩', -1, PREG_SPLIT_NO_EMPTY ), str_split( '01234567890123456789' ) ) ) ) );
+    }
+
+    /** One row per paid registration; export always includes all saved dormitory requests. */
+    public function dormitory_rows( int $competition_id ): array {
+        $rows = [];
+        foreach ( $this->paid_entries( $competition_id ) as $entry ) {
+            if ( $entry['item']->get_meta( self::ITEM_META_DORMITORY, true ) !== 'yes' ) continue;
+            $user_id = (int) $entry['order']->get_customer_id();
+            $user = get_userdata( $user_id );
+            $rows[] = [ (string) ( count( $rows ) + 1 ), $user ? $this->user_display_name( $user, $user_id ) : 'کاربر حذف‌شده',
+                (string) get_user_meta( $user_id, 'national_id', true ),
+                (string) ( get_user_meta( $user_id, 'billing_phone', true ) ?: get_user_meta( $user_id, 'mobile', true ) ),
+                (string) $entry['order']->get_id(), (string) $entry['item']->get_meta( 'دسته وزنی', true ) ];
+        }
+        return $rows;
+    }
+
+    public function export_dormitory(): void {
+        $competition_id = (int) ( $_GET['competition_id'] ?? 0 );
+        if ( get_post_type( $competition_id ) !== 'competition' || ! current_user_can( 'edit_post', $competition_id ) ) wp_die( 'دسترسی مجاز نیست.', '', [ 'response' => 403 ] );
+        check_admin_referer( 'imao_dormitory_export_' . $competition_id );
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setRightToLeft( true );
+        $rows = array_merge( [ [ 'ردیف', 'نام ورزشکار', 'کد ملی', 'موبایل', 'سفارش', 'دسته وزنی' ] ], $this->dormitory_rows( $competition_id ) );
+        foreach ( $rows as $row_index => $row ) {
+            foreach ( $row as $column => $value ) {
+                $sheet->setCellValueExplicit( \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex( $column + 1 ) . ( $row_index + 1 ), $value, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING );
+            }
+        }
+        foreach ( range( 'A', 'F' ) as $column ) $sheet->getColumnDimension( $column )->setAutoSize( true );
+        $sheet->getStyle( 'A1:F1' )->getFont()->setBold( true );
+        nocache_headers();
+        header( 'Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' );
+        header( 'Content-Disposition: attachment; filename="dormitory-' . $competition_id . '.xlsx"' );
+        ( new \PhpOffice\PhpSpreadsheet\Writer\Xlsx( $spreadsheet ) )->save( 'php://output' );
+        exit;
     }
 
     public function save_weigh_ins( int $competition_id, WP_Post $post ): void {

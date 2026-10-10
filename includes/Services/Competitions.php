@@ -896,7 +896,8 @@ class Competitions
         wp_enqueue_script('imao-select2', $url . 'assets/js/select2.min.js', ['jquery'], '1.0.0', true);
         wp_enqueue_script('imao-dt', $url . 'assets/js/jquery.dataTables.min.js', ['jquery'], '1.0.0', true);
         wp_add_inline_script('imao-jdp', 'jQuery(function($){$(".crm-select2").select2({dir:"rtl",width:"resolve"});jalaliDatepicker.startWatch();});');
-        wp_add_inline_script('imao-dt', 'jQuery(function($){var normalize=function(v){return (v||"").toString().replace(/[۰-۹٠-٩]/g,function(d){return "۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩".indexOf(d)%10;}).toLowerCase().trim();};$("#crm-attendees-table").DataTable({language:{url:"https://cdn.datatables.net/plug-ins/1.13.8/i18n/fa.json"},pageLength:20});$("#imao-weigh-in-search").on("input",function(){var q=normalize($(this).val());$("#imao-weigh-in-table tbody tr").each(function(){var haystack=normalize((($(this).data("search")||"")+" "+$(this).text()));$(this).toggle(haystack.indexOf(q)!==-1);});});});');
+        wp_enqueue_script('imao-weigh-pagination', $url . 'assets/js/weigh-in-pagination.js', [], '1.0.0', true);
+        wp_add_inline_script('imao-dt', 'jQuery(function($){$("#crm-attendees-table").DataTable({language:{url:"https://cdn.datatables.net/plug-ins/1.13.8/i18n/fa.json"},pageLength:20});});');
     }
 
     public function add_cart_item_data($data, $prod_id)

@@ -7,7 +7,15 @@ use IMAOCustom\Helpers\CityMap;
 
 class Assets {
     public function register(): void {
+        add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_input_languages' ] );
+        add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_input_languages' ] );
         add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_frontend' ] );
+    }
+
+    public function enqueue_input_languages(): void {
+        $url = plugin_dir_url( dirname( __DIR__ ) ) . 'assets/';
+        wp_enqueue_style( 'imao-input-language', $url . 'css/input-language.css', [], '1.0.0' );
+        wp_enqueue_script( 'imao-input-language', $url . 'js/input-language.js', [], '1.0.0', true );
     }
 
     public function enqueue_frontend(): void {

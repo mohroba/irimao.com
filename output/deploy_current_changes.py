@@ -103,6 +103,19 @@ elif "--weighin-dormitory-guest-dedupe" in sys.argv:
         "includes/Services/Competitions.php",
         "includes/Services/Eligibility.php",
     ]
+elif "--competition-admin-bracket-inputs" in sys.argv:
+    BACKUP_ROOT = LOCAL_ROOT / "output" / "production-backups" / "competition-admin-bracket-inputs-14050718"
+    FILES = [
+        "assets/css/input-language.css",
+        "assets/data/countries-fa.json",
+        "assets/js/input-language.js",
+        "assets/js/weigh-in-pagination.js",
+        "includes/Forms/BasicInfoForm.php",
+        "includes/Services/Assets.php",
+        "includes/Services/CompetitionBrackets.php",
+        "includes/Services/CompetitionCards.php",
+        "includes/Services/Competitions.php",
+    ]
 
 
 def ensure_remote_dir(ftp, remote_dir):

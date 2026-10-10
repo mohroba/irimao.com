@@ -298,10 +298,10 @@ class BasicInfoForm extends BaseForm {
         $html .= '<div class="cbif-field"><label for="gender">جنسیت<span class="required">*</span></label><select id="gender" name="gender" class="crm-select2"><option value="">— انتخاب کنید —</option><option value="male"' . $this->sel( $f['gender'], 'male' ) . '>مرد</option><option value="female"' . $this->sel( $f['gender'], 'female' ) . '>زن</option></select></div>';
 
         // names
-        $html .= '<div class="cbif-field"><label for="first_name_fa">نام (فارسی)<span class="required">*</span></label><input type="text" id="first_name_fa" name="first_name_fa" value="' . esc_attr( $f['first_name_fa'] ) . '"></div>';
-        $html .= '<div class="cbif-field"><label for="last_name_fa">نام خانوادگی (فارسی)<span class="required">*</span></label><input type="text" id="last_name_fa" name="last_name_fa" value="' . esc_attr( $f['last_name_fa'] ) . '"></div>';
-        $html .= '<div class="cbif-field"><label for="first_name_en">نام (En)</label><input type="text" id="first_name_en" name="first_name_en" value="' . esc_attr( $f['first_name_en'] ) . '"></div>';
-        $html .= '<div class="cbif-field"><label for="last_name_en">نام‌خانوادگی (En)</label><input type="text" id="last_name_en" name="last_name_en" value="' . esc_attr( $f['last_name_en'] ) . '"></div>';
+        $html .= '<div class="cbif-field"><label for="first_name_fa">نام (فارسی)<span class="required">*</span></label><input type="text" class="imao-input-fa" id="first_name_fa" name="first_name_fa" value="' . esc_attr( $f['first_name_fa'] ) . '"></div>';
+        $html .= '<div class="cbif-field"><label for="last_name_fa">نام خانوادگی (فارسی)<span class="required">*</span></label><input type="text" class="imao-input-fa" id="last_name_fa" name="last_name_fa" value="' . esc_attr( $f['last_name_fa'] ) . '"></div>';
+        $html .= '<div class="cbif-field"><label for="first_name_en">نام (En)</label><input type="text" class="imao-input-en" id="first_name_en" name="first_name_en" value="' . esc_attr( $f['first_name_en'] ) . '"></div>';
+        $html .= '<div class="cbif-field"><label for="last_name_en">نام‌خانوادگی (En)</label><input type="text" class="imao-input-en" id="last_name_en" name="last_name_en" value="' . esc_attr( $f['last_name_en'] ) . '"></div>';
 
         // father, birth
         $html .= '<div class="cbif-field"><label for="father_name">نام پدر<span class="required">*</span></label><input type="text" id="father_name" name="father_name" value="' . esc_attr( $f['father_name'] ) . '"></div>';

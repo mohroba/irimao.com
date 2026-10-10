@@ -60,27 +60,29 @@ class CompetitionBrackets {
             echo '<div style="overflow:auto"><table class="widefat striped"><thead><tr><th>مرحله</th><th>مسابقه</th><th>قرمز</th><th>آبی</th><th>برنده</th></tr></thead><tbody>';
             foreach ( $rounds as $round_index => $matches ) {
                 foreach ( $matches as $match_index => $match ) {
+                    if ( $match['empty'] ) continue;
                     $key = $round_index . ':' . $match_index;
-                $a = $match['a'];
-                $b = $match['b'];
-                    echo '<tr><td>' . esc_html( self::round_label( count( $division['slots'] ), $round_index ) ) . '</td><td>' . ( $match_index + 1 ) . '</td><td>' . esc_html( self::entry_name( $a ) ) . '</td><td>' . esc_html( self::entry_name( $b ) ) . '</td><td>';
-                if ( $a && $b ) {
+                    $a = $match['a'];
+                    $b = $match['b'];
+                    echo '<tr><td>' . esc_html( self::round_label( count( $division['slots'] ), $round_index ) ) . '</td><td>' . ( $match_index + 1 ) . '</td><td>' . esc_html( $a ? self::entry_name( $a ) : ( $match['a_pending'] ? 'در انتظار نتیجه' : 'استراحت' ) ) . '</td><td>' . esc_html( $b ? self::entry_name( $b ) : ( $match['b_pending'] ? 'در انتظار نتیجه' : 'استراحت' ) ) . '</td><td>';
+                    if ( $a && $b ) {
                         echo '<select name="imao_bracket_winners[' . esc_attr( $division_key ) . '][' . esc_attr( $key ) . ']"><option value="">— انتخاب —</option>';
-                    foreach ( [ $a, $b ] as $entry ) {
-                        echo '<option value="' . esc_attr( $entry['entry_id'] ) . '" ' . selected( $match['winner']['entry_id'] ?? '', $entry['entry_id'], false ) . '>' . esc_html( $entry['name'] ) . '</option>';
+                        foreach ( [ $a, $b ] as $entry ) {
+                            echo '<option value="' . esc_attr( $entry['entry_id'] ) . '" ' . selected( $match['winner']['entry_id'] ?? '', $entry['entry_id'], false ) . '>' . esc_html( $entry['name'] ) . '</option>';
+                        }
+                        echo '</select>';
+                    } elseif ( $match['winner'] ) {
+                        echo 'صعود خودکار: ' . esc_html( $match['winner']['name'] );
+                    } else {
+                        echo '—';
                     }
-                    echo '</select>';
-                } elseif ( $match['winner'] ) {
-                    echo 'صعود خودکار: ' . esc_html( $match['winner']['name'] );
-                } else {
-                    echo '—';
-                }
-                echo '</td></tr>';
+                    echo '</td></tr>';
                 }
             }
             echo '</tbody></table></div>';
         }
     }
+
 
     public function save_admin_changes( int $competition_id, WP_Post $post ): void {
         if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return;
@@ -204,11 +206,67 @@ class CompetitionBrackets {
     private function bracket_html( int $competition_id ): string {
         $snapshot = self::snapshot( $competition_id );
         if ( ! $snapshot ) return '<p class="imao-bracket-empty">جدول این مسابقه هنوز منتشر نشده است.</p>';
+        $criterion = $this->criterion( $competition_id );
         ob_start(); ?>
-<style>.imao-bracket-shell{direction:rtl;background:#fff;border:1px solid #e2e5ea;border-radius:14px;overflow:hidden;font-family:Tahoma,Arial,sans-serif}.imao-bracket-toolbar{display:flex;gap:8px;align-items:center;padding:10px 14px;background:#17134b;color:#fff}.imao-bracket-toolbar button{border:1px solid #ffffff66;border-radius:6px;background:#fff;color:#17134b;padding:5px 11px;cursor:pointer}.imao-bracket-viewport{direction:ltr;overflow:auto;cursor:grab;min-height:420px;padding:24px}.imao-bracket-tree{position:relative;display:flex;gap:54px;transform-origin:top left;width:max-content;transition:transform .15s}.imao-bracket-connectors{position:absolute;inset:0;z-index:0;overflow:visible;pointer-events:none}.imao-bracket-connectors path{fill:none;stroke:#8993a3;stroke-width:2;vector-effect:non-scaling-stroke}.imao-bracket-round{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:space-around;width:220px;gap:18px}.imao-bracket-round h3{direction:rtl;text-align:center;font-size:14px;margin:0 0 8px;color:#555}.imao-bracket-match{position:relative;direction:rtl;border:1px solid #ccd2dd;border-radius:8px;background:#fff;box-shadow:0 2px 8px #0000000d;overflow:visible}.imao-bracket-player{display:flex;justify-content:space-between;gap:8px;padding:8px 10px;min-height:43px;border-bottom:1px solid #edf0f4;font-size:12px}.imao-bracket-player:last-child{border:0}.imao-bracket-player.winner{background:#eaf8ee;color:#116b2d;font-weight:700}.imao-bracket-player.bye{color:#9299a5;font-style:italic;direction:ltr}.imao-bracket-player-name{display:flex;flex-direction:column;gap:2px}.imao-bracket-national-id{font-size:10px;color:#6b7280;font-weight:400;line-height:1.2}.imao-bracket-player.winner .imao-bracket-national-id{color:#257442}.imao-bracket-champion{border-color:#d7a900;box-shadow:0 0 0 2px #ffd84d55}.imao-bracket-button{display:inline-block;padding:10px 18px;border-radius:7px;background:#17134b;color:#fff!important;text-decoration:none}.imao-bracket-empty{text-align:center;color:#777}</style>
-<?php foreach ( self::snapshot_divisions( $snapshot ) as $division ) : $rounds = self::build_rounds( $division['slots'], $division['winners'] ?? [] ); ?><h2 style="font:700 18px Tahoma;text-align:center;margin:26px 0 10px"><?php echo esc_html( (string) $division['label'] ); ?></h2><div class="imao-bracket-shell" data-imao-bracket><div class="imao-bracket-toolbar"><strong>جدول <?php echo (int) $division['size']; ?> نفره</strong><button type="button" data-zoom="in">+</button><button type="button" data-zoom="out">−</button><button type="button" data-zoom="reset">۱۰۰٪</button></div><div class="imao-bracket-viewport"><div class="imao-bracket-tree">
-<?php foreach ( $rounds as $round_index => $matches ) : ?><section class="imao-bracket-round"><h3><?php echo esc_html( self::round_label( (int) $division['size'], $round_index ) ); ?></h3><?php foreach ( $matches as $match ) : ?><div class="imao-bracket-match <?php echo $round_index === count( $rounds ) - 1 && $match['winner'] ? 'imao-bracket-champion' : ''; ?>"><?php foreach ( [ $match['a'], $match['b'] ] as $entry ) : ?><div class="imao-bracket-player <?php echo ! $entry ? 'bye' : ( $match['winner'] && $entry['entry_id'] === $match['winner']['entry_id'] ? 'winner' : '' ); ?>"><span class="imao-bracket-player-name"><span><?php echo esc_html( self::entry_name( $entry ) ); ?><?php if ( $entry && ! empty( $entry['seed_rank'] ) ) : ?> <b title="رتبه در زمان جدول‌بندی">#<?php echo (int) $entry['seed_rank']; ?></b><?php endif; ?></span><?php if ( $entry && ! empty( $entry['national_id'] ) ) : ?><small class="imao-bracket-national-id">کد ملی: <?php echo esc_html( (string) $entry['national_id'] ); ?></small><?php endif; ?></span><?php if ( $entry && ! empty( $entry['group_label'] ) ) : ?><small><?php echo esc_html( $entry['group_label'] ); ?></small><?php endif; ?></div><?php endforeach; ?></div><?php endforeach; ?></section><?php endforeach; ?>
-</div></div></div><?php endforeach; ?><script>(function(){var ns='http://www.w3.org/2000/svg';document.querySelectorAll('[data-imao-bracket]').forEach(function(root){if(root.dataset.ready)return;root.dataset.ready='1';var view=root.querySelector('.imao-bracket-viewport'),tree=root.querySelector('.imao-bracket-tree'),scale=1,drag=false,x=0,y=0,sx=0,sy=0;function zoom(){tree.style.transform='scale('+scale+')'}function connectors(){var old=tree.querySelector('.imao-bracket-connectors');if(old)old.remove();var svg=document.createElementNS(ns,'svg'),rounds=tree.querySelectorAll('.imao-bracket-round');svg.setAttribute('class','imao-bracket-connectors');svg.setAttribute('width',tree.scrollWidth);svg.setAttribute('height',tree.scrollHeight);rounds.forEach(function(round,ri){if(ri>=rounds.length-1)return;var matches=round.querySelectorAll('.imao-bracket-match'),parents=rounds[ri+1].querySelectorAll('.imao-bracket-match');matches.forEach(function(match,mi){var parent=parents[Math.floor(mi/2)];if(!parent)return;var x1=round.offsetLeft+match.offsetLeft+match.offsetWidth,y1=round.offsetTop+match.offsetTop+match.offsetHeight/2,x2=rounds[ri+1].offsetLeft+parent.offsetLeft,y2=rounds[ri+1].offsetTop+parent.offsetTop+parent.offsetHeight/2,xm=x1+(x2-x1)/2,path=document.createElementNS(ns,'path');path.setAttribute('d','M'+x1+' '+y1+' H'+xm+' V'+y2+' H'+x2);svg.appendChild(path)})});tree.insertBefore(svg,tree.firstChild)}root.addEventListener('click',function(e){var z=e.target.dataset.zoom;if(!z)return;scale=z==='reset'?1:Math.max(.4,Math.min(2,scale+(z==='in'?.15:-.15)));zoom()});view.addEventListener('mousedown',function(e){drag=true;x=e.clientX;y=e.clientY;sx=view.scrollLeft;sy=view.scrollTop});window.addEventListener('mouseup',function(){drag=false});view.addEventListener('mousemove',function(e){if(!drag)return;view.scrollLeft=sx-(e.clientX-x);view.scrollTop=sy-(e.clientY-y)});view.addEventListener('wheel',function(e){if(!e.ctrlKey)return;e.preventDefault();scale=Math.max(.4,Math.min(2,scale+(e.deltaY<0?.1:-.1)));zoom()},{passive:false});connectors();if(window.ResizeObserver)new ResizeObserver(connectors).observe(tree)})})();</script>
+<style>.imao-bracket-shell{direction:rtl;background:#fff;border:1px solid #e2e5ea;border-radius:14px;overflow:hidden;font-family:Tahoma,Arial,sans-serif}.imao-bracket-toolbar{display:flex;gap:8px;align-items:center;padding:10px 14px;background:#17134b;color:#fff}.imao-bracket-toolbar button{border:1px solid #ffffff66;border-radius:6px;background:#fff;color:#17134b;padding:5px 11px;cursor:pointer}.imao-bracket-viewport{direction:ltr;overflow:auto;cursor:grab;min-height:240px;padding:24px}.imao-bracket-tree{position:relative;display:flex;gap:54px;transform-origin:top left;width:max-content;transition:transform .15s}.imao-bracket-connectors{position:absolute;inset:0;z-index:0;overflow:visible;pointer-events:none}.imao-bracket-connectors path{fill:none;stroke:#8993a3;stroke-width:2;vector-effect:non-scaling-stroke}.imao-bracket-round{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:space-around;width:220px;gap:18px}.imao-bracket-round h3{direction:rtl;text-align:center;font-size:14px;margin:0 0 8px;color:#555}.imao-bracket-match{position:relative;direction:rtl;border:1px solid #ccd2dd;border-radius:8px;background:#fff;box-shadow:0 2px 8px #0000000d;overflow:visible}.imao-bracket-player{display:flex;justify-content:space-between;gap:8px;padding:6px 10px;min-height:26px;border-bottom:1px solid #edf0f4;font-size:12px}.imao-bracket-player:last-child{border:0}.imao-bracket-player.winner{background:#eaf8ee;color:#116b2d;font-weight:700}.imao-bracket-player.bye{color:#9299a5;font-style:italic;direction:rtl}.imao-bracket-player-name{display:flex;flex-direction:column;gap:2px}.imao-bracket-champion{border-color:#d7a900;box-shadow:0 0 0 2px #ffd84d55}.imao-bracket-button{display:inline-block;padding:10px 18px;border-radius:7px;background:#17134b;color:#fff!important;text-decoration:none}.imao-bracket-empty{text-align:center;color:#777}.imao-bracket-layout{display:flex;direction:ltr;align-items:flex-start}.imao-bracket-viewport{flex:1;min-width:0}.imao-bracket-placements{direction:rtl;flex:0 0 320px;padding:16px}.imao-bracket-placements table{width:100%;border-collapse:collapse;font-size:12px}.imao-bracket-placements th,.imao-bracket-placements td{padding:10px;border:1px solid #ccd2dd}.imao-bracket-placements caption{padding:10px;font-weight:bold}@media(max-width:800px){.imao-bracket-layout{display:block}.imao-bracket-placements{max-width:100%}}</style>
+<?php foreach ( self::snapshot_divisions( $snapshot ) as $division ) :
+    $rounds = self::build_rounds( $division['slots'], $division['winners'] ?? [] ); ?>
+<h2 style="font:700 18px Tahoma;text-align:center;margin:26px 0 10px"><?php echo esc_html( (string) $division['label'] ); ?></h2>
+<div class="imao-bracket-shell" data-imao-bracket>
+    <div class="imao-bracket-toolbar">
+        <strong>جدول <?php echo (int) $division['size']; ?> نفره</strong>
+        <button type="button" data-zoom="in">+</button>
+        <button type="button" data-zoom="out">−</button>
+        <button type="button" data-zoom="reset">۱۰۰٪</button>
+    </div>
+    <div class="imao-bracket-layout">
+        <div class="imao-bracket-viewport">
+            <div class="imao-bracket-tree">
+                <?php foreach ( $rounds as $round_index => $matches ) : ?>
+                <section class="imao-bracket-round">
+                    <h3><?php echo esc_html( self::round_label( (int) $division['size'], $round_index ) ); ?></h3>
+                    <?php foreach ( $matches as $match ) : ?>
+                    <div <?php echo $match['empty'] ? 'style="visibility:hidden" aria-hidden="true"' : ''; ?> class="imao-bracket-match <?php echo $round_index === count( $rounds ) - 1 && $match['winner'] ? 'imao-bracket-champion' : ''; ?>">
+                        <?php foreach ( [ 'a' => $match['a'], 'b' => $match['b'] ] as $side => $entry ) : ?>
+                        <div class="imao-bracket-player <?php echo ! $entry ? 'bye' : ( $match['winner'] && $entry['entry_id'] === $match['winner']['entry_id'] ? 'winner' : '' ); ?>">
+                            <span class="imao-bracket-player-name">
+                                <span>
+                                    <?php echo esc_html( $entry ? self::entry_name( $entry ) : ( $match[ $side . '_pending' ] ? 'در انتظار نتیجه' : 'استراحت' ) ); ?>
+                                    <?php if ( $entry && ! empty( $entry['seed_rank'] ) ) : ?>
+                                    <b title="رتبه در زمان جدول‌بندی">#<?php echo (int) $entry['seed_rank']; ?></b>
+                                    <?php endif; ?>
+                                </span>
+                            </span>
+                            <?php if ( $entry ) : ?>
+                            <small><?php echo esc_html( self::group_label( $entry, $criterion ) ); ?></small>
+                            <?php endif; ?>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endforeach; ?>
+                </section>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <aside class="imao-bracket-placements">
+            <table>
+                <caption>نفرات برتر</caption>
+                <thead><tr><th>رتبه</th><th>نام ورزشکار</th><th><?php echo esc_html( self::criterion_label( $criterion ) ); ?></th></tr></thead>
+                <tbody>
+                    <?php foreach ( self::placements( $rounds ) as $position => $entry ) : ?>
+                    <tr>
+                        <td><?php echo esc_html( [ 1 => 'اول', 2 => 'دوم', 3 => 'سوم', 4 => 'سوم مشترک' ][ $position ] ); ?></td>
+                        <td><?php echo esc_html( $entry['name'] ?? '—' ); ?></td>
+                        <td><?php echo esc_html( $entry ? self::group_label( $entry, $criterion ) : '—' ); ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </aside>
+    </div>
+</div>
+<?php endforeach; ?>
+<script>(function(){var ns='http://www.w3.org/2000/svg';document.querySelectorAll('[data-imao-bracket]').forEach(function(root){if(root.dataset.ready)return;root.dataset.ready='1';var view=root.querySelector('.imao-bracket-viewport'),tree=root.querySelector('.imao-bracket-tree'),scale=1,drag=false,x=0,y=0,sx=0,sy=0;function zoom(){tree.style.transform='scale('+scale+')'}function connectors(){var old=tree.querySelector('.imao-bracket-connectors');if(old)old.remove();var svg=document.createElementNS(ns,'svg'),rounds=tree.querySelectorAll('.imao-bracket-round');svg.setAttribute('class','imao-bracket-connectors');svg.setAttribute('width',tree.scrollWidth);svg.setAttribute('height',tree.scrollHeight);rounds.forEach(function(round,ri){if(ri>=rounds.length-1)return;var matches=round.querySelectorAll('.imao-bracket-match'),parents=rounds[ri+1].querySelectorAll('.imao-bracket-match');matches.forEach(function(match,mi){var parent=parents[Math.floor(mi/2)];if(!parent||match.style.visibility==='hidden'||parent.style.visibility==='hidden')return;var x1=round.offsetLeft+match.offsetLeft+match.offsetWidth,y1=round.offsetTop+match.offsetTop+match.offsetHeight/2,x2=rounds[ri+1].offsetLeft+parent.offsetLeft,y2=rounds[ri+1].offsetTop+parent.offsetTop+parent.offsetHeight/2,xm=x1+(x2-x1)/2,path=document.createElementNS(ns,'path');path.setAttribute('d','M'+x1+' '+y1+' H'+xm+' V'+y2+' H'+x2);svg.appendChild(path)})});tree.insertBefore(svg,tree.firstChild)}root.addEventListener('click',function(e){var z=e.target.dataset.zoom;if(!z)return;scale=z==='reset'?1:Math.max(.4,Math.min(2,scale+(z==='in'?.15:-.15)));zoom()});view.addEventListener('mousedown',function(e){drag=true;x=e.clientX;y=e.clientY;sx=view.scrollLeft;sy=view.scrollTop});window.addEventListener('mouseup',function(){drag=false});view.addEventListener('mousemove',function(e){if(!drag)return;view.scrollLeft=sx-(e.clientX-x);view.scrollTop=sy-(e.clientY-y)});view.addEventListener('wheel',function(e){if(!e.ctrlKey)return;e.preventDefault();scale=Math.max(.4,Math.min(2,scale+(e.deltaY<0?.1:-.1)));zoom()},{passive:false});connectors();if(window.ResizeObserver)new ResizeObserver(connectors).observe(tree)})})();</script>
 <?php return (string) ob_get_clean();
     }
 
@@ -264,8 +322,13 @@ class CompetitionBrackets {
             foreach ( $members as $member ) {
                 $best = [];
                 $best_score = -1;
+                $empty_pairs = false;
+                for ( $pair = 0; $pair < $size; $pair += 2 ) {
+                    if ( $slots[ $pair ] === null && $slots[ $pair + 1 ] === null ) { $empty_pairs = true; break; }
+                }
                 for ( $slot = 0; $slot < $size; $slot++ ) {
                     if ( $slots[ $slot ] !== null ) continue;
+                    if ( $empty_pairs && $slots[ $slot ^ 1 ] !== null ) continue;
                     $score = $used ? min( array_map( static fn( int $other ): int => self::encounter_round( $slot, $other ), $used ) ) : PHP_INT_MAX;
                     if ( $score > $best_score ) { $best_score = $score; $best = [ $slot ]; }
                     elseif ( $score === $best_score ) $best[] = $slot;
@@ -302,7 +365,7 @@ class CompetitionBrackets {
                     elseif ( $requested === (string) $b['entry_id'] ) $winner = $b;
                     if ( $winner ) { $accepted[ $key ] = $winner['entry_id']; $decided = true; }
                 }
-                $matches[] = [ 'a' => $a, 'b' => $b, 'winner' => $winner ];
+                $matches[] = [ 'a' => $a, 'b' => $b, 'winner' => $winner, 'empty' => $left['decided'] && $right['decided'] && ! $a && ! $b, 'a_pending' => ! $left['decided'], 'b_pending' => ! $right['decided'] ];
                 $next[] = [ 'entry' => $winner, 'decided' => $decided ];
             }
             $rounds[] = $matches;
@@ -356,6 +419,7 @@ class CompetitionBrackets {
             'name' => trim( $first . ' ' . $last ) ?: $user->display_name,
             'national_id' => $national_id,
             'club' => $club ?: ( $club_id ? 'باشگاه ' . $club_id : 'بدون باشگاه' ),
+            'city' => (string) get_user_meta( $user_id, 'residence_city', true ) ?: 'شهرستان ثبت نشده',
             'province' => (string) get_user_meta( $user_id, 'residence_province', true ) ?: 'بدون استان',
             'country' => (string) ( get_user_meta( $user_id, 'nationality_country', true ) ?: get_user_meta( $user_id, 'billing_country', true ) ?: 'IR' ),
             'weight_term_id' => $weight_term_id,
@@ -391,13 +455,67 @@ class CompetitionBrackets {
     private function criterion( int $competition_id ): string {
         $terms = get_the_terms( $competition_id, 'level' );
         $level = $terms && ! is_wp_error( $terms ) ? strtolower( implode( ' ', array_merge( wp_list_pluck( $terms, 'slug' ), wp_list_pluck( $terms, 'name' ) ) ) ) : '';
-        if ( strpos( $level, 'بین‌الملل' ) !== false || strpos( $level, 'international' ) !== false ) return 'country';
-        if ( strpos( $level, 'کشور' ) !== false || strpos( $level, 'national' ) !== false ) return 'province';
+        return self::criterion_for_level( $level );
+    }
+
+    public static function criterion_for_level( string $level ): string {
+        $level = str_replace( [ '‌', '-', ' ' ], '', strtolower( $level ) );
+        if ( strpos( $level, 'بینالملل' ) !== false || strpos( $level, 'international' ) !== false ) return 'country';
+        if ( strpos( $level, 'شهرستان' ) !== false || strpos( $level, 'county' ) !== false ) return 'club';
+        if ( strpos( $level, 'استان' ) !== false || strpos( $level, 'province' ) !== false || strpos( $level, 'provincial' ) !== false ) return 'city';
+        foreach ( [ 'کشور', 'جایزهبزرگ', 'منطقه', 'national', 'grandprix', 'regional' ] as $word ) {
+            if ( strpos( $level, $word ) !== false ) return 'province';
+        }
         return 'club';
     }
 
     private static function criterion_label( string $criterion ): string {
-        return [ 'club' => 'باشگاه', 'province' => 'استان', 'country' => 'کشور' ][ $criterion ] ?? $criterion;
+        return [ 'club' => 'باشگاه', 'city' => 'شهرستان', 'province' => 'استان', 'country' => 'کشور' ][ $criterion ] ?? $criterion;
+    }
+
+    public static function group_label( array $entry, string $criterion ): string {
+        $value = trim( (string) ( $entry[ $criterion ] ?? '' ) );
+        // Older snapshots predate city labels; resolve only that missing field.
+        if ( $criterion === 'city' && $value === '' && ! empty( $entry['user_id'] ) ) {
+            $value = (string) get_user_meta( (int) $entry['user_id'], 'residence_city', true );
+        }
+        if ( $criterion === 'province' ) {
+            static $provinces;
+            if ( $provinces === null ) {
+                $codes = [ 'EAZ','WAZ','ADL','ESF','ABZ','ILM','BHR','THR','CHB','SKH','RKH','NKH','KHZ','ZJN','SMN','SBN','FRS','GZN','QHM','KRD','KRN','KRH','KBD','GLS','LRS','GIL','MZN','MKZ','HRZ','HDN','YZD' ];
+                $names = [ 'آذربایجان شرقی','آذربایجان غربی','اردبیل','اصفهان','البرز','ایلام','بوشهر','تهران','چهارمحال و بختیاری','خراسان جنوبی','خراسان رضوی','خراسان شمالی','خوزستان','زنجان','سمنان','سیستان و بلوچستان','فارس','قزوین','قم','کردستان','کرمان','کرمانشاه','کهگیلویه و بویراحمد','گلستان','لرستان','گیلان','مازندران','مرکزی','هرمزگان','همدان','یزد' ];
+                $provinces = array_combine( $codes, $names ) + array_combine( array_map( static fn( int $number ): string => sprintf( 'IR-%02d', $number ), range( 1, 31 ) ), $names );
+            }
+            $value = $provinces[ strtoupper( $value ) ] ?? $value;
+        } elseif ( $criterion === 'country' && preg_match( '/^[A-Za-z]{2}$/', $value ) ) {
+            static $countries;
+            if ( $countries === null ) $countries = json_decode( (string) file_get_contents( dirname( __DIR__, 2 ) . '/assets/data/countries-fa.json' ), true ) ?: [];
+            $value = $countries[ strtoupper( $value ) ] ?? '';
+        }
+        return preg_match( '/[\x{0600}-\x{06ff}]/u', $value ) ? $value : self::criterion_label( $criterion ) . ' ثبت نشده';
+    }
+
+    /** Placements are derived only from a decided final and its semifinal feeders. */
+    public static function placements( array $rounds ): array {
+        $result = [ 1 => null, 2 => null, 3 => null, 4 => null ];
+        if ( ! $rounds ) return $result;
+        $final = $rounds[ count( $rounds ) - 1 ][0];
+        if ( ! $final['winner'] ) return $result;
+        $result[1] = $final['winner'];
+        $result[2] = self::loser( $final );
+        if ( count( $rounds ) > 1 && $result[2] ) {
+            foreach ( $rounds[ count( $rounds ) - 2 ] as $match ) {
+                if ( ! $match['winner'] ) continue;
+                $position = $match['winner']['entry_id'] === $result[1]['entry_id'] ? 3 : 4;
+                $result[ $position ] = self::loser( $match );
+            }
+        }
+        return $result;
+    }
+
+    private static function loser( array $match ): ?array {
+        if ( ! $match['winner'] || ! $match['a'] || ! $match['b'] ) return null;
+        return $match['winner']['entry_id'] === $match['a']['entry_id'] ? $match['b'] : $match['a'];
     }
 
     private static function entry_name( ?array $entry ): string { return $entry ? (string) $entry['name'] : 'BYE'; }

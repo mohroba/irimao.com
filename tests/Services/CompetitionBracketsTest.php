@@ -5,6 +5,55 @@ namespace {
     use PHPUnit\Framework\TestCase;
 
     class CompetitionBracketsTest extends TestCase {
+        public function test_opening_matches_have_an_entrant_for_every_supported_size(): void {
+            foreach ( [ 2, 3, 5, 9, 17, 33, 65, 129 ] as $count ) {
+                foreach ( [ 'first', 'second', 'third' ] as $seed ) {
+                    $participants = [];
+                    for ( $i = 1; $i <= $count; $i++ ) {
+                        $participants[] = [ 'entry_id' => (string) $i, 'name' => 'Fighter ' . $i, 'club' => 'club-' . ( $i % 3 ), 'seed_rank' => $i <= 4 ? $i : 0 ];
+                    }
+                    $slots = CompetitionBrackets::seed_participants( $participants, CompetitionBrackets::bracket_size( $count ), 'club', $seed );
+                    $this->assertCount( $count, array_filter( $slots ) );
+                    for ( $pair = 0; $pair < count( $slots ); $pair += 2 ) {
+                        $this->assertTrue( $slots[ $pair ] !== null || $slots[ $pair + 1 ] !== null, 'Empty opening match for ' . $count );
+                    }
+                }
+            }
+        }
+
+        public function test_pending_results_are_distinct_from_empty_matches(): void {
+            $a = [ 'entry_id' => 'a', 'name' => 'A' ];
+            $b = [ 'entry_id' => 'b', 'name' => 'B' ];
+            $rounds = CompetitionBrackets::build_rounds( [ $a, $b, null, null ], [] );
+            $this->assertTrue( $rounds[0][1]['empty'] );
+            $this->assertTrue( $rounds[1][0]['a_pending'] );
+            $this->assertFalse( $rounds[1][0]['empty'] );
+            $this->assertNull( $rounds[1][0]['winner'] );
+        }
+
+        public function test_medals_follow_the_final_and_semifinal_opponents(): void {
+            $entries = [];
+            foreach ( [ 'a', 'b', 'c', 'd' ] as $id ) $entries[] = [ 'entry_id' => $id, 'name' => $id ];
+            $rounds = CompetitionBrackets::build_rounds( $entries, [ '0:0' => 'b', '0:1' => 'd', '1:0' => 'd' ] );
+            $this->assertSame( [ 1 => 'd', 2 => 'b', 3 => 'c', 4 => 'a' ], array_map( static fn( $entry ) => $entry['entry_id'], CompetitionBrackets::placements( $rounds ) ) );
+            $this->assertSame( [ 1 => null, 2 => null, 3 => null, 4 => null ], CompetitionBrackets::placements( CompetitionBrackets::build_rounds( $entries, [ '0:0' => 'b', '0:1' => 'd' ] ) ) );
+            $rounds = CompetitionBrackets::build_rounds( [ $entries[0], null, $entries[2], $entries[3] ], [ '0:1' => 'd', '1:0' => 'a' ] );
+            $medals = CompetitionBrackets::placements( $rounds );
+            $this->assertNull( $medals[3] );
+            $this->assertSame( 'c', $medals[4]['entry_id'] );
+        }
+
+        public function test_competition_levels_select_the_requested_identity(): void {
+            foreach ( [ 'استانی' => 'city', 'بین المللی' => 'country', 'بین‌المللی' => 'country', 'کشوری' => 'province', 'جایزه بزرگ' => 'province', 'منطقه‌ای' => 'province', 'شهرستانی' => 'club' ] as $level => $criterion ) {
+                $this->assertSame( $criterion, CompetitionBrackets::criterion_for_level( $level ) );
+            }
+            $this->assertSame( 'تهران', CompetitionBrackets::group_label( [ 'province' => 'THR' ], 'province' ) );
+            $this->assertSame( 'خوزستان', CompetitionBrackets::group_label( [ 'province' => 'IR-13' ], 'province' ) );
+            $this->assertSame( 'ایران', CompetitionBrackets::group_label( [ 'country' => 'IR' ], 'country' ) );
+            $this->assertSame( 'ایالات متحده', CompetitionBrackets::group_label( [ 'country' => 'US' ], 'country' ) );
+            $this->assertSame( 'رشت', CompetitionBrackets::group_label( [ 'city' => 'رشت' ], 'city' ) );
+        }
+
         public function test_bracket_expands_to_smallest_supported_power_of_two(): void {
             $this->assertSame( 2, CompetitionBrackets::bracket_size( 2 ) );
             $this->assertSame( 8, CompetitionBrackets::bracket_size( 5 ) );
