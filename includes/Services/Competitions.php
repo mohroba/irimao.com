@@ -944,7 +944,9 @@ class Competitions
     public function enqueue_admin_assets(): void
     {
         $screen = get_current_screen();
-        if (!$screen || $screen->post_type !== 'competition') {
+        $is_competition_screen = $screen && ($screen->post_type ?? '') === 'competition';
+        $is_attendees_page = isset($_GET['page']) && (string) $_GET['page'] === 'crm-competition-attendees';
+        if (!$is_competition_screen && !$is_attendees_page) {
             return;
         }
         $url = plugin_dir_url(dirname(__DIR__));
@@ -956,7 +958,7 @@ class Competitions
         wp_enqueue_script('imao-dt', $url . 'assets/js/jquery.dataTables.min.js', ['jquery'], '1.0.0', true);
         wp_add_inline_script('imao-jdp', 'jQuery(function($){$(".crm-select2").select2({dir:"rtl",width:"resolve"});jalaliDatepicker.startWatch();});');
         wp_enqueue_script('imao-weigh-pagination', $url . 'assets/js/weigh-in-pagination.js', [], '1.0.0', true);
-        wp_add_inline_script('imao-dt', 'jQuery(function($){$("#crm-attendees-table").DataTable({language:{url:"https://cdn.datatables.net/plug-ins/1.13.8/i18n/fa.json"},pageLength:20});});');
+        wp_add_inline_script('imao-dt', 'jQuery(function($){var $table=$("#crm-attendees-table");if(!$table.length||!$.fn.DataTable){return;}var isDataTable=($.fn.DataTable.isDataTable||($.fn.dataTable&&$.fn.dataTable.isDataTable)||function(){return false;});if(isDataTable($table)){return;}$table.DataTable({language:{url:"https://cdn.datatables.net/plug-ins/1.13.8/i18n/fa.json"},pageLength:25,lengthMenu:[[10,25,50,100,-1],[10,25,50,100,"همه"]],deferRender:true,stateSave:true,order:[]});});');
     }
 
     public function add_cart_item_data($data, $prod_id)

@@ -36,6 +36,23 @@ if (!function_exists('get_user_meta')) {
 if (!function_exists('esc_html')) { function esc_html($v){ return $v; } }
 if (!function_exists('current_user_can')) { function current_user_can($capability, ...$args){ return true; } }
 if (!function_exists('admin_url')) { function admin_url($path = ''){ return '/wp-admin/' . ltrim($path, '/'); } }
+if (!function_exists('get_current_screen')) { function get_current_screen(){ return $GLOBALS['test_current_screen'] ?? null; } }
+if (!function_exists('plugin_dir_url')) { function plugin_dir_url($path){ return '/plugin/'; } }
+if (!function_exists('wp_enqueue_style')) {
+    function wp_enqueue_style($handle, $src = '', $deps = [], $ver = '') {
+        $GLOBALS['test_enqueued_styles'][] = $handle;
+    }
+}
+if (!function_exists('wp_enqueue_script')) {
+    function wp_enqueue_script($handle, $src = '', $deps = [], $ver = '', $in_footer = false) {
+        $GLOBALS['test_enqueued_scripts'][] = $handle;
+    }
+}
+if (!function_exists('wp_add_inline_script')) {
+    function wp_add_inline_script($handle, $data) {
+        $GLOBALS['test_inline_scripts'][$handle] = $data;
+    }
+}
 if (!function_exists('add_query_arg')) {
     function add_query_arg($args, $url = '') {
         return $url . (strpos($url, '?') === false ? '?' : '&') . http_build_query($args);
@@ -77,5 +94,21 @@ class CompetitionAttendeesTest extends TestCase {
         $this->assertStringContainsString('مشاهده شرکت‌کنندگان', $html);
         $this->assertStringContainsString('page=crm-competition-attendees', $html);
         $this->assertStringContainsString('competition_id=20', $html);
+    }
+
+    public function test_attendees_admin_page_enqueues_datatables(): void {
+        if (!class_exists(Competitions::class)) { $this->markTestSkipped('Plugin not loaded.'); }
+        $GLOBALS['test_current_screen'] = (object) ['post_type' => '', 'id' => 'admin_page_crm-competition-attendees'];
+        $GLOBALS['test_enqueued_scripts'] = [];
+        $GLOBALS['test_inline_scripts'] = [];
+        $_GET['page'] = 'crm-competition-attendees';
+
+        (new Competitions())->enqueue_admin_assets();
+
+        unset($_GET['page'], $GLOBALS['test_current_screen']);
+        $this->assertContains('imao-dt', $GLOBALS['test_enqueued_scripts']);
+        $this->assertArrayHasKey('imao-dt', $GLOBALS['test_inline_scripts']);
+        $this->assertStringContainsString('crm-attendees-table', $GLOBALS['test_inline_scripts']['imao-dt']);
+        $this->assertStringContainsString('stateSave:true', $GLOBALS['test_inline_scripts']['imao-dt']);
     }
 }
