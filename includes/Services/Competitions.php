@@ -30,6 +30,7 @@ class Competitions
         add_action('init', [$this, 'register_taxonomies'], 5);
         add_action('init', [$this, 'populate_board_terms'], 6);
         add_action('init', [$this, 'register_cpt']);
+        add_action('admin_menu', [$this, 'add_admin_menu']);
         add_action('add_meta_boxes', [$this, 'add_meta_boxes']);
         add_action('save_post', [$this, 'save_meta'], 10, 3);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
@@ -103,7 +104,64 @@ class Competitions
         add_meta_box('crm_type_assignments', 'انواع مسابقه در رده‌ها', [$this, 'render_type_assignments_box'], 'competition', 'normal', 'default');
         add_meta_box('crm_payouts', 'ذی‌نفعان', [$this, 'render_payouts_box'], 'competition', 'normal', 'default');
         add_meta_box('crm_manual', 'افزودن شرکت کننده به صورت دستی', [$this, 'render_manual_box'], 'competition', 'side', 'default');
-        add_meta_box('crm_attendees', 'شرکت‌کنندگان', [$this, 'render_attendees_box'], 'competition', 'side', 'default');
+        add_meta_box('crm_attendees_link', 'شرکت‌کنندگان', [$this, 'render_attendees_link_box'], 'competition', 'side', 'default');
+    }
+
+    public function add_admin_menu(): void
+    {
+        add_submenu_page(
+            null,
+            'شرکت‌کنندگان مسابقه',
+            'شرکت‌کنندگان مسابقه',
+            'edit_posts',
+            'crm-competition-attendees',
+            [$this, 'render_attendees_page']
+        );
+    }
+
+    public static function attendees_page_url(int $competition_id): string
+    {
+        return add_query_arg(
+            [
+                'page' => 'crm-competition-attendees',
+                'competition_id' => $competition_id,
+            ],
+            admin_url('admin.php')
+        );
+    }
+
+    public function render_attendees_link_box(WP_Post $post): void
+    {
+        if (empty($post->ID) || in_array($post->post_status, ['auto-draft'], true)) {
+            echo '<p style="color:#666">پس از ذخیره مسابقه، صفحهٔ شرکت‌کنندگان در دسترس خواهد بود.</p>';
+            return;
+        }
+        if (!current_user_can('edit_post', (int)$post->ID)) {
+            echo '<p style="color:#a00">دسترسی مجاز نیست.</p>';
+            return;
+        }
+        echo '<p>فهرست کامل شرکت‌کنندگان در صفحه‌ای جداگانه نمایش داده می‌شود.</p>';
+        echo '<p><a class="button button-primary" href="' . esc_url(self::attendees_page_url((int)$post->ID)) . '">مشاهده شرکت‌کنندگان</a></p>';
+    }
+
+    public function render_attendees_page(): void
+    {
+        $competition_id = (int)($_GET['competition_id'] ?? 0);
+        if (!$competition_id || get_post_type($competition_id) !== 'competition') {
+            wp_die('مسابقه پیدا نشد.', 'مسابقه پیدا نشد', ['response' => 404]);
+        }
+        if (!current_user_can('edit_post', $competition_id)) {
+            wp_die('دسترسی مجاز نیست.', 'دسترسی مجاز نیست', ['response' => 403]);
+        }
+        $post = get_post($competition_id);
+        echo '<div class="wrap">';
+        echo '<h1>شرکت‌کنندگان مسابقه: ' . esc_html(get_the_title($competition_id)) . '</h1>';
+        echo '<p><a class="button" href="' . esc_url(get_edit_post_link($competition_id, '')) . '">بازگشت به ویرایش مسابقه</a> ';
+        echo '<a class="button" href="' . esc_url(wp_nonce_url(admin_url('admin-post.php?action=export_competition_attendees&competition=' . $competition_id), 'export_competition_attendees_' . $competition_id)) . '">خروجی اکسل</a></p>';
+        if ($post instanceof WP_Post) {
+            $this->render_attendees_box($post);
+        }
+        echo '</div>';
     }
 
     public function render_details_box(WP_Post $post): void
@@ -571,6 +629,7 @@ class Competitions
             return;
         }
         $url = wp_nonce_url(admin_url('admin-post.php?action=export_competition_attendees&competition=' . $post_id), 'export_competition_attendees_' . $post_id);
+        echo '<a class="button button-primary" href="' . esc_url(self::attendees_page_url($post_id)) . '">شرکت‌کنندگان</a> ';
         echo '<a class="button" href="' . esc_url($url) . '">خروجی اکسل</a>';
     }
 

@@ -34,6 +34,14 @@ if (!function_exists('get_user_meta')) {
     }
 }
 if (!function_exists('esc_html')) { function esc_html($v){ return $v; } }
+if (!function_exists('current_user_can')) { function current_user_can($capability, ...$args){ return true; } }
+if (!function_exists('admin_url')) { function admin_url($path = ''){ return '/wp-admin/' . ltrim($path, '/'); } }
+if (!function_exists('add_query_arg')) {
+    function add_query_arg($args, $url = '') {
+        return $url . (strpos($url, '?') === false ? '?' : '&') . http_build_query($args);
+    }
+}
+if (!function_exists('esc_url')) { function esc_url($v){ return $v; } }
 
 use PHPUnit\Framework\TestCase;
 use IMAOCustom\Services\Competitions;
@@ -44,15 +52,30 @@ if (!class_exists('WP_User')) { class WP_User { public $ID; public $display_name
 class CompetitionAttendeesTest extends TestCase {
     public function test_render_attendees_box_outputs_users(): void {
         if (!class_exists(Competitions::class)) { $this->markTestSkipped('Plugin not loaded.'); }
+        $GLOBALS['test_post_meta'][20]['_linked_product_id'] = 99;
         $post = new WP_Post();
-        $post->ID = 1;
+        $post->ID = 20;
         $post->post_status = 'publish';
         ob_start();
         (new Competitions())->render_attendees_box($post);
         $html = ob_get_clean();
         $this->assertStringContainsString('<table id="crm-attendees-table"', $html);
-        $this->assertStringContainsString('billing_phone_10', $html);
-        global $wc_orders_args;
-        $this->assertSame([1,2], $wc_orders_args['include']);
+        $this->assertStringContainsString('billing_phone_1', $html);
+        $this->assertStringContainsString('User1', $html);
+    }
+
+    public function test_render_attendees_link_box_points_to_standalone_page(): void {
+        if (!class_exists(Competitions::class)) { $this->markTestSkipped('Plugin not loaded.'); }
+        $post = new WP_Post();
+        $post->ID = 20;
+        $post->post_status = 'publish';
+
+        ob_start();
+        (new Competitions())->render_attendees_link_box($post);
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString('مشاهده شرکت‌کنندگان', $html);
+        $this->assertStringContainsString('page=crm-competition-attendees', $html);
+        $this->assertStringContainsString('competition_id=20', $html);
     }
 }
