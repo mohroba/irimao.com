@@ -56,7 +56,8 @@ class CompetitionBrackets {
     private function render_result_fields( array $snapshot ): void {
         foreach ( self::snapshot_divisions( $snapshot ) as $division_key => $division ) {
             $rounds = self::build_rounds( $division['slots'], $division['winners'] ?? [] );
-            echo '<h4>' . esc_html( (string) $division['label'] ) . ' — جدول ' . (int) $division['size'] . ' نفره</h4>';
+            $entrant_count = self::division_entrant_count( $division );
+            echo '<h4>' . esc_html( (string) $division['label'] ) . ' — جدول ' . (int) $division['size'] . ' نفره — تعداد شرکت‌کنندگان: ' . (int) $entrant_count . '</h4>';
             echo '<div style="overflow:auto"><table class="widefat striped"><thead><tr><th>مرحله</th><th>مسابقه</th><th>قرمز</th><th>آبی</th><th>برنده</th></tr></thead><tbody>';
             foreach ( $rounds as $round_index => $matches ) {
                 foreach ( $matches as $match_index => $match ) {
@@ -210,11 +211,12 @@ class CompetitionBrackets {
         ob_start(); ?>
 <style>.imao-bracket-shell{direction:rtl;background:#fff;border:1px solid #e2e5ea;border-radius:14px;overflow:hidden;font-family:Tahoma,Arial,sans-serif}.imao-bracket-toolbar{display:flex;gap:8px;align-items:center;padding:10px 14px;background:#17134b;color:#fff}.imao-bracket-toolbar button{border:1px solid #ffffff66;border-radius:6px;background:#fff;color:#17134b;padding:5px 11px;cursor:pointer}.imao-bracket-viewport{direction:ltr;overflow:auto;cursor:grab;min-height:240px;padding:24px}.imao-bracket-tree{position:relative;display:flex;gap:54px;transform-origin:top left;width:max-content;transition:transform .15s}.imao-bracket-connectors{position:absolute;inset:0;z-index:0;overflow:visible;pointer-events:none}.imao-bracket-connectors path{fill:none;stroke:#8993a3;stroke-width:2;vector-effect:non-scaling-stroke}.imao-bracket-round{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:space-around;width:220px;gap:18px}.imao-bracket-round h3{direction:rtl;text-align:center;font-size:14px;margin:0 0 8px;color:#555}.imao-bracket-match{position:relative;direction:rtl;border:1px solid #ccd2dd;border-radius:8px;background:#fff;box-shadow:0 2px 8px #0000000d;overflow:visible}.imao-bracket-player{display:flex;justify-content:space-between;gap:8px;padding:6px 10px;min-height:26px;border-bottom:1px solid #edf0f4;font-size:12px}.imao-bracket-player:last-child{border:0}.imao-bracket-player.winner{background:#eaf8ee;color:#116b2d;font-weight:700}.imao-bracket-player.bye{color:#9299a5;font-style:italic;direction:rtl}.imao-bracket-player-name{display:flex;flex-direction:column;gap:2px}.imao-bracket-champion{border-color:#d7a900;box-shadow:0 0 0 2px #ffd84d55}.imao-bracket-button{display:inline-block;padding:10px 18px;border-radius:7px;background:#17134b;color:#fff!important;text-decoration:none}.imao-bracket-empty{text-align:center;color:#777}.imao-bracket-layout{display:flex;direction:ltr;align-items:flex-start}.imao-bracket-viewport{flex:1;min-width:0}.imao-bracket-placements{direction:rtl;flex:0 0 320px;padding:16px}.imao-bracket-placements table{width:100%;border-collapse:collapse;font-size:12px}.imao-bracket-placements th,.imao-bracket-placements td{padding:10px;border:1px solid #ccd2dd}.imao-bracket-placements caption{padding:10px;font-weight:bold}@media(max-width:800px){.imao-bracket-layout{display:block}.imao-bracket-placements{max-width:100%}}</style>
 <?php foreach ( self::snapshot_divisions( $snapshot ) as $division ) :
-    $rounds = self::build_rounds( $division['slots'], $division['winners'] ?? [] ); ?>
+    $rounds = self::build_rounds( $division['slots'], $division['winners'] ?? [] );
+    $entrant_count = self::division_entrant_count( $division ); ?>
 <h2 style="font:700 18px Tahoma;text-align:center;margin:26px 0 10px"><?php echo esc_html( (string) $division['label'] ); ?></h2>
 <div class="imao-bracket-shell" data-imao-bracket>
     <div class="imao-bracket-toolbar">
-        <strong>جدول <?php echo (int) $division['size']; ?> نفره</strong>
+        <strong>جدول <?php echo (int) $division['size']; ?> نفره — تعداد شرکت‌کنندگان: <?php echo (int) $entrant_count; ?></strong>
         <button type="button" data-zoom="in">+</button>
         <button type="button" data-zoom="out">−</button>
         <button type="button" data-zoom="reset">۱۰۰٪</button>
@@ -278,6 +280,10 @@ class CompetitionBrackets {
     private static function snapshot_divisions( array $snapshot ): array {
         if ( ! empty( $snapshot['divisions'] ) && is_array( $snapshot['divisions'] ) ) return $snapshot['divisions'];
         return ! empty( $snapshot['slots'] ) ? [ 'legacy' => [ 'label' => 'جدول مسابقه', 'size' => count( $snapshot['slots'] ), 'slots' => $snapshot['slots'], 'winners' => $snapshot['winners'] ?? [] ] ] : [];
+    }
+
+    private static function division_entrant_count( array $division ): int {
+        return count( array_filter( $division['slots'] ?? [], 'is_array' ) );
     }
 
     public static function bracket_size( int $count ): int {
