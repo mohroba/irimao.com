@@ -2,7 +2,7 @@
 // Disposable WooCommerce/WordPress fixtures; no real users or orders are changed.
 require dirname( __DIR__, 2 ) . '/vendor/autoload.php';
 
-class WP_Post { public $ID = 1; }
+class WP_Post { public $ID = 1; public $post_status = 'publish'; }
 class WC_Order_Item_Product {
     public $id;
     public $meta;
@@ -57,7 +57,10 @@ function current_time( $type ) { return '2026-10-10 12:00:00'; }
 function get_current_user_id() { return 1; }
 function get_post_type( $id ) { return 'competition'; }
 function check_admin_referer( ...$args ) {}
+function check_ajax_referer( ...$args ) {}
 function nocache_headers() {}
+function wp_send_json( $data ) { $GLOBALS['fixture_json'] = $data; throw new RuntimeException( '__fixture_json__' ); }
+function wp_send_json_error( $data, $status = null ) { $GLOBALS['fixture_json_error'] = [ $data, $status ]; throw new RuntimeException( '__fixture_json__' ); }
 
 $service = new IMAOCustom\Services\CompetitionCards();
 if ( ( $argv[1] ?? '' ) === 'export' ) { $_GET['competition_id'] = 1; $service->export_dormitory(); }
@@ -72,16 +75,18 @@ if ( ( $argv[1] ?? $_GET['fixture_mode'] ?? '' ) === 'html' ) {
     exit;
 }
 function verify_fixture( $condition, $message ) { if ( ! $condition ) throw new RuntimeException( $message ); }
-$_GET['imao_weigh_page'] = 2;
 $html = render_fixture( $service );
-verify_fixture( substr_count( $html, '<tr data-search=' ) === 20, 'Page two must render only 20 entries.' );
-verify_fixture( strpos( $html, 'imao_weigh_ins[21][weight]' ) !== false, 'Page two starts at entry 21.' );
-verify_fixture( strpos( $html, 'imao_weigh_ins[1][weight]' ) === false, 'Page one inputs must be absent.' );
+verify_fixture( strpos( $html, 'مدیریت وزن‌کشی و صدور کارت' ) !== false, 'Edit meta box must link to dedicated weigh-in page.' );
+$_POST = [ 'competition_id' => 1, 'draw' => 1, 'start' => 20, 'length' => 20, 'search' => [ 'value' => '' ] ];
+try { $service->ajax_weigh_ins_datatable(); } catch ( RuntimeException $e ) { if ( $e->getMessage() !== '__fixture_json__' ) throw $e; }
+verify_fixture( count( $GLOBALS['fixture_json']['data'] ) === 20, 'Server-side page two must return only 20 entries.' );
+verify_fixture( strpos( $GLOBALS['fixture_json']['data'][0]['actual_weight'], 'imao_weigh_ins[21][weight]' ) !== false, 'Page two starts at entry 21.' );
+verify_fixture( strpos( implode( ' ', array_column( $GLOBALS['fixture_json']['data'], 'actual_weight' ) ), 'imao_weigh_ins[1][weight]' ) === false, 'Page one inputs must be absent.' );
 verify_fixture( count( $service->dormitory_rows( 1 ) ) === 25, 'Dormitory export must span pages.' );
 verify_fixture( $service->dormitory_rows( 1 )[0][2] === '0012340001', 'National ID must keep leading zeroes.' );
-$_GET = [ 'imao_weigh_search' => 'ورزشکار ۴۵' ];
-$html = render_fixture( $service );
-verify_fixture( substr_count( $html, '<tr data-search=' ) === 1 && strpos( $html, 'imao_weigh_ins[45][weight]' ) !== false, 'Search must find entries beyond page one.' );
+$_POST = [ 'competition_id' => 1, 'draw' => 2, 'start' => 0, 'length' => 20, 'search' => [ 'value' => 'ورزشکار ۴۵' ] ];
+try { $service->ajax_weigh_ins_datatable(); } catch ( RuntimeException $e ) { if ( $e->getMessage() !== '__fixture_json__' ) throw $e; }
+verify_fixture( count( $GLOBALS['fixture_json']['data'] ) === 1 && strpos( $GLOBALS['fixture_json']['data'][0]['actual_weight'], 'imao_weigh_ins[45][weight]' ) !== false, 'Server-side search must find entries beyond page one.' );
 $_POST = [ 'imao_competition_weigh_ins_nonce' => 'fixture', 'imao_weigh_ins' => [ 21 => [ 'weight' => '70', 'confirmed' => 1 ] ] ];
 $service->save_weigh_ins( 1, new WP_Post() );
 verify_fixture( $orders[20]->item->get_meta( '_imao_dormitory_requested' ) === 'no', 'Unchecked dormitory must save on submitted row.' );

@@ -630,6 +630,7 @@ class Competitions
         }
         $url = wp_nonce_url(admin_url('admin-post.php?action=export_competition_attendees&competition=' . $post_id), 'export_competition_attendees_' . $post_id);
         echo '<a class="button button-primary" href="' . esc_url(self::attendees_page_url($post_id)) . '">شرکت‌کنندگان</a> ';
+        echo '<a class="button button-primary" href="' . esc_url(CompetitionCards::weigh_ins_page_url($post_id)) . '">وزن‌کشی</a> ';
         echo '<a class="button" href="' . esc_url($url) . '">خروجی اکسل</a>';
     }
 
