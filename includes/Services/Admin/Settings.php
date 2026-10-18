@@ -142,6 +142,7 @@ class Settings
         return [
             [ 'tag' => 'imao_class_submit', 'description' => 'فرم ثبت کلاس', 'params' => 'بدون پارامتر', 'return' => 'HTML فرم', 'example' => '[imao_class_submit]' ],
             [ 'tag' => 'imao_monthly_classes', 'description' => 'فهرست کلاس‌های ماهانه', 'params' => 'بدون پارامتر', 'return' => 'HTML فهرست', 'example' => '[imao_monthly_classes]' ],
+            [ 'tag' => 'imao_class_list', 'description' => 'همه کلاس‌های منتشرشده و تأییدشده با فیلتر', 'params' => 'province: کد استان؛ city: شهر؛ coach_id؛ club_id؛ search؛ per_page: 1 تا 100؛ order: ASC یا DESC', 'return' => 'فهرست عمومی کلاس‌ها با فیلتر و صفحه‌بندی', 'example' => '[imao_class_list province="THR" per_page="20" order="ASC"]' ],
             [ 'tag' => 'imao_class_due', 'description' => 'مهلت پرداخت شهریه کلاس', 'params' => 'class_id: شناسه کلاس؛ field: days یا date', 'return' => 'تعداد روز یا تاریخ سررسید', 'example' => '[imao_class_due class_id="123" field="days"] / [imao_class_due class_id="123" field="date"]' ],
             [ 'tag' => 'imao_class_info', 'description' => 'اطلاعات کلاس', 'params' => 'class_id: شناسه کلاس؛ field: title، fee، coach یا club', 'return' => 'متن اطلاعات کلاس', 'example' => '[imao_class_info class_id="123" field="title"]' ],
             [ 'tag' => 'imao_class_payments', 'description' => 'سوابق شهریه کاربر جاری', 'params' => 'class_id: شناسه اختیاری کلاس', 'return' => 'جدول صفحه‌بندی‌شده پرداخت‌های کاربر جاری', 'example' => '[imao_class_payments class_id="123"]' ],

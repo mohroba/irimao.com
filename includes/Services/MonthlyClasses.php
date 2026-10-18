@@ -17,6 +17,10 @@ class MonthlyClasses {
         add_action( 'admin_post_imao_submit_monthly_class', [ $this, 'submit_class' ] );
         add_shortcode( 'imao_class_submit', [ $this, 'submission_shortcode' ] );
         add_shortcode( 'imao_monthly_classes', [ $this, 'classes_shortcode' ] );
+        add_shortcode( 'imao_class_list', [ $this, 'directory_shortcode' ] );
+        add_filter( 'woocommerce_get_query_vars', [ $this, 'account_query_vars' ] );
+        add_action( 'woocommerce_account_monthly-class-list_endpoint', [ $this, 'account_directory' ] );
+        add_action( 'woocommerce_account_monthly-class-payments_endpoint', [ $this, 'account_payments' ] );
         add_filter( 'woocommerce_account_menu_items', [ $this, 'account_menu' ] );
         add_action( 'woocommerce_account_monthly-classes_endpoint', [ $this, 'account_classes' ] );
         add_action( 'woocommerce_account_monthly-class-submit_endpoint', [ $this, 'account_submit' ] );
@@ -41,9 +45,11 @@ class MonthlyClasses {
         ] );
         add_rewrite_endpoint( 'monthly-classes', EP_ROOT | EP_PAGES );
         add_rewrite_endpoint( 'monthly-class-submit', EP_ROOT | EP_PAGES );
-        if ( get_option( 'imao_monthly_classes_rewrite_version' ) !== '1' ) {
+        add_rewrite_endpoint( 'monthly-class-list', EP_ROOT | EP_PAGES );
+        add_rewrite_endpoint( 'monthly-class-payments', EP_ROOT | EP_PAGES );
+        if ( get_option( 'imao_monthly_classes_rewrite_version' ) !== '2' ) {
             flush_rewrite_rules( false );
-            update_option( 'imao_monthly_classes_rewrite_version', '1', false );
+            update_option( 'imao_monthly_classes_rewrite_version', '2', false );
         }
     }
 
@@ -376,11 +382,171 @@ class MonthlyClasses {
         return (string) ob_get_clean();
     }
 
+    /** Only known scalar filters may override shortcode defaults. */
+    public static function directory_filters( array $attributes, array $request ): array {
+        $defaults = [ 'province' => '', 'city' => '', 'coach_id' => 0, 'club_id' => 0, 'search' => '', 'per_page' => 20, 'order' => 'ASC', 'page' => 1 ];
+        $filters = [];
+        foreach ( $defaults as $key => $default ) {
+            $value = $attributes[ $key ] ?? $default;
+            $input = $request[ 'imao_class_list_' . $key ] ?? null;
+            if ( is_scalar( $input ) ) {
+                $value = wp_unslash( (string) $input );
+            }
+            $value = is_scalar( $value ) ? (string) $value : (string) $default;
+            if ( in_array( $key, [ 'coach_id', 'club_id', 'per_page', 'page' ], true ) ) {
+                $filters[ $key ] = ctype_digit( $value ) ? (int) $value : (int) $default;
+            } else {
+                $filters[ $key ] = sanitize_text_field( $value );
+            }
+        }
+        $filters['per_page'] = max( 1, min( 100, $filters['per_page'] ) );
+        $filters['page'] = max( 1, $filters['page'] );
+        $filters['order'] = strtoupper( $filters['order'] ) === 'DESC' ? 'DESC' : 'ASC';
+        return $filters;
+    }
+
+    /** Club IDs are resolved separately because geographic metadata belongs to clubs. */
+    public static function directory_query_args( array $filters, array $club_ids = [] ): array {
+        $args = [
+            'post_type' => self::POST_TYPE, 'post_status' => 'publish',
+            'posts_per_page' => $filters['per_page'], 'paged' => $filters['page'],
+            'orderby' => [ 'title' => $filters['order'], 'ID' => $filters['order'] ],
+            's' => $filters['search'],
+            'meta_query' => [ 'relation' => 'AND', [ 'key' => '_class_approved', 'value' => 'yes', 'compare' => '=' ] ],
+        ];
+        foreach ( [ 'coach_id', 'club_id' ] as $key ) {
+            if ( $filters[ $key ] > 0 ) {
+                $args['meta_query'][] = [ 'key' => '_class_' . $key, 'value' => $filters[ $key ], 'compare' => '=', 'type' => 'NUMERIC' ];
+            }
+        }
+        if ( $filters['province'] !== '' || $filters['city'] !== '' ) {
+            // An empty IN list must never broaden a geographic search.
+            $args['meta_query'][] = [ 'key' => '_class_club_id', 'value' => $club_ids ?: [ 0 ], 'compare' => 'IN', 'type' => 'NUMERIC' ];
+        }
+        return $args;
+    }
+
+    public function directory_shortcode( $attributes = [] ): string {
+        $filters = self::directory_filters( is_array( $attributes ) ? $attributes : [], $_GET );
+        $club_ids = [];
+        if ( $filters['province'] !== '' || $filters['city'] !== '' ) {
+            $meta = [ 'relation' => 'AND' ];
+            foreach ( [ 'province', 'city' ] as $key ) {
+                if ( $filters[ $key ] !== '' ) {
+                    $meta[] = [ 'key' => 'club_' . $key, 'value' => $filters[ $key ], 'compare' => '=' ];
+                }
+            }
+            $club_ids = get_posts( [ 'post_type' => 'club_application', 'post_status' => 'publish', 'posts_per_page' => -1, 'fields' => 'ids', 'meta_query' => $meta ] );
+        }
+        $query = new \WP_Query( self::directory_query_args( $filters, $club_ids ) );
+        $provinces = \IMAOCustom\Helpers\CityMap::get_provinces();
+        $selected_coach = is_user_logged_in() ? (int) get_user_meta( get_current_user_id(), 'coach_id', true ) : 0;
+        // A relative, escaped URL cannot inherit an attacker-supplied host.
+        $base = remove_query_arg( array_map( static function ( $key ) { return 'imao_class_list_' . $key; }, array_keys( $filters ) ) );
+        ob_start();
+        echo '<div dir="rtl" class="imao-class-list"><form method="get" action="' . esc_url( $base ) . '">';
+        // Preserve page routing query arguments, including plain permalink installations.
+        $routing = wp_parse_url( $base, PHP_URL_QUERY );
+        parse_str( (string) $routing, $routing_args );
+        foreach ( $routing_args as $key => $value ) {
+            if ( is_scalar( $value ) ) {
+                echo '<input type="hidden" name="' . esc_attr( $key ) . '" value="' . esc_attr( $value ) . '">';
+            }
+        }
+        echo '<label>استان <select name="imao_class_list_province"><option value="">همه استان‌ها</option>';
+        foreach ( $provinces as $code => $name ) {
+            echo '<option value="' . esc_attr( $code ) . '" ' . selected( $filters['province'], $code, false ) . '>' . esc_html( $name ) . '</option>';
+        }
+        echo '</select></label>';
+        $city_list_id = wp_unique_id( 'imao-class-cities-' );
+        echo '<label>شهر <input type="text" name="imao_class_list_city" list="' . esc_attr( $city_list_id ) . '" value="' . esc_attr( $filters['city'] ) . '"></label><datalist id="' . esc_attr( $city_list_id ) . '">';
+        foreach ( \IMAOCustom\Helpers\CityMap::get_cities( $filters['province'] ) as $city ) {
+            echo '<option value="' . esc_attr( $city ) . '"></option>';
+        }
+        echo '</datalist>';
+        $option_queries = self::directory_option_queries();
+        $coaches = get_users( $option_queries['coaches'] );
+        $clubs = get_posts( $option_queries['clubs'] );
+        foreach ( [ 'coach_id' => [ 'مربی', 'همه مربیان', $coaches ], 'club_id' => [ 'باشگاه', 'همه باشگاه‌ها', $clubs ] ] as $key => $field ) {
+            echo '<label>' . esc_html( $field[0] ) . ' <select name="imao_class_list_' . esc_attr( $key ) . '"><option value="0">' . esc_html( $field[1] ) . '</option>';
+            foreach ( $field[2] as $option ) {
+                $name = $key === 'coach_id' ? $option->display_name : $option->post_title;
+                echo '<option value="' . esc_attr( $option->ID ) . '" ' . selected( $filters[ $key ], $option->ID, false ) . '>' . esc_html( $name ) . '</option>';
+            }
+            echo '</select></label>';
+        }
+        echo '<label>جستجو <input type="search" name="imao_class_list_search" value="' . esc_attr( $filters['search'] ) . '"></label>';
+        foreach ( [ 'per_page', 'order' ] as $key ) {
+            echo '<input type="hidden" name="imao_class_list_' . esc_attr( $key ) . '" value="' . esc_attr( $filters[ $key ] ) . '">';
+        }
+        echo '<button type="submit" class="button">فیلتر کلاس‌ها</button></form>';
+        if ( ! $query->posts ) {
+            echo '<p>کلاس تأییدشده‌ای یافت نشد.</p>';
+        }
+        foreach ( $query->posts as $class ) {
+            $id = (int) $class->ID;
+            $coach_id = (int) get_post_meta( $id, '_class_coach_id', true );
+            $coach = get_userdata( $coach_id );
+            $club_id = (int) get_post_meta( $id, '_class_club_id', true );
+            $province = (string) get_post_meta( $club_id, 'club_province', true );
+            $fee = get_post_meta( $id, '_class_fee', true );
+            echo '<section><h3>' . esc_html( $class->post_title ) . '</h3>';
+            foreach ( [ 'مربی' => $coach ? $coach->display_name : '', 'باشگاه' => $club_id > 0 ? get_the_title( $club_id ) : '', 'استان' => $provinces[ $province ] ?? $province, 'شهر' => get_post_meta( $club_id, 'club_city', true ) ] as $label => $value ) {
+                echo '<p>' . esc_html( $label . ': ' . $value ) . '</p>';
+            }
+            echo '<p>شهریه ماهانه: ' . ( function_exists( 'wc_price' ) ? wp_kses_post( wc_price( $fee ) ) : esc_html( $fee ) ) . '</p>';
+            if ( $selected_coach > 0 && $selected_coach === $coach_id && class_exists( MonthlyTuition::class ) ) {
+                echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="imao_pay_monthly_class"><input type="hidden" name="class_id" value="' . esc_attr( $id ) . '">';
+                wp_nonce_field( 'imao_pay_monthly_class_' . $id, 'imao_monthly_class_nonce' );
+                echo '<button type="submit" class="button">پرداخت شهریه ماهانه</button></form>';
+            }
+            echo '</section>';
+        }
+        $args = [];
+        foreach ( $filters as $key => $value ) {
+            $args[ 'imao_class_list_' . $key ] = $value;
+        }
+        echo wp_kses_post( paginate_links( [ 'base' => str_replace( '999999999', '%#%', esc_url_raw( add_query_arg( array_merge( $args, [ 'imao_class_list_page' => 999999999 ] ), $base ) ) ), 'format' => '', 'current' => $filters['page'], 'total' => (int) $query->max_num_pages, 'add_args' => false ] ) );
+        echo '</div>';
+        return (string) ob_get_clean();
+    }
+
+    /** Public filter choices include only professionally approved coaches and published clubs. */
+    public static function directory_option_queries(): array {
+        return [
+            'coaches' => [
+                'role' => 'coach', 'meta_key' => 'identity_verified_professional', 'meta_value' => 'approved',
+                'orderby' => 'display_name', 'order' => 'ASC', 'fields' => [ 'ID', 'display_name' ],
+            ],
+            'clubs' => [
+                'post_type' => 'club_application', 'post_status' => 'publish',
+                'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC',
+            ],
+        ];
+    }
+
+    public function account_query_vars( array $vars ): array {
+        foreach ( [ 'monthly-classes', 'monthly-class-submit', 'monthly-class-list', 'monthly-class-payments' ] as $endpoint ) {
+            $vars[ $endpoint ] = $endpoint;
+        }
+        return $vars;
+    }
+
+    public function account_directory(): void {
+        echo $this->directory_shortcode();
+    }
+
+    public function account_payments(): void {
+        echo ( new MonthlyTuition() )->payments_shortcode();
+    }
+
     public function account_menu( array $items ): array {
         if ( is_user_logged_in() ) {
             $logout = $items['customer-logout'] ?? null;
             unset( $items['customer-logout'] );
             $items['monthly-classes'] = 'کلاس‌های ماهانه';
+            $items['monthly-class-list'] = 'همه کلاس‌ها';
+            $items['monthly-class-payments'] = 'سوابق شهریه کلاس‌ها';
             if ( self::valid_coach( get_current_user_id() ) ) {
                 $items['monthly-class-submit'] = 'ثبت کلاس ماهانه';
             }

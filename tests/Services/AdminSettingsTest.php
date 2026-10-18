@@ -65,5 +65,6 @@ class AdminSettingsTest extends TestCase
         $this->assertContains('imao_card_registration', $tags);
         $this->assertContains('imao_card_qr', $tags);
         $this->assertContains('crm_competition_bracket', $tags);
+        $this->assertContains('imao_class_list', $tags);
     }
 }

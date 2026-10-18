@@ -25,11 +25,33 @@ Partial/full WooCommerce refunds reverse the original recipients' shares proport
 | --- | --- | --- |
 | `[imao_class_submit]` | None | Coach class submission/edit forms and class statuses |
 | `[imao_monthly_classes]` | None | Current student's eligible classes, due dates and payment buttons |
+| `[imao_class_list]` | Optional `province`, `city`, `coach_id`, `club_id`, `search`, `per_page` (1–100, default 20), `order` (`ASC` default or `DESC`) | Public directory of all approved, published classes with filters and pagination |
 | `[imao_class_due class_id="123" field="days"]` | `class_id`; `field=days` or `date` | Signed number of days, or Jalali due date; empty before payment |
 | `[imao_class_info class_id="123" field="title"]` | `class_id`; `field=title`, `fee`, `coach`, `club` | Text only for a class belonging to the current student's selected coach |
 | `[imao_class_payments class_id="123"]` | Optional `class_id` | Paginated current student's own tuition history |
 
 These are also listed in the plugin's shortcode explorer.
+
+### Directory and account endpoint contracts
+
+`[imao_class_list province="THR" per_page="20" order="ASC"]` searches across all coaches. `province` is a CityMap province code; `city` is the exact stored city name. Geography comes from the linked published club's `club_province` and `club_city` metadata. Geographic filters combine with coach/club IDs and title/content search using AND. No matching clubs means no matching classes. Results sort by title with ID as a stable tie-breaker.
+
+The GET filter form provides a CityMap province selector, optional city text with datalist suggestions from the selected province on rendering, named coach and club dropdowns, and search. Coaches are queried with `get_users`, role `coach`, and `identity_verified_professional=approved`, sorted by display name. Clubs are published `club_application` posts sorted by name. Both dropdowns default to an optional “all” choice (value `0`); visitors select names, while shortcode parameters and submitted values remain IDs. Province-specific city suggestions refresh after submitting the province filter; city text remains optional and accepts manually entered names.
+
+Request keys use `imao_class_list_` plus the parameter name; pagination uses `imao_class_list_page`. Missing or array-valued request fields retain shortcode defaults. Empty scalar fields explicitly clear text/ID filters, and choosing “all” clears shortcode coach/club defaults. Pagination carries the effective filters, page size and order; submitting filters starts at page one and preserves scalar routing arguments for plain permalinks. Page size is capped at 100 and sort direction is allowlisted.
+
+Guests may browse the directory. A payment POST form appears only for a logged-in user whose selected `coach_id` equals the class coach. The form uses the existing class-specific nonce and `imao_pay_monthly_class` action; MonthlyTuition remains responsible for final authorization and checkout validation.
+
+WooCommerce account endpoints (GET) are registered in both WordPress rewrites and `woocommerce_get_query_vars`:
+
+| Endpoint under `/my-account/` | Menu / content |
+| --- | --- |
+| `monthly-classes/` | Existing selected-coach classes and own payment history |
+| `monthly-class-submit/` | Existing approved-coach submission/edit forms |
+| `monthly-class-list/` | همه کلاس‌ها — complete directory |
+| `monthly-class-payments/` | سوابق شهریه کلاس‌ها — existing own-payments shortcode |
+
+Rewrite version `2` flushes soft rewrite rules once after registering all four endpoints. Existing shortcode and endpoint behavior is retained. The scalar `imao_class_due` and `imao_class_info` helpers require a class ID and remain embeddable helpers rather than standalone account pages.
 
 ## Installation and checks
 

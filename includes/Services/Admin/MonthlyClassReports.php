@@ -94,7 +94,8 @@ class MonthlyClassReports
         echo '</select></label> <label>شهرستان <input name="city" placeholder="شهرستان محل سکونت"></label> ';
         echo '<button class="button button-primary" type="submit">اعمال فیلتر</button></p><p class="description">تاریخ شمسی با قالب سال/ماه/روز؛ خروجی شامل تمام ردیف‌های منطبق با فیلتر و جستجو است.</p></form>';
         echo '<p><button class="button imao-class-export" data-format="xlsx">خروجی XLSX</button> <button class="button imao-class-export" data-format="print">چاپ / ذخیره PDF</button></p>';
-        echo '<table id="imao-class-report" class="widefat striped" data-ajax="' . esc_url(admin_url('admin-ajax.php')) . '" data-export="' . esc_url(admin_url('admin-post.php')) . '" data-nonce="' . esc_attr(wp_create_nonce(self::NONCE)) . '"><thead><tr>';
+        // DataTables consumes data-ajax itself and would overwrite the POST configuration.
+        echo '<table id="imao-class-report" class="widefat striped" data-report-url="' . esc_url(admin_url('admin-ajax.php')) . '" data-export="' . esc_url(admin_url('admin-post.php')) . '" data-nonce="' . esc_attr(wp_create_nonce(self::NONCE)) . '"><thead><tr>';
         foreach ($this->headers() as $header) {
             echo '<th>' . esc_html($header) . '</th>';
         }
@@ -120,7 +121,7 @@ jQuery(function ($) {
             lengthMenu: 'نمایش _MENU_ ردیف', info: '_START_ تا _END_ از _TOTAL_', infoEmpty: 'بدون ردیف',
             zeroRecords: 'نتیجه‌ای یافت نشد', paginate: {next: 'بعدی', previous: 'قبلی'}},
         columnDefs: [{targets: 11, orderable: false}],
-        ajax: {url: table.data('ajax'), type: 'POST', data: function (data) {
+        ajax: {url: table.data('reportUrl'), type: 'POST', data: function (data) {
             Object.assign(data, values(), {action: 'imao_monthly_class_reports', nonce: table.data('nonce')});
         }},
         columns: Array.from({length: 12}, function (_, index) {
