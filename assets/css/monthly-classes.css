@@ -1,0 +1,180 @@
+/* Monthly classes follow the existing course/account palette and spacing. */
+.imao-monthly {
+    direction: rtl;
+    text-align: right;
+    font-family: 'vaziri', IranSansWeb, sans-serif;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    padding: 20px;
+    margin: 30px auto;
+    color: #253047;
+}
+
+.imao-monthly .crm-course-title {
+    margin: 0 0 20px;
+}
+
+.imao-monthly-empty {
+    padding: 16px;
+    margin: 0;
+    border: 1px solid #e1e7f0;
+    border-radius: 5px;
+    background: #f7f9fc;
+    color: #374151;
+}
+
+.imao-monthly .imao-class-filters,
+.imao-monthly .imao-class-form,
+.imao-monthly details form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px 18px;
+    align-items: end;
+    margin: 16px 0 22px;
+    padding: 16px;
+    border: 1px solid #e1e7f0;
+    border-radius: 5px;
+    background: #f9fafb;
+}
+
+.imao-monthly .imao-class-filters > label,
+.imao-monthly .imao-class-form p,
+.imao-monthly details form p {
+    display: block;
+    margin: 0;
+}
+
+.imao-monthly label {
+    display: block;
+    font-weight: 600;
+    color: #333;
+}
+
+.imao-monthly input:not([type='hidden']),
+.imao-monthly select {
+    display: block;
+    width: 100%;
+    min-height: 40px;
+    margin-top: 6px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #f9fafb;
+    color: #253047;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.imao-monthly .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 8px 18px;
+    border: 0;
+    border-radius: 6px;
+    background: #060097;
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.imao-monthly .button:hover,
+.imao-monthly .button:focus {
+    background: #040066;
+    color: #fff;
+}
+
+.imao-monthly :is(input, select, button, summary, a):focus-visible {
+    outline: 2px solid #060097;
+    outline-offset: 2px;
+}
+
+.imao-monthly .imao-class-card {
+    margin: 16px 0;
+    padding: 18px;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    background: #fff;
+}
+
+.imao-monthly .imao-class-card h3 {
+    margin: 0 0 12px;
+    color: #060097;
+    font-size: 18px;
+}
+
+.imao-monthly .imao-class-card p {
+    margin: 6px 0;
+}
+
+.imao-monthly .imao-class-card form {
+    margin-top: 14px;
+}
+
+.imao-monthly details {
+    margin: 12px 0;
+    padding: 14px;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+}
+
+.imao-monthly summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.imao-monthly .imao-class-hint {
+    grid-column: 1 / -1;
+    color: #5e6471;
+}
+
+.imao-class-table-scroll {
+    overflow-x: auto;
+}
+
+.imao-monthly table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 16px;
+}
+
+.imao-monthly table th,
+.imao-monthly table td {
+    padding: 8px 10px;
+    border: 1px solid #dcdcdc;
+    text-align: center;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.imao-monthly table thead {
+    background: #ff92008f;
+    color: #000;
+}
+
+.imao-monthly .imao-class-pagination,
+.imao-monthly-classes > a,
+.imao-class-list > a {
+    margin-top: 16px;
+}
+
+.imao-monthly .imao-class-pagination a,
+.imao-monthly-classes > a,
+.imao-class-list > a,
+.imao-class-list .page-numbers {
+    display: inline-block;
+    margin-inline-end: 5px;
+    padding: 5px 10px;
+    border: 1px solid #dcdcdc;
+    border-radius: 4px;
+    text-decoration: none;
+}
+
+@media (max-width: 600px) {
+    .imao-monthly { padding: 14px; margin: 18px auto; }
+    .imao-monthly .imao-class-filters,
+    .imao-monthly .imao-class-form,
+    .imao-monthly details form { grid-template-columns: 1fr; }
+}

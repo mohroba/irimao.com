@@ -455,7 +455,7 @@ class MonthlyTuition {
         $total = (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . self::table() . $where );
         $rows = $wpdb->get_results( 'SELECT order_id,class_id,paid_at,due_date,amount,status FROM ' . self::table() . $where
             . $wpdb->prepare( ' ORDER BY paid_at DESC,id DESC LIMIT 20 OFFSET %d', ( $page - 1 ) * 20 ) );
-        $html = '<div dir="rtl"><h3>سوابق شهریه</h3><table class="shop_table"><thead><tr><th>سفارش</th><th>کلاس</th><th>پرداخت</th><th>سررسید</th><th>مبلغ</th><th>وضعیت</th></tr></thead><tbody>';
+        $html = '<div class="imao-monthly imao-class-payments" dir="rtl"><div class="crm-course-title">سوابق شهریه</div><div class="imao-class-table-scroll"><table class="shop_table striped"><thead><tr><th>سفارش</th><th>کلاس</th><th>پرداخت</th><th>سررسید</th><th>مبلغ</th><th>وضعیت</th></tr></thead><tbody>';
         foreach ( $rows as $row ) {
             $status = [ 'paid' => 'پرداخت‌شده', 'partial_refund' => 'بازپرداخت جزئی', 'reversed' => 'برگشت‌خورده' ][ $row->status ] ?? $row->status;
             $html .= '<tr><td>#' . (int) $row->order_id . '</td><td>' . esc_html( get_the_title( (int) $row->class_id ) ) . '</td><td>'
@@ -465,10 +465,10 @@ class MonthlyTuition {
         if ( ! $rows ) {
             $html .= '<tr><td colspan="6">هنوز شهریه‌ای پرداخت نشده است.</td></tr>';
         }
-        $html .= '</tbody></table>';
+        $html .= '</tbody></table></div><nav class="imao-class-pagination" aria-label="صفحات سوابق شهریه">';
         for ( $number = max( 1, $page - 2 ); $number <= min( (int) ceil( $total / 20 ), $page + 2 ); ++$number ) {
             $html .= '<a href="' . esc_url( add_query_arg( 'tuition_page', $number ) ) . '">' . $number . '</a> ';
         }
-        return $html . '</div>';
+        return $html . '</nav></div>';
     }
 }

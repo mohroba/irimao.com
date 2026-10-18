@@ -263,12 +263,13 @@ class MonthlyClasses {
         }
         $clubs = $this->coach_clubs();
         ob_start();
+        echo '<div class="imao-monthly imao-monthly-submit" dir="rtl"><div class="crm-course-title">ثبت کلاس ماهانه</div>';
         $this->render_coach_classes( $clubs );
         if ( ! $clubs ) {
-            echo '<p>برای ثبت کلاس، ابتدا باید باشگاه تأییدشده‌ای به نام شما ثبت شده باشد.</p>';
+            echo '<p class="imao-monthly-empty">برای ثبت کلاس، ابتدا باید باشگاه تأییدشده‌ای به نام شما ثبت شده باشد.</p></div>';
             return (string) ob_get_clean();
         }
-        echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" dir="rtl">';
+        echo '<form class="imao-class-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" dir="rtl">';
         echo '<input type="hidden" name="action" value="imao_submit_monthly_class">';
         wp_nonce_field( 'imao_submit_monthly_class', 'imao_class_nonce' );
         echo '<p><label>نام کلاس <input type="text" name="class_title" maxlength="200" required></label></p>';
@@ -277,7 +278,7 @@ class MonthlyClasses {
             echo '<option value="' . esc_attr( $club->ID ) . '">' . esc_html( $club->post_title ) . '</option>';
         }
         echo '</select></label></p><p><label>شهریه ماهانه (واحد پول فروشگاه) <input type="number" name="class_fee" min="0.01" step="0.01" required></label></p>';
-        echo '<p>کلاس پس از بررسی و تأیید مدیر برای شاگردان نمایش داده می‌شود.</p><button type="submit" class="button">ارسال برای بررسی</button></form>';
+        echo '<p class="imao-class-hint">کلاس پس از بررسی و تأیید مدیر برای شاگردان نمایش داده می‌شود.</p><button type="submit" class="button">ارسال برای بررسی</button></form></div>';
         return (string) ob_get_clean();
     }
 
@@ -351,14 +352,14 @@ class MonthlyClasses {
             ],
         ] );
         ob_start();
-        echo '<div dir="rtl" class="imao-monthly-classes">';
+        echo '<div dir="rtl" class="imao-monthly imao-monthly-classes"><div class="crm-course-title">کلاس‌های ماهانه شما</div>';
         if ( ! $query->posts ) {
-            echo '<p>کلاس ماهانه تأییدشده‌ای برای مربی شما وجود ندارد.</p>';
+            echo '<p class="imao-monthly-empty">کلاس ماهانه تأییدشده‌ای برای مربی شما وجود ندارد.</p>';
         }
         foreach ( $query->posts as $class ) {
             $id = (int) $class->ID;
             $fee = get_post_meta( $id, '_class_fee', true );
-            echo '<section><h3>' . esc_html( $class->post_title ) . '</h3><p>باشگاه: ' . esc_html( get_the_title( (int) get_post_meta( $id, '_class_club_id', true ) ) ) . '</p>';
+            echo '<section class="imao-class-card"><h3>' . esc_html( $class->post_title ) . '</h3><p>باشگاه: ' . esc_html( get_the_title( (int) get_post_meta( $id, '_class_club_id', true ) ) ) . '</p>';
             echo '<p>شهریه ماهانه: ' . ( function_exists( 'wc_price' ) ? wp_kses_post( wc_price( $fee ) ) : esc_html( $fee ) ) . '</p>';
             if ( class_exists( MonthlyTuition::class ) ) {
                 $due = MonthlyTuition::due_date( $user_id, $id );
@@ -444,7 +445,7 @@ class MonthlyClasses {
         // A relative, escaped URL cannot inherit an attacker-supplied host.
         $base = remove_query_arg( array_map( static function ( $key ) { return 'imao_class_list_' . $key; }, array_keys( $filters ) ) );
         ob_start();
-        echo '<div dir="rtl" class="imao-class-list"><form method="get" action="' . esc_url( $base ) . '">';
+        echo '<div dir="rtl" class="imao-monthly imao-class-list"><div class="crm-course-title">همه کلاس‌های ماهانه</div><form class="imao-class-filters" method="get" action="' . esc_url( $base ) . '">';
         // Preserve page routing query arguments, including plain permalink installations.
         $routing = wp_parse_url( $base, PHP_URL_QUERY );
         parse_str( (string) $routing, $routing_args );
@@ -481,7 +482,7 @@ class MonthlyClasses {
         }
         echo '<button type="submit" class="button">فیلتر کلاس‌ها</button></form>';
         if ( ! $query->posts ) {
-            echo '<p>کلاس تأییدشده‌ای یافت نشد.</p>';
+            echo '<p class="imao-monthly-empty">کلاس تأییدشده‌ای یافت نشد.</p>';
         }
         foreach ( $query->posts as $class ) {
             $id = (int) $class->ID;
@@ -490,7 +491,7 @@ class MonthlyClasses {
             $club_id = (int) get_post_meta( $id, '_class_club_id', true );
             $province = (string) get_post_meta( $club_id, 'club_province', true );
             $fee = get_post_meta( $id, '_class_fee', true );
-            echo '<section><h3>' . esc_html( $class->post_title ) . '</h3>';
+            echo '<section class="imao-class-card"><h3>' . esc_html( $class->post_title ) . '</h3>';
             foreach ( [ 'مربی' => $coach ? $coach->display_name : '', 'باشگاه' => $club_id > 0 ? get_the_title( $club_id ) : '', 'استان' => $provinces[ $province ] ?? $province, 'شهر' => get_post_meta( $club_id, 'club_city', true ) ] as $label => $value ) {
                 echo '<p>' . esc_html( $label . ': ' . $value ) . '</p>';
             }
@@ -559,7 +560,6 @@ class MonthlyClasses {
 
     public function account_classes(): void {
         echo $this->classes_shortcode();
-        echo ( new MonthlyTuition() )->payments_shortcode();
     }
 
     public function account_submit(): void {

@@ -42,6 +42,7 @@ class Assets {
         wp_enqueue_style( 'imao-wallet', $url . 'assets/css/wallet.css', [], '1.0.0' );
         wp_enqueue_style( 'imao-club-register', $url . 'assets/css/club-register.css', [], '1.0.0' );
         wp_enqueue_style( 'imao-courses', $url . 'assets/css/courses.css', [], '1.0.0' );
+        wp_enqueue_style( 'imao-monthly-classes', $url . 'assets/css/monthly-classes.css', [ 'imao-courses' ], '1.0.0' );
         wp_enqueue_style( 'imao-jalali-datepicker-frontend', $url . 'assets/css/jalalidatepicker.min.css', [], '1.0.0' );
         wp_enqueue_script( 'imao-select2', $url . 'assets/js/select2.min.js', [ 'jquery' ], '1.0.0', true );
         wp_enqueue_script( 'imao-edit-basic-info', $url . 'assets/js/edit-basic-info.js', [ 'jquery', 'imao-select2' ], '1.0.0', true );
