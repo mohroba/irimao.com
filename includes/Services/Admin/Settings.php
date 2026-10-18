@@ -9,6 +9,7 @@ class Settings
 
     public function register(): void
     {
+        (new MonthlyClassReports())->register();
         add_action('admin_menu', [$this, 'add_menu']);
         add_action('admin_init', [$this, 'register_settings']);
         add_action('init', [$this, 'configure_add_to_cart_message'], PHP_INT_MAX);
@@ -139,6 +140,11 @@ class Settings
     public static function shortcode_catalog(): array
     {
         return [
+            [ 'tag' => 'imao_class_submit', 'description' => 'فرم ثبت کلاس', 'params' => 'بدون پارامتر', 'return' => 'HTML فرم', 'example' => '[imao_class_submit]' ],
+            [ 'tag' => 'imao_monthly_classes', 'description' => 'فهرست کلاس‌های ماهانه', 'params' => 'بدون پارامتر', 'return' => 'HTML فهرست', 'example' => '[imao_monthly_classes]' ],
+            [ 'tag' => 'imao_class_due', 'description' => 'مهلت پرداخت شهریه کلاس', 'params' => 'class_id: شناسه کلاس؛ field: days یا date', 'return' => 'تعداد روز یا تاریخ سررسید', 'example' => '[imao_class_due class_id="123" field="days"] / [imao_class_due class_id="123" field="date"]' ],
+            [ 'tag' => 'imao_class_info', 'description' => 'اطلاعات کلاس', 'params' => 'class_id: شناسه کلاس؛ field: title، fee، coach یا club', 'return' => 'متن اطلاعات کلاس', 'example' => '[imao_class_info class_id="123" field="title"]' ],
+            [ 'tag' => 'imao_class_payments', 'description' => 'سوابق شهریه کاربر جاری', 'params' => 'class_id: شناسه اختیاری کلاس', 'return' => 'جدول صفحه‌بندی‌شده پرداخت‌های کاربر جاری', 'example' => '[imao_class_payments class_id="123"]' ],
             [ 'tag' => 'crm_competitions_list', 'description' => 'فهرست مسابقات قابل ثبت‌نام', 'params' => 'بدون پارامتر', 'return' => 'HTML جدول', 'example' => '[crm_competitions_list]' ],
             [ 'tag' => 'crm_competition_details', 'description' => 'جزئیات یک مسابقه و فرم ثبت‌نام', 'params' => 'id: شناسه مسابقه؛ در صورت خالی بودن از competition_id استفاده می‌شود', 'return' => 'HTML فرم و جزئیات', 'example' => '[crm_competition_details id="10963"]' ],
             [ 'tag' => 'crm_user_competitions', 'description' => 'مسابقات ثبت‌نام‌شده کاربر جاری', 'params' => 'بدون پارامتر', 'return' => 'HTML جدول', 'example' => '[crm_user_competitions]' ],

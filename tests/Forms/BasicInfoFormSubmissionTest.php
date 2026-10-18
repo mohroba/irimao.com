@@ -3,7 +3,7 @@ namespace IMAOCustom\Forms {
     function is_user_logged_in() { return true; }
     $GLOBALS['current_user_email'] = 'old@example.com';
     function get_current_user_id() { return 1; }
-    function get_userdata( $uid ) { return (object) [ 'user_email' => $GLOBALS['current_user_email'] ]; }
+    function get_userdata( $uid ) { return (object) [ 'user_email' => $GLOBALS['current_user_email'], 'display_name' => 'کاربر معرف' ]; }
     function get_user_meta($uid, $key, $single = true) { return \IMAOCustom\Helpers\get_user_meta($uid, $key, $single); }
     function update_user_meta($uid, $key, $value) { \IMAOCustom\Helpers\update_user_meta($uid, $key, $value); }
     if ( ! function_exists( __NAMESPACE__ . '\\selected' ) ) {
@@ -73,6 +73,24 @@ use PHPUnit\Framework\TestCase;
 use IMAOCustom\Forms\BasicInfoForm;
 
 class BasicInfoFormSubmissionTest extends TestCase {
+    public function test_referrer_is_read_only_and_posted_changes_are_ignored(): void {
+        foreach ( [ '', 'approved' ] as $status ) {
+            $GLOBALS['user_meta']['identity_verified_professional'] = $status;
+            $GLOBALS['user_meta']['referrer_id'] = '12';
+            $_SERVER['REQUEST_METHOD'] = 'POST';
+            $_POST = $this->validPostData();
+            $_POST['referrer_id'] = '99';
+            $form = new BasicInfoForm();
+            $html = $form->render();
+            $this->assertSame( '12', $GLOBALS['user_meta']['referrer_id'] );
+            $this->assertSame( 12, $form->fields()['referrer_id'] );
+            $this->assertStringContainsString( 'id="referrer_id_display"', $html );
+            $this->assertStringContainsString( 'کاربر معرف (#12)', $html );
+            $this->assertStringContainsString( 'readonly', $html );
+            $this->assertStringNotContainsString( 'name="referrer_id"', $html );
+        }
+    }
+
     protected function tearDown(): void {
         $GLOBALS['user_meta']        = [];
         $GLOBALS['current_user_email'] = 'old@example.com';

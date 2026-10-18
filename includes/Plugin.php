@@ -48,6 +48,10 @@ use IMAOCustom\Services\PayoutManager;
 use IMAOCustom\Services\CompetitionCards;
 use IMAOCustom\Services\CompetitionCardTemplates;
 use IMAOCustom\Services\CompetitionBrackets;
+use IMAOCustom\Services\MonthlyClasses;
+use IMAOCustom\Services\MonthlyTuition;
+use IMAOCustom\Services\ClassReferrals;
+use IMAOCustom\Services\Admin\MonthlyClassReports;
 use IMAOCustom\ServiceManager;
 
 
@@ -65,6 +69,10 @@ class Plugin {
         SelfDeclarations::class,
         ClubApplications::class,
         Courses::class,
+        MonthlyClasses::class,
+        MonthlyTuition::class,
+        ClassReferrals::class,
+        MonthlyClassReports::class,
         AgeCategories::class,
         AgeCategoryWeightSeeder::class,
         EditBasicInfo::class,

@@ -36,6 +36,8 @@ class BasicInfoForm extends BaseForm {
         if ( ! empty( $this->posted ) ) {
             $fields = array_merge( $fields, $this->posted );
         }
+        // Referral ownership is managed exclusively through the admin profile.
+        $fields['referrer_id'] = (int) get_user_meta( $uid, 'referrer_id', true );
         return $fields;
     }
 
@@ -290,6 +292,12 @@ class BasicInfoForm extends BaseForm {
         $html .= $this->success_message();
         $html .= $this->error_list();
         $html .= '<div class="cbif-grid">';
+        $referrer = $f['referrer_id'] > 0 ? get_userdata( $f['referrer_id'] ) : false;
+        $referrer_label = $referrer
+            ? sprintf( '%s (#%d)', $referrer->display_name, $f['referrer_id'] )
+            : 'تعیین نشده';
+        $html .= '<div class="cbif-field"><label for="referrer_id_display">معرف</label>';
+        $html .= '<input type="text" id="referrer_id_display" value="' . esc_attr( $referrer_label ) . '" readonly></div>';
 
         // national id & gender
         $html .= '<div class="cbif-field"><label for="national_id_display">کد ملی<span class="required">*</span></label>';
