@@ -53,17 +53,30 @@ final class CompetitionBracketSeeding {
             }
         }
         $count = count( $entries );
-        $ideal = (int) ( $count / 2 ) + ( $count % 2 && hexdec( substr( hash( 'sha256', $salt ), 0, 1 ) ) % 2 ? 1 : 0 );
-        $left_count = max( $fixed_left, $count - $half, min( $ideal, $half, $count - $fixed_right ) );
-        $allocations = self::allocate_groups( array_values( $groups ), $left_count, $salt );
-        $left = [];
-        $right = [];
-        foreach ( array_values( $groups ) as $index => $group ) {
-            $free_left = $allocations[ $index ] - count( $group['left'] );
-            $left = array_merge( $left, $group['left'], array_slice( $group['free'], 0, $free_left ) );
-            $right = array_merge( $right, $group['right'], array_slice( $group['free'], $free_left ) );
+        $minimum = max( $fixed_left, $count - $half );
+        $maximum = min( $half, $count - $fixed_right );
+        $quotas = array_unique( [ max( $minimum, min( $maximum, (int) floor( $count / 2 ) ) ), max( $minimum, min( $maximum, (int) ceil( $count / 2 ) ) ) ] );
+        $best_score = null;
+        $best_ticket = '';
+        $left = $right = [];
+        foreach ( $quotas as $quota ) {
+            $allocation = self::allocate_groups( array_values( $groups ), $quota, $salt );
+            $candidate_left = $candidate_right = [];
+            foreach ( array_values( $groups ) as $index => $group ) {
+                $free_left = $allocation['counts'][ $index ] - count( $group['left'] );
+                $candidate_left = array_merge( $candidate_left, $group['left'], array_slice( $group['free'], 0, $free_left ) );
+                $candidate_right = array_merge( $candidate_right, $group['right'], array_slice( $group['free'], $free_left ) );
+            }
+            if ( $criterion !== 'province' ) self::improve_geography( $candidate_left, $candidate_right, $criterion, $fixed );
+            $score = [ $allocation['cost'], self::geography_cost( $candidate_left, $candidate_right ) ];
+            $ticket = hash( 'sha256', $salt . '|quota|' . $quota );
+            if ( $best_score === null || $score < $best_score || ( $score === $best_score && strcmp( $ticket, $best_ticket ) < 0 ) ) {
+                $best_score = $score;
+                $best_ticket = $ticket;
+                $left = $candidate_left;
+                $right = $candidate_right;
+            }
         }
-        if ( $criterion !== 'province' ) self::improve_geography( $left, $right, $criterion, $fixed );
         self::place( $left, $start, $half, $criterion, $seed, $fixed, $slots );
         self::place( $right, $middle, $half, $criterion, $seed, $fixed, $slots );
     }
@@ -93,11 +106,25 @@ final class CompetitionBracketSeeding {
             $costs = $next;
         }
         if ( ! isset( $costs[ $quota ] ) ) throw new \LogicException( 'Ranked slots cannot satisfy this bracket split.' );
+        $best_cost = $costs[ $quota ];
         $result = [];
         for ( $index = count( $groups ) - 1; $index >= 0; --$index ) {
             [ $quota, $result[ $index ] ] = $history[ $index ][ $quota ];
         }
-        return $result;
+        return [ 'counts' => $result, 'cost' => $best_cost ];
+    }
+
+    private static function geography_cost( array $left, array $right ): int {
+        $score = 0;
+        foreach ( [ $left, $right ] as $entries ) {
+            $counts = [];
+            foreach ( $entries as $entry ) {
+                $province = self::identity( $entry, 'province' );
+                $counts[ $province ] = ( $counts[ $province ] ?? 0 ) + 1;
+            }
+            foreach ( $counts as $count ) $score += $count * $count;
+        }
+        return $score;
     }
 
     /** Improve province separation only among splits of equal primary-group quality. */

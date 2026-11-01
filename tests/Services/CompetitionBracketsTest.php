@@ -5,6 +5,18 @@ namespace {
     use PHPUnit\Framework\TestCase;
 
     class CompetitionBracketsTest extends TestCase {
+        public function test_three_entrant_sections_choose_the_bye_side_that_avoids_a_same_province_fight(): void {
+            $entries = [];
+            for ( $i = 1; $i <= 10; ++$i ) $entries[] = [ 'entry_id' => (string) $i, 'name' => 'نام ' . $i, 'club' => 'club-' . $i,
+                'province' => $i <= 5 ? 'THR' : 'GZN', 'seed_rank' => $i <= 4 ? $i : 0 ];
+            foreach ( [ 'deployment-read-only', 'sample-draw', 'another-seed' ] as $seed ) {
+                foreach ( [ 'province', 'club' ] as $criterion ) {
+                    $slots = CompetitionBrackets::seed_participants( $entries, 16, $criterion, $seed );
+                    $this->assertSame( 0, \IMAOCustom\Services\CompetitionBracketView::opening_collisions( $slots, 'province' ), $seed . ' ' . $criterion );
+                }
+            }
+        }
+
         public function test_sample_provinces_avoid_opening_collisions_with_four_tehran_seeds(): void {
             $entries = [];
             for ( $i = 1; $i <= 10; ++$i ) {
