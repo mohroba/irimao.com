@@ -258,8 +258,14 @@ class MonthlyClasses {
     }
 
     public function submission_shortcode(): string {
-        if ( ! is_user_logged_in() || ! self::valid_coach( get_current_user_id() ) ) {
-            return '<p>ثبت کلاس فقط برای مربیان واردشده با هویت حرفه‌ای تأییدشده امکان‌پذیر است.</p>';
+        if ( ! is_user_logged_in() ) {
+            return '<p>برای ثبت کلاس ابتدا وارد حساب کاربری شوید.</p>';
+        }
+        if ( ! UserRoles::has( get_userdata( get_current_user_id() ), 'coach' ) ) {
+            return '<p>نقش مربی برای این حساب ثبت نشده است. در صورت تأیید مربیگری، از مدیر سایت بخواهید نقش مربی را به حساب شما اضافه کند.</p>';
+        }
+        if ( get_user_meta( get_current_user_id(), 'identity_verified_professional', true ) !== 'approved' ) {
+            return '<p>هویت حرفه‌ای این حساب هنوز تأیید نشده است. پس از تأیید توسط مدیر، امکان ثبت کلاس فعال می‌شود.</p>';
         }
         $clubs = $this->coach_clubs();
         ob_start();

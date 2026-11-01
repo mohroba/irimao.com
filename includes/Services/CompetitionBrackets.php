@@ -39,6 +39,15 @@ class CompetitionBrackets {
             echo '<a class="button" target="_blank" rel="noopener" href="' . esc_url( self::page_url( $post->ID ) ) . '">مشاهده جدول</a></p>';
             $divisions = self::snapshot_divisions( $snapshot );
             echo '<p>تعداد جدول‌ها: ' . count( $divisions ) . ' | معیار جداسازی: ' . esc_html( self::criterion_label( (string) $snapshot['criterion'] ) ) . ' | تولید: ' . esc_html( (string) $snapshot['generated_at'] ) . '</p>';
+            if ( (string) ( $snapshot['criterion'] ?? '' ) !== $this->criterion( $post->ID ) ) {
+                echo '<p class="notice notice-warning" style="padding:10px">معیار جداسازی این جدول با سطح فعلی مسابقه متفاوت است. برای اعمال معیار جدید، جدول باید پس از بررسی نتایج ثبت‌شده توسط مدیر تولید مجدد شود.</p>';
+            }
+            foreach ( $divisions as $division ) {
+                $empty_matches = self::empty_opening_matches( $division['slots'] ?? [] );
+                if ( $empty_matches > 0 ) {
+                    echo '<p class="notice notice-warning" style="padding:10px">در جدول «' . esc_html( (string) $division['label'] ) . '» تعداد ' . (int) $empty_matches . ' مسابقهٔ دور اول کاملاً خالی است. پیش از تولید مجدد، نتایج ثبت‌شده و تأیید وزن‌کشی شرکت‌کنندگان را بررسی کنید؛ تولید مجدد جایگاه‌ها را تغییر می‌دهد.</p>';
+                }
+            }
             $this->render_result_fields( $snapshot );
             echo '<p><button type="submit" class="button button-primary" name="imao_bracket_action" value="results">ذخیره نتایج</button></p>';
             if ( ! empty( $snapshot['audit'] ) ) {
@@ -228,7 +237,7 @@ class CompetitionBrackets {
                 <section class="imao-bracket-round">
                     <h3><?php echo esc_html( self::round_label( (int) $division['size'], $round_index ) ); ?></h3>
                     <?php foreach ( $matches as $match ) : ?>
-                    <div <?php echo $match['empty'] ? 'style="visibility:hidden" aria-hidden="true"' : ''; ?> class="imao-bracket-match <?php echo $round_index === count( $rounds ) - 1 && $match['winner'] ? 'imao-bracket-champion' : ''; ?>">
+                    <div class="imao-bracket-match <?php echo $match['empty'] ? 'imao-bracket-match-empty' : ''; ?> <?php echo $round_index === count( $rounds ) - 1 && $match['winner'] ? 'imao-bracket-champion' : ''; ?>">
                         <?php foreach ( [ 'a' => $match['a'], 'b' => $match['b'] ] as $side => $entry ) : ?>
                         <div class="imao-bracket-player <?php echo ! $entry ? 'bye' : ( $match['winner'] && $entry['entry_id'] === $match['winner']['entry_id'] ? 'winner' : '' ); ?>">
                             <span class="imao-bracket-player-name">
@@ -297,6 +306,14 @@ class CompetitionBrackets {
         $round = 0;
         while ( $xor > 0 ) { $round++; $xor >>= 1; }
         return max( 1, $round );
+    }
+
+    public static function empty_opening_matches( array $slots ): int {
+        $empty = 0;
+        for ( $i = 0; $i + 1 < count( $slots ); $i += 2 ) {
+            if ( empty( $slots[ $i ] ) && empty( $slots[ $i + 1 ] ) ) ++$empty;
+        }
+        return $empty;
     }
 
     public static function seed_participants( array $participants, int $size, string $criterion, string $seed ): array {
@@ -468,9 +485,9 @@ class CompetitionBrackets {
         $level = str_replace( [ '‌', '-', ' ' ], '', strtolower( $level ) );
         if ( strpos( $level, 'بینالملل' ) !== false || strpos( $level, 'international' ) !== false ) return 'country';
         if ( strpos( $level, 'شهرستان' ) !== false || strpos( $level, 'county' ) !== false ) return 'club';
-        if ( strpos( $level, 'استان' ) !== false || strpos( $level, 'province' ) !== false || strpos( $level, 'provincial' ) !== false ) return 'city';
-        foreach ( [ 'کشور', 'جایزهبزرگ', 'منطقه', 'national', 'grandprix', 'regional' ] as $word ) {
-            if ( strpos( $level, $word ) !== false ) return 'province';
+        if ( strpos( $level, 'کشور' ) !== false || strpos( $level, 'national' ) !== false ) return 'province';
+        foreach ( [ 'استان', 'province', 'provincial', 'جایزهبزرگ', 'منطقه', 'grandprix', 'regional' ] as $word ) {
+            if ( strpos( $level, $word ) !== false ) return 'club';
         }
         return 'club';
     }

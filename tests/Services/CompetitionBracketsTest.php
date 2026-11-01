@@ -31,6 +31,12 @@ namespace {
             $this->assertNull( $rounds[1][0]['winner'] );
         }
 
+        public function test_empty_saved_opening_matches_are_detected_without_changing_slots(): void {
+            $slots = [ [ 'entry_id' => 'a' ], null, null, null, [ 'entry_id' => 'b' ], null, null, null ];
+            $this->assertSame( 2, CompetitionBrackets::empty_opening_matches( $slots ) );
+            $this->assertCount( 8, $slots );
+        }
+
         public function test_medals_follow_the_final_and_semifinal_opponents(): void {
             $entries = [];
             foreach ( [ 'a', 'b', 'c', 'd' ] as $id ) $entries[] = [ 'entry_id' => $id, 'name' => $id ];
@@ -44,7 +50,7 @@ namespace {
         }
 
         public function test_competition_levels_select_the_requested_identity(): void {
-            foreach ( [ 'استانی' => 'city', 'بین المللی' => 'country', 'بین‌المللی' => 'country', 'کشوری' => 'province', 'جایزه بزرگ' => 'province', 'منطقه‌ای' => 'province', 'شهرستانی' => 'club' ] as $level => $criterion ) {
+            foreach ( [ 'استانی' => 'club', 'بین المللی' => 'country', 'بین‌المللی' => 'country', 'کشوری' => 'province', 'جایزه بزرگ' => 'club', 'منطقه‌ای' => 'club', 'شهرستانی' => 'club' ] as $level => $criterion ) {
                 $this->assertSame( $criterion, CompetitionBrackets::criterion_for_level( $level ) );
             }
             $this->assertSame( 'تهران', CompetitionBrackets::group_label( [ 'province' => 'THR' ], 'province' ) );
