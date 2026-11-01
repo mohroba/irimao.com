@@ -208,8 +208,8 @@ class Competitions
             'registration_start' => 'شروع ثبت‌نام',
             'registration_end' => 'پایان ثبت‌نام',
             'weigh_in_start_date' => 'تاریخ شروع وزن‌کشی',
-            'weigh_in_start' => 'ساعت شروع وزن‌کشی',
             'weigh_in_end_date' => 'تاریخ پایان وزن‌کشی',
+            'weigh_in_start' => 'ساعت شروع وزن‌کشی',
             'weigh_in_end' => 'ساعت پایان وزن‌کشی',
             'organizer' => 'مسئول برگزاری',
             'organizer_tel' => 'شماره همراه مسئول برگزاری',
@@ -218,6 +218,12 @@ class Competitions
             'price' => 'هزینه ثبت نام مسابقه (تومان)',
             'competition_card_background' => 'تصویر پس‌زمینه کارت مسابقه (URL، اختیاری)',
         ];
+    }
+
+    /** Fields safe to display in the public competition registration form. */
+    public static function public_detail_fields(): array
+    {
+        return array_diff_key(self::detail_fields(), array_flip(['competition_card_background']));
     }
 
     public function render_payouts_box(WP_Post $post): void
@@ -1410,7 +1416,7 @@ class Competitions
             $prod_id = $this->sync_product($cid);
         }
 
-        $fields     = self::detail_fields() + [
+        $fields     = self::public_detail_fields() + [
             'board'  => 'استان',
             'gender' => 'جنسیت',
             'level'  => 'سطح',
