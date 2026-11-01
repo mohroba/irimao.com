@@ -65,6 +65,7 @@ class CompetitionBrackets {
     private function render_result_fields( array $snapshot ): void {
         foreach ( self::snapshot_divisions( $snapshot ) as $division_key => $division ) {
             $rounds = self::build_rounds( $division['slots'], $division['winners'] ?? [] );
+            $bout_numbers = CompetitionBracketView::match_numbers( $division['slots'] );
             $entrant_count = self::division_entrant_count( $division );
             echo '<h4>' . esc_html( (string) $division['label'] ) . ' — جدول ' . (int) $division['size'] . ' نفره — تعداد شرکت‌کنندگان: ' . (int) $entrant_count . '</h4>';
             echo '<div style="overflow:auto"><table class="widefat striped"><thead><tr><th>مرحله</th><th>مسابقه</th><th>قرمز</th><th>آبی</th><th>برنده</th></tr></thead><tbody>';
@@ -74,7 +75,7 @@ class CompetitionBrackets {
                     $key = $round_index . ':' . $match_index;
                     $a = $match['a'];
                     $b = $match['b'];
-                    echo '<tr><td>' . esc_html( self::round_label( count( $division['slots'] ), $round_index ) ) . '</td><td>' . ( $match_index + 1 ) . '</td><td>' . esc_html( $a ? self::entry_name( $a ) : ( $match['a_pending'] ? 'در انتظار نتیجه' : 'استراحت' ) ) . '</td><td>' . esc_html( $b ? self::entry_name( $b ) : ( $match['b_pending'] ? 'در انتظار نتیجه' : 'استراحت' ) ) . '</td><td>';
+                    echo '<tr><td>' . esc_html( self::round_label( count( $division['slots'] ), $round_index ) ) . '</td><td>' . ( $bout_numbers[ $round_index ][ $match_index ] ?? 'صعود مستقیم' ) . '</td><td>' . esc_html( $a ? self::entry_name( $a ) : ( $match['a_pending'] ? 'در انتظار نتیجه' : ( $round_index === 0 ? 'استراحت' : 'بدون حریف' ) ) ) . '</td><td>' . esc_html( $b ? self::entry_name( $b ) : ( $match['b_pending'] ? 'در انتظار نتیجه' : ( $round_index === 0 ? 'استراحت' : 'بدون حریف' ) ) ) . '</td><td>';
                     if ( $a && $b ) {
                         echo '<select name="imao_bracket_winners[' . esc_attr( $division_key ) . '][' . esc_attr( $key ) . ']"><option value="">— انتخاب —</option>';
                         foreach ( [ $a, $b ] as $entry ) {
@@ -122,7 +123,8 @@ class CompetitionBrackets {
             }
             if ( ! $divisions ) return;
             update_post_meta( $competition_id, self::META_BRACKET, [
-                'version' => 2,
+                'version' => 3,
+                'allocation' => 'recursive-balanced-v1',
                 'criterion' => $criterion,
                 'seed' => $seed,
                 'divisions' => $divisions,
@@ -216,69 +218,8 @@ class CompetitionBrackets {
     private function bracket_html( int $competition_id ): string {
         $snapshot = self::snapshot( $competition_id );
         if ( ! $snapshot ) return '<p class="imao-bracket-empty">جدول این مسابقه هنوز منتشر نشده است.</p>';
-        $criterion = $this->criterion( $competition_id );
-        ob_start(); ?>
-<style>.imao-bracket-shell{direction:rtl;background:#fff;border:1px solid #e2e5ea;border-radius:14px;overflow:hidden;font-family:Tahoma,Arial,sans-serif}.imao-bracket-toolbar{display:flex;gap:8px;align-items:center;padding:10px 14px;background:#17134b;color:#fff}.imao-bracket-toolbar button{border:1px solid #ffffff66;border-radius:6px;background:#fff;color:#17134b;padding:5px 11px;cursor:pointer}.imao-bracket-viewport{direction:ltr;overflow:auto;cursor:grab;min-height:240px;padding:24px}.imao-bracket-tree{position:relative;display:flex;gap:54px;transform-origin:top left;width:max-content;transition:transform .15s}.imao-bracket-connectors{position:absolute;inset:0;z-index:0;overflow:visible;pointer-events:none}.imao-bracket-connectors path{fill:none;stroke:#8993a3;stroke-width:2;vector-effect:non-scaling-stroke}.imao-bracket-round{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:space-around;width:220px;gap:18px}.imao-bracket-round h3{direction:rtl;text-align:center;font-size:14px;margin:0 0 8px;color:#555}.imao-bracket-match{position:relative;direction:rtl;border:1px solid #ccd2dd;border-radius:8px;background:#fff;box-shadow:0 2px 8px #0000000d;overflow:visible}.imao-bracket-player{display:flex;justify-content:space-between;gap:8px;padding:6px 10px;min-height:26px;border-bottom:1px solid #edf0f4;font-size:12px}.imao-bracket-player:last-child{border:0}.imao-bracket-player.winner{background:#eaf8ee;color:#116b2d;font-weight:700}.imao-bracket-player.bye{color:#9299a5;font-style:italic;direction:rtl}.imao-bracket-player-name{display:flex;flex-direction:column;gap:2px}.imao-bracket-champion{border-color:#d7a900;box-shadow:0 0 0 2px #ffd84d55}.imao-bracket-button{display:inline-block;padding:10px 18px;border-radius:7px;background:#17134b;color:#fff!important;text-decoration:none}.imao-bracket-empty{text-align:center;color:#777}.imao-bracket-layout{display:flex;direction:ltr;align-items:flex-start}.imao-bracket-viewport{flex:1;min-width:0}.imao-bracket-placements{direction:rtl;flex:0 0 320px;padding:16px}.imao-bracket-placements table{width:100%;border-collapse:collapse;font-size:12px}.imao-bracket-placements th,.imao-bracket-placements td{padding:10px;border:1px solid #ccd2dd}.imao-bracket-placements caption{padding:10px;font-weight:bold}@media(max-width:800px){.imao-bracket-layout{display:block}.imao-bracket-placements{max-width:100%}}</style>
-<?php foreach ( self::snapshot_divisions( $snapshot ) as $division ) :
-    $rounds = self::build_rounds( $division['slots'], $division['winners'] ?? [] );
-    $entrant_count = self::division_entrant_count( $division ); ?>
-<h2 style="font:700 18px Tahoma;text-align:center;margin:26px 0 10px"><?php echo esc_html( (string) $division['label'] ); ?></h2>
-<div class="imao-bracket-shell" data-imao-bracket>
-    <div class="imao-bracket-toolbar">
-        <strong>جدول <?php echo (int) $division['size']; ?> نفره — تعداد شرکت‌کنندگان: <?php echo (int) $entrant_count; ?></strong>
-        <button type="button" data-zoom="in">+</button>
-        <button type="button" data-zoom="out">−</button>
-        <button type="button" data-zoom="reset">۱۰۰٪</button>
-    </div>
-    <div class="imao-bracket-layout">
-        <div class="imao-bracket-viewport">
-            <div class="imao-bracket-tree">
-                <?php foreach ( $rounds as $round_index => $matches ) : ?>
-                <section class="imao-bracket-round">
-                    <h3><?php echo esc_html( self::round_label( (int) $division['size'], $round_index ) ); ?></h3>
-                    <?php foreach ( $matches as $match ) : ?>
-                    <div class="imao-bracket-match <?php echo $match['empty'] ? 'imao-bracket-match-empty' : ''; ?> <?php echo $round_index === count( $rounds ) - 1 && $match['winner'] ? 'imao-bracket-champion' : ''; ?>">
-                        <?php foreach ( [ 'a' => $match['a'], 'b' => $match['b'] ] as $side => $entry ) : ?>
-                        <div class="imao-bracket-player <?php echo ! $entry ? 'bye' : ( $match['winner'] && $entry['entry_id'] === $match['winner']['entry_id'] ? 'winner' : '' ); ?>">
-                            <span class="imao-bracket-player-name">
-                                <span>
-                                    <?php echo esc_html( $entry ? self::entry_name( $entry ) : ( $match[ $side . '_pending' ] ? 'در انتظار نتیجه' : 'استراحت' ) ); ?>
-                                    <?php if ( $entry && ! empty( $entry['seed_rank'] ) ) : ?>
-                                    <b title="رتبه در زمان جدول‌بندی">#<?php echo (int) $entry['seed_rank']; ?></b>
-                                    <?php endif; ?>
-                                </span>
-                            </span>
-                            <?php if ( $entry ) : ?>
-                            <small><?php echo esc_html( self::group_label( $entry, $criterion ) ); ?></small>
-                            <?php endif; ?>
-                        </div>
-                        <?php endforeach; ?>
-                    </div>
-                    <?php endforeach; ?>
-                </section>
-                <?php endforeach; ?>
-            </div>
-        </div>
-        <aside class="imao-bracket-placements">
-            <table>
-                <caption>نفرات برتر</caption>
-                <thead><tr><th>رتبه</th><th>نام ورزشکار</th><th><?php echo esc_html( self::criterion_label( $criterion ) ); ?></th></tr></thead>
-                <tbody>
-                    <?php foreach ( self::placements( $rounds ) as $position => $entry ) : ?>
-                    <tr>
-                        <td><?php echo esc_html( [ 1 => 'اول', 2 => 'دوم', 3 => 'سوم', 4 => 'سوم مشترک' ][ $position ] ); ?></td>
-                        <td><?php echo esc_html( $entry['name'] ?? '—' ); ?></td>
-                        <td><?php echo esc_html( $entry ? self::group_label( $entry, $criterion ) : '—' ); ?></td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </aside>
-    </div>
-</div>
-<?php endforeach; ?>
-<script>(function(){var ns='http://www.w3.org/2000/svg';document.querySelectorAll('[data-imao-bracket]').forEach(function(root){if(root.dataset.ready)return;root.dataset.ready='1';var view=root.querySelector('.imao-bracket-viewport'),tree=root.querySelector('.imao-bracket-tree'),scale=1,drag=false,x=0,y=0,sx=0,sy=0;function zoom(){tree.style.transform='scale('+scale+')'}function connectors(){var old=tree.querySelector('.imao-bracket-connectors');if(old)old.remove();var svg=document.createElementNS(ns,'svg'),rounds=tree.querySelectorAll('.imao-bracket-round');svg.setAttribute('class','imao-bracket-connectors');svg.setAttribute('width',tree.scrollWidth);svg.setAttribute('height',tree.scrollHeight);rounds.forEach(function(round,ri){if(ri>=rounds.length-1)return;var matches=round.querySelectorAll('.imao-bracket-match'),parents=rounds[ri+1].querySelectorAll('.imao-bracket-match');matches.forEach(function(match,mi){var parent=parents[Math.floor(mi/2)];if(!parent||match.style.visibility==='hidden'||parent.style.visibility==='hidden')return;var x1=round.offsetLeft+match.offsetLeft+match.offsetWidth,y1=round.offsetTop+match.offsetTop+match.offsetHeight/2,x2=rounds[ri+1].offsetLeft+parent.offsetLeft,y2=rounds[ri+1].offsetTop+parent.offsetTop+parent.offsetHeight/2,xm=x1+(x2-x1)/2,path=document.createElementNS(ns,'path');path.setAttribute('d','M'+x1+' '+y1+' H'+xm+' V'+y2+' H'+x2);svg.appendChild(path)})});tree.insertBefore(svg,tree.firstChild)}root.addEventListener('click',function(e){var z=e.target.dataset.zoom;if(!z)return;scale=z==='reset'?1:Math.max(.4,Math.min(2,scale+(z==='in'?.15:-.15)));zoom()});view.addEventListener('mousedown',function(e){drag=true;x=e.clientX;y=e.clientY;sx=view.scrollLeft;sy=view.scrollTop});window.addEventListener('mouseup',function(){drag=false});view.addEventListener('mousemove',function(e){if(!drag)return;view.scrollLeft=sx-(e.clientX-x);view.scrollTop=sy-(e.clientY-y)});view.addEventListener('wheel',function(e){if(!e.ctrlKey)return;e.preventDefault();scale=Math.max(.4,Math.min(2,scale+(e.deltaY<0?.1:-.1)));zoom()},{passive:false});connectors();if(window.ResizeObserver)new ResizeObserver(connectors).observe(tree)})})();</script>
-<?php return (string) ob_get_clean();
+        $criterion = (string) ( $snapshot['criterion'] ?? $this->criterion( $competition_id ) );
+        return CompetitionBracketView::render( self::snapshot_divisions( $snapshot ), $criterion );
     }
 
     private static function snapshot( int $competition_id ): array {
@@ -317,53 +258,7 @@ class CompetitionBrackets {
     }
 
     public static function seed_participants( array $participants, int $size, string $criterion, string $seed ): array {
-        $slots = array_fill( 0, $size, null );
-        $seed_positions = [ 1 => 0, 2 => (int) ( $size / 2 ), 3 => (int) ( $size / 4 ), 4 => (int) ( 3 * $size / 4 ) ];
-        $remaining = [];
-        foreach ( $participants as $participant ) {
-            $rank = (int) ( $participant['seed_rank'] ?? 0 );
-            if ( $rank >= 1 && $rank <= 4 && isset( $seed_positions[ $rank ] ) && $slots[ $seed_positions[ $rank ] ] === null ) {
-                $participant['group_label'] = (string) ( $participant[ $criterion ] ?? '' );
-                $slots[ $seed_positions[ $rank ] ] = $participant;
-            } else {
-                $remaining[] = $participant;
-            }
-        }
-        $participants = $remaining;
-        usort( $participants, static function ( array $a, array $b ) use ( $criterion, $seed ): int {
-            $ga = (string) ( $a[ $criterion ] ?? '' );
-            $gb = (string) ( $b[ $criterion ] ?? '' );
-            if ( $ga !== $gb ) return strcmp( $ga, $gb );
-            return strcmp( hash( 'sha256', $seed . '|' . $a['entry_id'] ), hash( 'sha256', $seed . '|' . $b['entry_id'] ) );
-        } );
-        $groups = [];
-        foreach ( $participants as $participant ) $groups[ (string) ( $participant[ $criterion ] ?? '' ) ][] = $participant;
-        uasort( $groups, static fn( array $a, array $b ): int => count( $b ) <=> count( $a ) );
-        foreach ( $groups as $group => $members ) {
-            $used = [];
-            foreach ( $slots as $slot => $placed ) if ( $placed && (string) ( $placed[ $criterion ] ?? '' ) === $group ) $used[] = $slot;
-            foreach ( $members as $member ) {
-                $best = [];
-                $best_score = -1;
-                $empty_pairs = false;
-                for ( $pair = 0; $pair < $size; $pair += 2 ) {
-                    if ( $slots[ $pair ] === null && $slots[ $pair + 1 ] === null ) { $empty_pairs = true; break; }
-                }
-                for ( $slot = 0; $slot < $size; $slot++ ) {
-                    if ( $slots[ $slot ] !== null ) continue;
-                    if ( $empty_pairs && $slots[ $slot ^ 1 ] !== null ) continue;
-                    $score = $used ? min( array_map( static fn( int $other ): int => self::encounter_round( $slot, $other ), $used ) ) : PHP_INT_MAX;
-                    if ( $score > $best_score ) { $best_score = $score; $best = [ $slot ]; }
-                    elseif ( $score === $best_score ) $best[] = $slot;
-                }
-                usort( $best, static fn( int $a, int $b ): int => strcmp( hash( 'sha256', $seed . '|' . $member['entry_id'] . '|' . $a ), hash( 'sha256', $seed . '|' . $member['entry_id'] . '|' . $b ) ) );
-                $chosen = $best[0];
-                $member['group_label'] = $group;
-                $slots[ $chosen ] = $member;
-                $used[] = $chosen;
-            }
-        }
-        return $slots;
+        return CompetitionBracketSeeding::seed( $participants, $size, $criterion, $seed );
     }
 
     public static function build_rounds( array $slots, array $requested_winners, ?array &$accepted_winners = null ): array {

@@ -5,8 +5,50 @@ namespace {
     use PHPUnit\Framework\TestCase;
 
     class CompetitionBracketsTest extends TestCase {
+        public function test_sample_provinces_avoid_opening_collisions_with_four_tehran_seeds(): void {
+            $entries = [];
+            for ( $i = 1; $i <= 10; ++$i ) {
+                $entries[] = [ 'entry_id' => (string) $i, 'club' => 'club-' . $i,
+                    'province' => $i <= 5 ? 'THR' : [ 'GZN', 'ABZ', 'ZJN', 'QHM', 'ESF' ][ $i - 6 ],
+                    'seed_rank' => $i <= 4 ? $i : 0 ];
+            }
+            foreach ( [ 'province', 'club' ] as $criterion ) {
+                for ( $seed = 0; $seed < 20; ++$seed ) {
+                    $slots = CompetitionBrackets::seed_participants( $entries, 16, $criterion, 'sample-' . $seed );
+                    $this->assertSame( 0, \IMAOCustom\Services\CompetitionBracketView::opening_collisions( $slots, 'province' ), $criterion . ' seed ' . $seed );
+                    $this->assertSame( 0, CompetitionBrackets::empty_opening_matches( $slots ) );
+                }
+            }
+        }
+
+        public function test_province_aliases_are_one_protected_group(): void {
+            $participants = [
+                [ 'entry_id' => 'a', 'province' => 'THR' ],
+                [ 'entry_id' => 'b', 'province' => 'IR-08' ],
+                [ 'entry_id' => 'c', 'province' => 'GZN' ],
+                [ 'entry_id' => 'd', 'province' => 'ZJN' ],
+            ];
+            $slots = CompetitionBrackets::seed_participants( $participants, 4, 'province', 'province-aliases' );
+            $positions = [];
+            foreach ( $slots as $slot => $entry ) $positions[ $entry['entry_id'] ] = $slot;
+            $this->assertSame( 2, CompetitionBrackets::encounter_round( $positions['a'], $positions['b'] ) );
+        }
+
+        public function test_byes_are_balanced_in_every_half_and_quarter(): void {
+            foreach ( [ 5, 6, 9, 10, 11, 13, 17, 21, 33 ] as $count ) {
+                $entries = [];
+                for ( $i = 1; $i <= $count; ++$i ) $entries[] = [ 'entry_id' => (string) $i, 'name' => 'Fighter ' . $i, 'club' => 'club-' . ( $i % 5 ), 'seed_rank' => $i <= 4 ? $i : 0 ];
+                $size = CompetitionBrackets::bracket_size( $count );
+                $slots = CompetitionBrackets::seed_participants( $entries, $size, 'club', 'balanced-byes' );
+                for ( $section = (int) ( $size / 2 ); $section >= 2; $section = (int) ( $section / 2 ) ) {
+                    $counts = array_map( static fn( array $chunk ): int => count( array_filter( $chunk ) ), array_chunk( $slots, $section ) );
+                    $this->assertLessThanOrEqual( 1, max( $counts ) - min( $counts ), 'Uneven BYEs for ' . $count . ' entrants in sections of ' . $section );
+                }
+            }
+        }
+
         public function test_opening_matches_have_an_entrant_for_every_supported_size(): void {
-            foreach ( [ 2, 3, 5, 9, 17, 33, 65, 129 ] as $count ) {
+            foreach ( [ 2, 3, 5, 9, 17, 33, 65, 129, 256 ] as $count ) {
                 foreach ( [ 'first', 'second', 'third' ] as $seed ) {
                     $participants = [];
                     for ( $i = 1; $i <= $count; $i++ ) {
@@ -110,6 +152,7 @@ namespace {
             $first = CompetitionBrackets::seed_participants( $participants, 4, 'province', 'audit-seed' );
             $second = CompetitionBrackets::seed_participants( $participants, 4, 'province', 'audit-seed' );
             $this->assertSame( $first, $second );
+            $this->assertSame( $first, CompetitionBrackets::seed_participants( array_reverse( $participants ), 4, 'province', 'audit-seed' ) );
         }
 
         public function test_top_four_ranked_fighters_are_protected_until_semifinals_and_final(): void {

@@ -3,7 +3,8 @@
 require dirname( __DIR__, 2 ) . '/vendor/autoload.php';
 
 $divisions = [];
-foreach ( [ '۶۵ کیلوگرم' => 8, '۷۰ کیلوگرم' => 6 ] as $weight => $count ) {
+$preview_counts = isset( $_GET['count'] ) ? [ 'وزن آزمایشی' => max( 2, min( 256, (int) $_GET['count'] ) ) ] : [ '۶۰ کیلوگرم' => 10, '۶۵ کیلوگرم' => 8, '۷۰ کیلوگرم' => 6 ];
+foreach ( $preview_counts as $weight => $count ) {
     $participants = [];
     for ( $i = 1; $i <= $count; $i++ ) {
         $participants[] = [
@@ -11,11 +12,13 @@ foreach ( [ '۶۵ کیلوگرم' => 8, '۷۰ کیلوگرم' => 6 ] as $weight 
             'user_id' => $i,
             'name' => 'شرکت‌کننده ' . $i,
             'club' => 'باشگاه ' . ( ( $i % 4 ) + 1 ),
+            'province' => $i <= 5 ? 'THR' : [ 'GZN', 'ABZ', 'ZJN', 'QHM', 'ESF' ][ ( $i - 6 ) % 5 ],
             'seed_rank' => $i <= 4 ? $i : 0,
         ];
     }
     $key = hash( 'sha256', $weight );
-    $slots = IMAOCustom\Services\CompetitionBrackets::seed_participants( $participants, 8, 'club', 'visual-preview-seed|' . $key );
+    $size = IMAOCustom\Services\CompetitionBrackets::bracket_size( $count );
+    $slots = IMAOCustom\Services\CompetitionBrackets::seed_participants( $participants, $size, 'club', 'visual-preview-seed|' . $key );
     $winners = [];
     if ( $count === 8 ) {
         for ( $round = 0; $round < 3; $round++ ) {
@@ -25,7 +28,7 @@ foreach ( [ '۶۵ کیلوگرم' => 8, '۷۰ کیلوگرم' => 6 ] as $weight 
             }
         }
     }
-    $divisions[ $key ] = [ 'label' => 'بزرگسالان — ' . $weight, 'weight_term_id' => 100 + count( $divisions ), 'size' => 8, 'slots' => $slots, 'winners' => $winners ];
+    $divisions[ $key ] = [ 'label' => 'بزرگسالان — ' . $weight, 'weight_term_id' => 100 + count( $divisions ), 'size' => $size, 'slots' => $slots, 'winners' => $winners ];
 }
 $GLOBALS['preview_bracket'] = [
     'version' => 2,
