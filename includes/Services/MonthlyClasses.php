@@ -14,6 +14,9 @@ class MonthlyClasses {
         add_action( 'add_meta_boxes', [ $this, 'add_meta_boxes' ] );
         add_action( 'save_post_' . self::POST_TYPE, [ $this, 'save_class' ], 10, 2 );
         add_action( 'admin_notices', [ $this, 'admin_notice' ] );
+        add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_form_assets' ] );
+        add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_form_assets' ] );
+        add_filter( 'wp_insert_post_data', [ $this, 'schedule_title' ], 10, 2 );
         add_action( 'admin_post_imao_submit_monthly_class', [ $this, 'submit_class' ] );
         add_shortcode( 'imao_class_submit', [ $this, 'submission_shortcode' ] );
         add_shortcode( 'imao_monthly_classes', [ $this, 'classes_shortcode' ] );
@@ -62,9 +65,15 @@ class MonthlyClasses {
             return;
         }
         wp_nonce_field( 'imao_save_monthly_class_' . $post->ID, 'imao_monthly_class_nonce' );
-        foreach ( [ '_class_coach_id' => 'شناسه مربی', '_class_club_id' => 'شناسه باشگاه', '_class_fee' => 'شهریه ماهانه (واحد پول فروشگاه)' ] as $key => $label ) {
-            echo '<p><label>' . esc_html( $label ) . ' <input type="number" min="0" step="' . ( $key === '_class_fee' ? '0.01' : '1' ) . '" name="' . esc_attr( $key ) . '" value="' . esc_attr( get_post_meta( $post->ID, $key, true ) ) . '" required></label></p>';
+        $coaches = get_users( self::directory_option_queries()['coaches'] );
+        $clubs = get_posts( self::directory_option_queries()['clubs'] );
+        foreach ( [ '_class_coach_id' => [ 'نام مربی', $coaches ], '_class_club_id' => [ 'نام باشگاه', $clubs ] ] as $key => $field ) {
+            echo '<p><label>' . esc_html( $field[0] ) . ' <select name="' . esc_attr( $key ) . '" required><option value="">انتخاب کنید</option>';
+            foreach ( $field[1] as $option ) echo '<option value="' . (int) $option->ID . '" ' . selected( get_post_meta( $post->ID, $key, true ), $option->ID, false ) . '>' . esc_html( $key === '_class_coach_id' ? $option->display_name : $option->post_title ) . '</option>';
+            echo '</select></label></p>';
         }
+        $this->schedule_fields( $post->ID, true );
+        echo '<p><label>شهریه ماهانه (تومان) <input type="text" inputmode="numeric" data-imao-money name="_class_fee" value="' . esc_attr( number_format( MonthlyClassBilling::class_fee( $post->ID ), 0, '.', ',' ) ) . '" required></label></p>';
         $shares = get_post_meta( $post->ID, '_class_shares', true );
         foreach ( [ 'referrer' => 'معرف', 'coach' => 'مربی', 'club' => 'باشگاه' ] as $key => $label ) {
             echo '<p><label>درصد سهم ' . esc_html( $label ) . ' <input type="number" min="0.01" max="99.99" step="0.01" name="_class_shares[' . esc_attr( $key ) . ']" value="' . esc_attr( is_array( $shares ) ? ( $shares[ $key ] ?? '' ) : '' ) . '" required></label></p>';
@@ -123,11 +132,7 @@ class MonthlyClasses {
     }
 
     private static function fee( string $value ): string {
-        if ( ! preg_match( '/^\d+(?:\.\d+)?$/D', $value ) || ! is_finite( (float) $value ) || (float) $value <= 0 ) {
-            return '';
-        }
-        $fee = function_exists( 'wc_format_decimal' ) ? wc_format_decimal( $value, wc_get_price_decimals() ) : $value;
-        return (float) $fee > 0 ? $fee : '';
+        return MonthlyClassBilling::amount( $value );
     }
 
     public function save_class( int $post_id, $post ): void {
@@ -157,7 +162,7 @@ class MonthlyClasses {
 
     private static function configuration( int $post_id ): array {
         $configuration = [];
-        foreach ( [ '_class_coach_id', '_class_club_id', '_class_fee', '_class_shares', '_class_product_id', '_class_approved' ] as $key ) {
+        foreach ( [ '_class_coach_id', '_class_club_id', '_class_fee', '_class_fee_unit', '_class_start_time', '_class_end_time', '_class_shares', '_class_product_id', '_class_approved' ] as $key ) {
             $configuration[ $key ] = get_post_meta( $post_id, $key, true );
         }
         return $configuration;
@@ -167,14 +172,16 @@ class MonthlyClasses {
         $coach_id = absint( self::input( '_class_coach_id' ) );
         $club_id = absint( self::input( '_class_club_id' ) );
         $fee = self::fee( self::input( '_class_fee' ) );
+        $start = MonthlyClassBilling::time( self::input( '_class_start_time' ) );
+        $end = MonthlyClassBilling::time( self::input( '_class_end_time' ) );
         $shares = self::validate_shares( isset( $_POST['_class_shares'] ) ? wp_unslash( $_POST['_class_shares'] ) : null );
         // Revoke approval before validation so invalid edits cannot remain payable.
         update_post_meta( $post_id, '_class_approved', 'no' );
-        if ( ! self::valid_coach( $coach_id ) || ! self::club_belongs_to_coach( $club_id, $coach_id ) || $fee === '' || $shares === null ) {
+        if ( ! self::valid_coach( $coach_id ) || ! self::club_belongs_to_coach( $club_id, $coach_id ) || $fee === '' || $shares === null || $start === '' || $end <= $start ) {
             $this->set_error( 'اطلاعات کلاس نامعتبر است؛ مربی، مالکیت باشگاه، شهریه و مجموع سهم‌ها را بررسی کنید.' );
             return;
         }
-        foreach ( [ '_class_coach_id' => $coach_id, '_class_club_id' => $club_id, '_class_fee' => $fee, '_class_shares' => $shares ] as $key => $value ) {
+        foreach ( [ '_class_coach_id' => $coach_id, '_class_club_id' => $club_id, '_class_fee' => $fee, '_class_fee_unit' => 'toman', '_class_start_time' => $start, '_class_end_time' => $end, '_class_shares' => $shares ] as $key => $value ) {
             update_post_meta( $post_id, $key, $value );
         }
         if ( self::input( '_class_approved' ) !== 'yes' || $post->post_status !== 'publish' ) {
@@ -197,9 +204,10 @@ class MonthlyClasses {
             $product->set_catalog_visibility( 'hidden' );
             $product->set_virtual( true );
             $product->set_sold_individually( true );
-            $product->set_regular_price( $fee );
+            $store_fee = (string) MonthlyClassBilling::store_amount( (float) $fee, get_woocommerce_currency() );
+            $product->set_regular_price( $store_fee );
             $product->set_sale_price( '' );
-            $product->set_price( $fee );
+            $product->set_price( $store_fee );
             $product->update_meta_data( '_imao_monthly_class_id', $post_id );
             $saved_id = $product->save();
             if ( ! $saved_id ) {
@@ -232,25 +240,46 @@ class MonthlyClasses {
         return get_posts( [ 'post_type' => 'club_application', 'post_status' => 'publish', 'author' => get_current_user_id(), 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ] );
     }
 
+    public function enqueue_form_assets(): void {
+        wp_enqueue_script( 'imao-monthly-class-form', plugin_dir_url( IMAO_PLUGIN_FILE ) . 'assets/js/monthly-classes.js', [], '20261108', true );
+    }
+
+    public function schedule_title( array $data, array $postarr ): array {
+        if ( ( $data['post_type'] ?? '' ) !== self::POST_TYPE ) return $data;
+        $start = MonthlyClassBilling::time( self::input( '_class_start_time' ) );
+        $end = MonthlyClassBilling::time( self::input( '_class_end_time' ) );
+        if ( current_user_can( 'manage_options' ) && $start !== '' && $end > $start ) $data['post_title'] = $start . '–' . $end;
+        return $data;
+    }
+
+    private function schedule_fields( int $id = 0, bool $admin = false ): void {
+        foreach ( [ 'start' => 'ساعت شروع', 'end' => 'ساعت پایان' ] as $key => $label ) {
+            echo '<p><label>' . esc_html( $label ) . ' <input type="time" name="' . ( $admin ? '_class_' : 'class_' ) . $key . '_time" value="' . esc_attr( $id ? get_post_meta( $id, '_class_' . $key . '_time', true ) : '' ) . '" required></label></p>';
+        }
+    }
+
     private function render_coach_classes( array $clubs ): void {
-        $classes = get_posts( [ 'post_type' => self::POST_TYPE, 'post_status' => [ 'publish', 'pending', 'draft' ],
-            'author' => get_current_user_id(), 'posts_per_page' => 100, 'orderby' => 'date', 'order' => 'DESC' ] );
+        $classes = get_posts( [ 'post_type' => self::POST_TYPE, 'post_status' => [ 'publish', 'pending', 'draft', 'private' ],
+            'meta_key' => '_class_coach_id', 'meta_value' => get_current_user_id(), 'posts_per_page' => 100, 'orderby' => 'date', 'order' => 'DESC' ] );
+        echo '<h3>درخواست‌های ثبت کلاس شما</h3>';
+        if ( ! $classes ) echo '<p class="imao-monthly-empty">هنوز درخواستی ثبت نشده است.</p>';
         foreach ( $classes as $class ) {
             if ( (int) get_post_meta( $class->ID, '_class_coach_id', true ) !== get_current_user_id() ) {
                 continue;
             }
-            $status = $class->post_status === 'publish' && get_post_meta( $class->ID, '_class_approved', true ) === 'yes' ? 'تأییدشده' : 'در انتظار تأیید / غیرفعال';
+            $status = $class->post_status === 'pending' ? 'در انتظار بررسی مدیر' : 'غیرفعال / پیش‌نویس';
+            if ( $class->post_status === 'publish' ) $status = get_post_meta( $class->ID, '_class_approved', true ) === 'yes' ? 'تأییدشده' : 'منتشرشده؛ پرداخت غیرفعال';
             echo '<details dir="rtl"><summary>' . esc_html( $class->post_title . ' — ' . $status ) . '</summary>';
             if ( $clubs && in_array( $class->post_status, [ 'pending', 'publish' ], true ) ) {
                 echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="imao_submit_monthly_class"><input type="hidden" name="class_id" value="' . (int) $class->ID . '">';
                 wp_nonce_field( 'imao_submit_monthly_class', 'imao_class_nonce' );
                 wp_nonce_field( 'imao_edit_monthly_class_' . $class->ID, 'imao_edit_class_nonce' );
-                echo '<p><label>نام کلاس <input name="class_title" maxlength="200" required value="' . esc_attr( $class->post_title ) . '"></label></p>';
+                $this->schedule_fields( (int) $class->ID );
                 echo '<p><label>باشگاه <select name="class_club_id" required>';
                 foreach ( $clubs as $club ) {
                     echo '<option value="' . (int) $club->ID . '" ' . selected( get_post_meta( $class->ID, '_class_club_id', true ), $club->ID, false ) . '>' . esc_html( $club->post_title ) . '</option>';
                 }
-                echo '</select></label></p><p><label>شهریه <input name="class_fee" type="number" min="0.01" step="0.01" required value="' . esc_attr( get_post_meta( $class->ID, '_class_fee', true ) ) . '"></label></p>';
+                echo '</select></label></p><p><label>شهریه ماهانه (تومان) <input name="class_fee" type="text" inputmode="numeric" data-imao-money required value="' . esc_attr( number_format( MonthlyClassBilling::class_fee( $class->ID ), 0, '.', ',' ) ) . '"></label></p>';
                 echo '<p>ویرایش کلاس نیازمند تأیید دوباره مدیر است.</p><button class="button" type="submit">ویرایش و ارسال برای بررسی</button></form>';
             }
             echo '</details>';
@@ -270,21 +299,25 @@ class MonthlyClasses {
         $clubs = $this->coach_clubs();
         ob_start();
         echo '<div class="imao-monthly imao-monthly-submit" dir="rtl"><div class="crm-course-title">ثبت کلاس ماهانه</div>';
-        $this->render_coach_classes( $clubs );
+        if ( isset( $_GET['class_submitted'] ) ) echo '<p class="woocommerce-message" role="status">کلاس ثبت شد و در انتظار بررسی مدیر است.</p>';
         if ( ! $clubs ) {
-            echo '<p class="imao-monthly-empty">برای ثبت کلاس، ابتدا باید باشگاه تأییدشده‌ای به نام شما ثبت شده باشد.</p></div>';
+            echo '<p class="imao-monthly-empty">برای ثبت کلاس، ابتدا باید باشگاه تأییدشده‌ای به نام شما ثبت شده باشد.</p>';
+            $this->render_coach_classes( $clubs );
+            echo '</div>';
             return (string) ob_get_clean();
         }
         echo '<form class="imao-class-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" dir="rtl">';
         echo '<input type="hidden" name="action" value="imao_submit_monthly_class">';
         wp_nonce_field( 'imao_submit_monthly_class', 'imao_class_nonce' );
-        echo '<p><label>نام کلاس <input type="text" name="class_title" maxlength="200" required></label></p>';
+        $this->schedule_fields();
         echo '<p><label>باشگاه <select name="class_club_id" required><option value="">انتخاب باشگاه</option>';
         foreach ( $clubs as $club ) {
             echo '<option value="' . esc_attr( $club->ID ) . '">' . esc_html( $club->post_title ) . '</option>';
         }
-        echo '</select></label></p><p><label>شهریه ماهانه (واحد پول فروشگاه) <input type="number" name="class_fee" min="0.01" step="0.01" required></label></p>';
-        echo '<p class="imao-class-hint">کلاس پس از بررسی و تأیید مدیر برای شاگردان نمایش داده می‌شود.</p><button type="submit" class="button">ارسال برای بررسی</button></form></div>';
+        echo '</select></label></p><p><label>شهریه ماهانه (تومان) <input type="text" inputmode="numeric" data-imao-money name="class_fee" required></label></p>';
+        echo '<p class="imao-class-hint">کلاس پس از بررسی و تأیید مدیر برای شاگردان نمایش داده می‌شود.</p><button type="submit" class="button">ارسال برای بررسی</button></form>';
+        $this->render_coach_classes( $clubs );
+        echo '</div>';
         return (string) ob_get_clean();
     }
 
@@ -299,7 +332,7 @@ class MonthlyClasses {
         $class_id = absint( self::input( 'class_id' ) );
         if ( $class_id ) {
             $class = get_post( $class_id );
-            if ( ! $class || $class->post_type !== self::POST_TYPE || (int) $class->post_author !== $coach_id
+            if ( ! $class || $class->post_type !== self::POST_TYPE
                 || (int) get_post_meta( $class_id, '_class_coach_id', true ) !== $coach_id
                 || ! in_array( $class->post_status, [ 'pending', 'publish' ], true ) ) {
                 wp_die( 'اجازه ویرایش این کلاس را ندارید.', '', [ 'response' => 403 ] );
@@ -309,9 +342,11 @@ class MonthlyClasses {
         }
         $club_id = absint( self::input( 'class_club_id' ) );
         $fee = self::fee( self::input( 'class_fee' ) );
-        $title = self::input( 'class_title' );
-        if ( $title === '' || $fee === '' || ! self::club_belongs_to_coach( $club_id, $coach_id ) ) {
-            wp_die( 'نام کلاس، شهریه و باشگاه متعلق به خود را به‌درستی وارد کنید.', '', [ 'response' => 400 ] );
+        $start = MonthlyClassBilling::time( self::input( 'class_start_time' ) );
+        $end = MonthlyClassBilling::time( self::input( 'class_end_time' ) );
+        $title = $start . '–' . $end;
+        if ( $start === '' || $end <= $start || $fee === '' || ! self::club_belongs_to_coach( $club_id, $coach_id ) ) {
+            wp_die( 'ساعت شروع و پایان، شهریه و باشگاه متعلق به خود را به‌درستی وارد کنید. ساعت پایان باید بعد از ساعت شروع باشد.', '', [ 'response' => 400 ] );
             return;
         }
         $previous = $class_id ? self::configuration( $class_id ) : [];
@@ -321,7 +356,7 @@ class MonthlyClasses {
         }
         $data = [
             'post_type' => self::POST_TYPE, 'post_title' => $title, 'post_status' => 'pending', 'post_author' => $coach_id,
-            'meta_input' => [ '_class_coach_id' => $coach_id, '_class_club_id' => $club_id, '_class_fee' => $fee, '_class_approved' => 'no' ],
+            'meta_input' => [ '_class_coach_id' => $coach_id, '_class_club_id' => $club_id, '_class_fee' => $fee, '_class_fee_unit' => 'toman', '_class_start_time' => $start, '_class_end_time' => $end, '_class_approved' => 'no' ],
         ];
         if ( $class_id ) {
             $data['ID'] = $class_id;
@@ -336,7 +371,8 @@ class MonthlyClasses {
             wp_die( 'ثبت کلاس انجام نشد. دوباره تلاش کنید.', '', [ 'response' => 500 ] );
             return;
         }
-        wp_die( 'کلاس ثبت شد و در انتظار تأیید مدیر است.', 'ثبت کلاس', [ 'response' => 200, 'back_link' => true ] );
+        wp_safe_redirect( add_query_arg( 'class_submitted', '1', wc_get_account_endpoint_url( 'monthly-class-submit' ) ) );
+        exit;
     }
 
     public function classes_shortcode(): string {
@@ -366,8 +402,11 @@ class MonthlyClasses {
             $id = (int) $class->ID;
             $fee = get_post_meta( $id, '_class_fee', true );
             echo '<section class="imao-class-card"><h3>' . esc_html( $class->post_title ) . '</h3><p>باشگاه: ' . esc_html( get_the_title( (int) get_post_meta( $id, '_class_club_id', true ) ) ) . '</p>';
-            echo '<p>شهریه ماهانه: ' . ( function_exists( 'wc_price' ) ? wp_kses_post( wc_price( $fee ) ) : esc_html( $fee ) ) . '</p>';
+            echo '<p>ساعت کلاس: ' . esc_html( get_post_meta( $id, '_class_start_time', true ) . ' تا ' . get_post_meta( $id, '_class_end_time', true ) ) . '</p>';
+            echo '<p>شهریه ماهانه: ' . esc_html( MonthlyClassBilling::display_fee( $id ) ) . '</p>';
             if ( class_exists( MonthlyTuition::class ) ) {
+                $quote = MonthlyTuition::billing_quote( $id, $user_id );
+                echo '<p>دورهٔ ثبت‌نام: ' . esc_html( $quote['period'] ) . '؛ مبلغ قابل پرداخت: ' . esc_html( number_format( $quote['amount_toman'], 0, '.', ',' ) ) . ' تومان</p>';
                 $due = MonthlyTuition::due_date( $user_id, $id );
                 $days = MonthlyTuition::days_remaining( $user_id, $id );
                 echo '<p>سررسید: ' . esc_html( $due !== '' ? Date::to_jalali( $due, 'Y/m/d' ) : 'هنوز پرداخت نشده' ) . '</p>';
@@ -376,7 +415,7 @@ class MonthlyClasses {
                 }
                 echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="imao_pay_monthly_class"><input type="hidden" name="class_id" value="' . esc_attr( $id ) . '">';
                 wp_nonce_field( 'imao_pay_monthly_class_' . $id, 'imao_monthly_class_nonce' );
-                echo '<button class="button" type="submit">پرداخت شهریه ماهانه</button></form>';
+                echo '<p>ثبت‌نام هر ماه جداگانه انجام می‌شود. پرداخت نخست تا پایان ماه شمسی روزشمار است؛ تمدیدها شهریهٔ کامل ماه را دارند.</p><button class="button" type="submit">ثبت‌نام این ماه و پرداخت</button></form>';
             } else {
                 echo '<p>سامانه پرداخت شهریه در حال آماده‌سازی است.</p>';
             }
@@ -501,11 +540,11 @@ class MonthlyClasses {
             foreach ( [ 'مربی' => $coach ? $coach->display_name : '', 'باشگاه' => $club_id > 0 ? get_the_title( $club_id ) : '', 'استان' => $provinces[ $province ] ?? $province, 'شهر' => get_post_meta( $club_id, 'club_city', true ) ] as $label => $value ) {
                 echo '<p>' . esc_html( $label . ': ' . $value ) . '</p>';
             }
-            echo '<p>شهریه ماهانه: ' . ( function_exists( 'wc_price' ) ? wp_kses_post( wc_price( $fee ) ) : esc_html( $fee ) ) . '</p>';
+            echo '<p>شهریه ماهانه: ' . esc_html( MonthlyClassBilling::display_fee( $id ) ) . '</p>';
             if ( $selected_coach > 0 && $selected_coach === $coach_id && class_exists( MonthlyTuition::class ) ) {
                 echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="imao_pay_monthly_class"><input type="hidden" name="class_id" value="' . esc_attr( $id ) . '">';
                 wp_nonce_field( 'imao_pay_monthly_class_' . $id, 'imao_monthly_class_nonce' );
-                echo '<button type="submit" class="button">پرداخت شهریه ماهانه</button></form>';
+                echo '<button type="submit" class="button">ثبت‌نام ماهانه و پرداخت</button></form>';
             }
             echo '</section>';
         }

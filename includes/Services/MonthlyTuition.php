@@ -16,6 +16,9 @@ class MonthlyTuition {
         add_action( 'admin_post_imao_pay_monthly_class', [ $this, 'start_checkout' ] );
         add_filter( 'woocommerce_add_to_cart_validation', [ $this, 'validate_cart' ], 20, 6 );
         add_action( 'woocommerce_check_cart_items', [ $this, 'check_cart' ] );
+        add_action( 'woocommerce_before_calculate_totals', [ $this, 'price_cart' ], 30 );
+        add_action( 'woocommerce_order_status_cancelled', [ $this, 'release_enrollment' ] );
+        add_action( 'woocommerce_order_status_failed', [ $this, 'release_enrollment' ] );
         add_action( 'woocommerce_checkout_create_order_line_item', [ $this, 'snapshot_item' ], 20, 4 );
         add_action( 'woocommerce_checkout_order_created', [ $this, 'prepare_order' ], 20 );
         add_action( 'woocommerce_store_api_checkout_order_processed', [ $this, 'prepare_order' ], 20 );
@@ -36,6 +39,9 @@ class MonthlyTuition {
 
     /** Additive, versioned schema; never modifies the existing payout tables. */
     public function install(): void {
+        if ( get_option( 'imao_class_enrollment_db_version' ) !== '20261108060148' && ( new \IMAOCustom\Migrations\CreateClassEnrollments20261108060148() )->up() ) {
+            update_option( 'imao_class_enrollment_db_version', '20261108060148', false );
+        }
         if ( get_option( 'imao_class_tuition_db_version' ) === self::VERSION ) {
             return;
         }
@@ -47,6 +53,34 @@ class MonthlyTuition {
     public static function table(): string {
         global $wpdb;
         return $wpdb->prefix . 'imao_class_tuition';
+    }
+
+    public static function billing_quote( int $class_id, int $user_id ): array {
+        global $wpdb;
+        $latest = $wpdb->get_row( $wpdb->prepare( 'SELECT due_date FROM ' . self::table() . " WHERE user_id=%d AND class_id=%d AND status IN ('paid','partial_refund') ORDER BY due_date DESC,id DESC LIMIT 1", $user_id, $class_id ) );
+        return MonthlyClassBilling::period( current_time( 'Y-m-d' ), MonthlyClassBilling::class_fee( $class_id ), ! $latest, $latest ? (string) $latest->due_date : '' );
+    }
+
+    public function price_cart( $cart ): void {
+        foreach ( $cart->get_cart() as $entry ) {
+            $class = self::class_for_product( (int) $entry['product_id'] );
+            if ( ! $class ) continue;
+            try {
+                self::checkout_snapshot( $class, get_current_user_id() );
+                $quote = self::billing_quote( $class, get_current_user_id() );
+                $entry['data']->set_price( MonthlyClassBilling::store_amount( $quote['amount_toman'], get_woocommerce_currency() ) );
+            } catch ( \Throwable $error ) {
+                wc_add_notice( $error->getMessage(), 'error' );
+            }
+        }
+    }
+
+    public function release_enrollment( int $order_id ): void {
+        global $wpdb;
+        $order = wc_get_order( $order_id );
+        if ( $order && ! $order->is_paid() && $order->has_status( [ 'cancelled', 'failed' ] ) ) {
+            $wpdb->delete( $wpdb->prefix . 'imao_class_enrollments', [ 'order_id' => $order_id ] );
+        }
     }
 
     /** Clamp at the last Jalali day instead of overflowing into another month. */
@@ -199,6 +233,13 @@ class MonthlyTuition {
             throw new RuntimeException( 'تعداد شهریه ماهانه معتبر نیست.' );
         }
         $item->add_meta_data( self::ITEM_SNAPSHOT, self::checkout_snapshot( $class, (int) $order->get_customer_id() ), true );
+        $billing = self::billing_quote( $class, (int) $order->get_customer_id() );
+        $snapshot = $item->get_meta( self::ITEM_SNAPSHOT, true );
+        $snapshot['billing'] = $billing;
+        $snapshot['currency'] = get_woocommerce_currency();
+        $item->add_meta_data( self::ITEM_SNAPSHOT, $snapshot, true );
+        $item->add_meta_data( 'دورهٔ ثبت‌نام', $billing['period'], true );
+        $item->add_meta_data( 'نوع شهریه', $billing['first'] ? 'نخستین ثبت‌نام؛ روزشمار' : 'تمدید ماهانه؛ کامل', true );
     }
 
     /** Also covers block checkout and administrator-created pay-for-order links. */
@@ -220,8 +261,25 @@ class MonthlyTuition {
             // Revalidate eligibility but preserve the already agreed recipients and percentages.
             $snapshot = self::checkout_snapshot( $class, (int) $order->get_customer_id() );
             if ( ! is_array( $item->get_meta( self::ITEM_SNAPSHOT, true ) ) ) {
+                $snapshot['billing'] = self::billing_quote( $class, (int) $order->get_customer_id() );
                 $item->add_meta_data( self::ITEM_SNAPSHOT, $snapshot, true );
                 $item->save();
+            }
+            $saved = $item->get_meta( self::ITEM_SNAPSHOT, true );
+            if ( ! empty( $saved['billing'] ) ) {
+                $billing = $saved['billing'];
+                $expected = MonthlyClassBilling::store_amount( (float) $billing['amount_toman'], $order->get_currency() );
+                if ( function_exists( 'wc_get_price_excluding_tax' ) ) {
+                    $product = $item->get_product();
+                    if ( ! $product ) throw new RuntimeException( 'محصول کلاس در دسترس نیست.' );
+                    $expected = (float) wc_get_price_excluding_tax( $product, [ 'price' => $expected, 'qty' => 1 ] );
+                }
+                if ( abs( (float) $item->get_subtotal() - $expected ) > 0.01 ) throw new RuntimeException( 'مبلغ ثبت‌نام تغییر کرده است؛ سبد خرید را به‌روز کنید.' );
+                global $wpdb;
+                $table = $wpdb->prefix . 'imao_class_enrollments';
+                $result = $wpdb->query( $wpdb->prepare( "INSERT INTO {$table} (user_id,class_id,period,order_id,billing) VALUES (%d,%d,%s,%d,%s) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)", $order->get_customer_id(), $class, $billing['period'], $order->get_id(), wp_json_encode( $billing ) ) );
+                $owner = $wpdb->get_var( $wpdb->prepare( "SELECT order_id FROM {$table} WHERE user_id=%d AND class_id=%d AND period=%s", $order->get_customer_id(), $class, $billing['period'] ) );
+                if ( $result === false || (int) $owner !== (int) $order->get_id() ) throw new RuntimeException( 'برای این ماه سفارش ثبت‌نام دیگری دارید؛ همان سفارش را پرداخت یا ابتدا لغو کنید.' );
             }
         }
     }
@@ -266,6 +324,7 @@ class MonthlyTuition {
             throw new RuntimeException( 'شناسه پرداخت‌کننده با اطلاعات شهریه مطابقت ندارد.' );
         }
         $amount = round( max( 0, (float) $item->get_total() ), 2 );
+        $snapshot['currency'] = $order->get_currency();
         $snapshot['amounts'] = self::split_amount( $amount, $snapshot['shares'] ?? [] );
         $refunded = min( $amount, abs( (float) $order->get_total_refunded_for_item( (int) $item->get_id() ) ) );
         $snapshot['credited'] = self::split_amount( max( 0, $amount - $refunded ), $snapshot['shares'] );
@@ -284,7 +343,7 @@ class MonthlyTuition {
             $this->must( $wpdb->insert( $table, [
                 'order_id' => $order->get_id(), 'order_item_id' => $item->get_id(),
                 'class_id' => $snapshot['class_id'], 'user_id' => $order->get_customer_id(),
-                'paid_at' => $paid_at, 'due_date' => self::next_due_date( $paid_at ),
+                'paid_at' => $paid_at, 'due_date' => $snapshot['billing']['due_date'] ?? self::next_due_date( $paid_at ),
                 'amount' => $amount, 'snapshot' => wp_json_encode( $snapshot ),
                 'status' => $snapshot['refunded_amount'] > 0 ? ( $snapshot['refunded_amount'] >= $amount ? 'reversed' : 'partial_refund' ) : 'paid',
             ] ) );
@@ -431,7 +490,9 @@ class MonthlyTuition {
         }
         switch ( $atts['field'] ) {
             case 'title': return esc_html( get_the_title( $id ) );
-            case 'fee': return esc_html( (string) get_post_meta( $id, '_class_fee', true ) );
+            case 'fee': return esc_html( (string) MonthlyClassBilling::class_fee( $id ) );
+            case 'start_time': return esc_html( (string) get_post_meta( $id, '_class_start_time', true ) );
+            case 'end_time': return esc_html( (string) get_post_meta( $id, '_class_end_time', true ) );
             case 'club': return esc_html( get_the_title( (int) get_post_meta( $id, '_class_club_id', true ) ) );
             case 'coach':
                 $coach = get_userdata( (int) get_post_meta( $id, '_class_coach_id', true ) );

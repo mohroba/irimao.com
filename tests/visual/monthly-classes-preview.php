@@ -38,6 +38,9 @@ function esc_url( $value ) { return esc_html( $value ); }
 function esc_url_raw( $value ) { return $value; }
 function wp_kses_post( $value ) { return $value; }
 function wc_price( $amount ) { return number_format( (float) $amount ) . ' تومان'; }
+function get_woocommerce_currency() { return 'IRT'; }
+function current_time( $format ) { return date( $format ); }
+function wp_timezone() { return new DateTimeZone( 'Asia/Tehran' ); }
 function sanitize_text_field( $value ) { return strip_tags( (string) $value ); }
 function absint( $value ) { return abs( (int) $value ); }
 function wp_unique_id( $prefix = '' ) { static $index = 0; return $prefix . ++$index; }
@@ -52,6 +55,7 @@ $wpdb = new class {
     public string $prefix = 'fixture_';
     public function prepare( $sql, ...$args ) { return $sql; }
     public function get_var( $sql ) { return ''; }
+    public function get_row( $sql ) { return null; }
 };
 
 $classes = new IMAOCustom\Services\MonthlyClasses();
@@ -62,4 +66,4 @@ $classes = new IMAOCustom\Services\MonthlyClasses();
 <?php echo $classes->classes_shortcode(); ?>
 <?php echo $classes->directory_shortcode(); ?>
 <?php echo $classes->submission_shortcode(); ?>
-</body></html>
+<script src="/assets/js/monthly-classes.js"></script></body></html>
