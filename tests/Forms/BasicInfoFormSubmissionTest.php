@@ -1,4 +1,7 @@
 <?php
+namespace IMAOCustom\Services {
+    function get_user_meta( $uid, $key, $single = true ) { return \IMAOCustom\Helpers\get_user_meta( $uid, $key, $single ); }
+}
 namespace IMAOCustom\Forms {
     function is_user_logged_in() { return true; }
     $GLOBALS['current_user_email'] = 'old@example.com';

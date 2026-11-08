@@ -259,7 +259,7 @@ jQuery(function($){
     if (status && status !== 'pending' && status !== 'rejected') {
         $form
             .find(
-                'input:not([name="coach_id"]):not([name="club_id"]):not([type="hidden"]), ' +
+                'input:not([name="coach_id"]):not([name="club_id"]):not([name="referrer_id"]):not([type="hidden"]), ' +
                 'select:not([name="coach_id"]):not([name="club_id"]), textarea:not([name="coach_id"]):not([name="club_id"])'
             )
             .prop('disabled', true);
@@ -267,7 +267,8 @@ jQuery(function($){
         $form.on('submit', function(e){
             const coachChanged = $coach.val() !== initialCoach;
             const clubChanged  = $club.val() !== initialClub;
-            if (!coachChanged && !clubChanged) {
+            const initialReferrer = String($form.find('[name="referrer_id"]').val() || '').trim() !== '';
+            if (!coachChanged && !clubChanged && !initialReferrer) {
                 e.preventDefault();
                 e.stopImmediatePropagation();
                 Swal.fire({

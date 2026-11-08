@@ -5,6 +5,7 @@ namespace IMAOCustom\Services {
     function wp_unslash( $value ) { return stripslashes( $value ); }
     function get_userdata( $id ) { return in_array( $id, [ 1, 2, 3 ], true ) ? (object) [ 'ID' => $id ] : false; }
     function add_user_meta( $id, $key, $value ) { $GLOBALS['referral_audit'][] = $value; return 1; }
+    function wp_cache_delete( ...$args ) {}
 }
 
 namespace Tests\Services {
@@ -68,6 +69,35 @@ namespace Tests\Services {
             ( new ClassReferrals() )->save_profile_field( 1 );
             $this->assertSame( 2, $GLOBALS['test_user_meta'][1]['referrer_id'] );
             $this->assertSame( [], $GLOBALS['referral_audit'] );
+        }
+
+        public function test_initial_assignment_is_saved_once_and_remains_locked_when_pending(): void {
+            $GLOBALS['test_user_meta'][1] = [ 'identity_verified_professional' => 'pending' ];
+            $old = $GLOBALS['wpdb'];
+            $GLOBALS['wpdb'] = new class {
+                public function prepare( $query, ...$args ) { return $query; }
+                public function get_var( $query ) { return 1; }
+            };
+            try {
+                $this->assertTrue( ClassReferrals::can_assign_initial( 1 ) );
+                ClassReferrals::assign_initial( 1, '۲' );
+                ClassReferrals::assign_initial( 1, '3' );
+                $this->assertSame( 2, $GLOBALS['test_user_meta'][1]['referrer_id'] );
+                $this->assertCount( 1, $GLOBALS['referral_audit'] );
+                $GLOBALS['test_user_meta'][1]['referrer_id'] = 0;
+                $this->assertFalse( ClassReferrals::can_assign_initial( 1 ) );
+            } finally { $GLOBALS['wpdb'] = $old; }
+        }
+
+        public function test_previous_admin_assignment_prevents_a_new_self_assignment_after_clear(): void {
+            $GLOBALS['test_user_meta'][1] = [ 'referrer_id' => 0, ClassReferrals::AUDIT_META_KEY => [ [ 'previous' => 2, 'new' => 0 ] ] ];
+            $this->assertFalse( ClassReferrals::can_assign_initial( 1 ) );
+        }
+
+        public function test_invalid_initial_referrer_is_rejected(): void {
+            $GLOBALS['test_user_meta'][1] = [];
+            $this->expectException( \RuntimeException::class );
+            ClassReferrals::assign_initial( 1, '1' );
         }
     }
 }

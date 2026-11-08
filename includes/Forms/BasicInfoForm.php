@@ -4,6 +4,7 @@ namespace IMAOCustom\Forms;
 use IMAOCustom\Helpers\CityMap;
 use IMAOCustom\Helpers\UserMeta;
 use IMAOCustom\Services\Validation;
+use IMAOCustom\Services\ClassReferrals;
 
 class BasicInfoForm extends BaseForm {
     protected string $nonce_action = 'imao_basic_info';
@@ -36,7 +37,7 @@ class BasicInfoForm extends BaseForm {
         if ( ! empty( $this->posted ) ) {
             $fields = array_merge( $fields, $this->posted );
         }
-        // Referral ownership is managed exclusively through the admin profile.
+        // Existing referrals remain administrator-managed after the first assignment.
         $fields['referrer_id'] = (int) get_user_meta( $uid, 'referrer_id', true );
         return $fields;
     }
@@ -74,6 +75,8 @@ class BasicInfoForm extends BaseForm {
         }
 
         if ( $locked ) {
+            try { ClassReferrals::assign_initial( $uid, is_scalar( $_POST['referrer_id'] ?? '' ) ? (string) ( $_POST['referrer_id'] ?? '' ) : '' ); }
+            catch ( \RuntimeException $error ) { $this->errors[] = $error->getMessage(); return; }
             foreach ( [ 'coach_id', 'club_id' ] as $k ) {
                 update_user_meta( $uid, $k, $data[ $k ] ?? '' );
             }
@@ -135,6 +138,8 @@ class BasicInfoForm extends BaseForm {
                 return;
             }
         }
+        try { ClassReferrals::assign_initial( $uid, is_scalar( $_POST['referrer_id'] ?? '' ) ? (string) ( $_POST['referrer_id'] ?? '' ) : '' ); }
+        catch ( \RuntimeException $error ) { $this->errors[] = $error->getMessage(); return; }
         update_user_meta( $uid, 'billing_email', $data['billing_email'] );
         unset( $data['billing_email'] );
         foreach ( $this->meta_keys() as $k ) {
@@ -296,8 +301,11 @@ class BasicInfoForm extends BaseForm {
         $referrer_label = $referrer
             ? sprintf( '%s (#%d)', $referrer->display_name, $f['referrer_id'] )
             : 'تعیین نشده';
-        $html .= '<div class="cbif-field"><label for="referrer_id_display">معرف</label>';
-        $html .= '<input type="text" id="referrer_id_display" value="' . esc_attr( $referrer_label ) . '" readonly></div>';
+        if ( ClassReferrals::can_assign_initial( get_current_user_id() ) ) {
+            $html .= '<div class="cbif-field"><label for="referrer_id">شناسهٔ کاربری معرف</label><input type="text" inputmode="numeric" name="referrer_id" id="referrer_id" placeholder="شناسهٔ کاربری معرف"><small>انتخاب معرف فقط یک‌بار ممکن است؛ پس از ذخیره، تغییر آن فقط توسط مدیر انجام می‌شود.</small></div>';
+        } else {
+            $html .= '<div class="cbif-field"><label for="referrer_id_display">معرف</label><input type="text" id="referrer_id_display" value="' . esc_attr( $referrer_label ) . '" readonly></div>';
+        }
 
         // national id & gender
         $html .= '<div class="cbif-field"><label for="national_id_display">کد ملی<span class="required">*</span></label>';

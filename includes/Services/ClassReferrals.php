@@ -4,6 +4,36 @@ namespace IMAOCustom\Services;
 class ClassReferrals {
     public const AUDIT_META_KEY = 'referrer_id_audit';
 
+    public static function can_assign_initial( int $user_id ): bool {
+        if ( $user_id <= 0 ) return false;
+        if ( (int) get_user_meta( $user_id, 'referrer_id', true ) > 0 || get_user_meta( $user_id, 'referrer_initial_assigned', true ) === '1' ) return false;
+        $history = get_user_meta( $user_id, self::AUDIT_META_KEY, false );
+        foreach ( is_array( $history ) ? $history : [] as $entry ) {
+            if ( is_array( $entry ) && ( (int) ( $entry['new'] ?? 0 ) > 0 || (int) ( $entry['previous'] ?? 0 ) > 0 ) ) return false;
+        }
+        return true;
+    }
+
+    /** Called only after the basic information form's nonce and field validation. */
+    public static function assign_initial( int $user_id, string $raw ): void {
+        if ( $user_id !== get_current_user_id() || ! self::can_assign_initial( $user_id ) || trim( $raw ) === '' ) return;
+        $raw = MonthlyClassBilling::normalize_digits( $raw );
+        $id = filter_var( $raw, FILTER_VALIDATE_INT, [ 'options' => [ 'min_range' => 1 ] ] );
+        if ( ! $id || $id === $user_id || ! get_userdata( $id ) ) throw new \RuntimeException( 'شناسهٔ معرف معتبر نیست؛ معرف نمی‌تواند خود شما باشد.' );
+        global $wpdb;
+        $lock = 'imao_referrer_' . $user_id;
+        if ( (int) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s,5)', $lock ) ) !== 1 ) throw new \RuntimeException( 'ثبت معرف انجام نشد؛ دوباره تلاش کنید.' );
+        try {
+            wp_cache_delete( $user_id, 'user_meta' );
+            if ( ! self::can_assign_initial( $user_id ) ) return;
+            if ( update_user_meta( $user_id, 'referrer_id', $id ) === false ) throw new \RuntimeException( 'ذخیرهٔ معرف انجام نشد.' );
+            update_user_meta( $user_id, 'referrer_initial_assigned', '1' );
+            add_user_meta( $user_id, self::AUDIT_META_KEY, [ 'previous' => 0, 'new' => $id, 'actor' => $user_id, 'time' => current_time( 'mysql', true ), 'reason' => 'initial_self_assignment' ] );
+        } finally {
+            $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) );
+        }
+    }
+
     public function register(): void {
         add_action( 'show_user_profile', [ $this, 'render_profile_field' ] );
         add_action( 'edit_user_profile', [ $this, 'render_profile_field' ] );
