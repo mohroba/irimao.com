@@ -31,6 +31,7 @@ function get_posts( $args ) {
 function get_users( $args ) { return [ get_userdata( 1 ) ]; }
 function get_the_title( $id ) { return $id === 61 ? 'باشگاه نمونه' : 'کلاس کیک‌بوکسینگ بزرگسالان'; }
 function admin_url( $path ) { return '#'; }
+function home_url( $path = '' ) { return '/' . ltrim( $path, '/' ); }
 function wp_nonce_field( $action, $name ) { echo '<input type="hidden" name="' . esc_attr( $name ) . '" value="fixture">'; }
 function esc_html( $value ) { return htmlspecialchars( (string) $value, ENT_QUOTES, 'UTF-8' ); }
 function esc_attr( $value ) { return esc_html( $value ); }

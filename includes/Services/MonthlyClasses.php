@@ -18,6 +18,7 @@ class MonthlyClasses {
         add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_form_assets' ] );
         add_filter( 'wp_insert_post_data', [ $this, 'schedule_title' ], 10, 2 );
         add_action( 'admin_post_imao_submit_monthly_class', [ $this, 'submit_class' ] );
+        add_action( 'wp_loaded', [ $this, 'handle_frontend_submission' ], 20 );
         add_shortcode( 'imao_class_submit', [ $this, 'submission_shortcode' ] );
         add_shortcode( 'imao_monthly_classes', [ $this, 'classes_shortcode' ] );
         add_shortcode( 'imao_class_list', [ $this, 'directory_shortcode' ] );
@@ -240,6 +241,17 @@ class MonthlyClasses {
         return get_posts( [ 'post_type' => 'club_application', 'post_status' => 'publish', 'author' => get_current_user_id(), 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ] );
     }
 
+    public static function submission_url(): string {
+        return add_query_arg( 'imao_class_action', 'submit', home_url( '/' ) );
+    }
+
+    public function handle_frontend_submission(): void {
+        if ( ( $_SERVER['REQUEST_METHOD'] ?? '' ) !== 'POST'
+            || ( $_GET['imao_class_action'] ?? '' ) !== 'submit'
+            || ( $_POST['action'] ?? '' ) !== 'imao_submit_monthly_class' ) return;
+        $this->submit_class();
+    }
+
     public function enqueue_form_assets(): void {
         wp_enqueue_script( 'imao-monthly-class-form', plugin_dir_url( IMAO_PLUGIN_FILE ) . 'assets/js/monthly-classes.js', [], '20261108', true );
     }
@@ -271,7 +283,7 @@ class MonthlyClasses {
             if ( $class->post_status === 'publish' ) $status = get_post_meta( $class->ID, '_class_approved', true ) === 'yes' ? 'تأییدشده' : 'منتشرشده؛ پرداخت غیرفعال';
             echo '<details dir="rtl"><summary>' . esc_html( $class->post_title . ' — ' . $status ) . '</summary>';
             if ( $clubs && in_array( $class->post_status, [ 'pending', 'publish' ], true ) ) {
-                echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="imao_submit_monthly_class"><input type="hidden" name="class_id" value="' . (int) $class->ID . '">';
+                echo '<form method="post" action="' . esc_url( self::submission_url() ) . '"><input type="hidden" name="action" value="imao_submit_monthly_class"><input type="hidden" name="class_id" value="' . (int) $class->ID . '">';
                 wp_nonce_field( 'imao_submit_monthly_class', 'imao_class_nonce' );
                 wp_nonce_field( 'imao_edit_monthly_class_' . $class->ID, 'imao_edit_class_nonce' );
                 $this->schedule_fields( (int) $class->ID );
@@ -306,7 +318,7 @@ class MonthlyClasses {
             echo '</div>';
             return (string) ob_get_clean();
         }
-        echo '<form class="imao-class-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" dir="rtl">';
+        echo '<form class="imao-class-form" method="post" action="' . esc_url( self::submission_url() ) . '" dir="rtl">';
         echo '<input type="hidden" name="action" value="imao_submit_monthly_class">';
         wp_nonce_field( 'imao_submit_monthly_class', 'imao_class_nonce' );
         $this->schedule_fields();

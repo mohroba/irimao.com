@@ -35,7 +35,9 @@ namespace {
         }
 
         public function test_coach_submission_without_name_is_saved_pending_and_redirects_to_list(): void {
-            try { ( new MonthlyClasses() )->submit_class(); }
+            $_GET['imao_class_action'] = 'submit';
+            $_POST['action'] = 'imao_submit_monthly_class';
+            try { ( new MonthlyClasses() )->handle_frontend_submission(); }
             catch ( MonthlyClassRedirect $redirect ) {
                 $this->assertSame( '/my-account/monthly-class-submit/?class_submitted=1', $redirect->getMessage() );
             }
@@ -51,6 +53,18 @@ namespace {
             $_POST['class_end_time'] = '09:00';
             try { ( new MonthlyClasses() )->submit_class(); $this->fail( 'Invalid schedule accepted.' ); }
             catch ( RuntimeException $error ) { $this->assertArrayNotHasKey( 'submitted_class', $GLOBALS ); }
+        }
+
+        public function test_frontend_handler_ignores_get_and_unrelated_requests(): void {
+            $_GET['imao_class_action'] = 'submit';
+            $_POST['action'] = 'imao_submit_monthly_class';
+            $_SERVER['REQUEST_METHOD'] = 'GET';
+            ( new MonthlyClasses() )->handle_frontend_submission();
+            $this->assertArrayNotHasKey( 'submitted_class', $GLOBALS );
+            $_SERVER['REQUEST_METHOD'] = 'POST';
+            $_GET['imao_class_action'] = 'different';
+            ( new MonthlyClasses() )->handle_frontend_submission();
+            $this->assertArrayNotHasKey( 'submitted_class', $GLOBALS );
         }
     }
 }
