@@ -97,9 +97,15 @@ class MonthlyTuition {
     public static function due_date( int $user_id, int $class_id ): string {
         global $wpdb;
         return (string) $wpdb->get_var( $wpdb->prepare(
-            'SELECT due_date FROM ' . self::table() . " WHERE user_id=%d AND class_id=%d AND status IN ('paid','partial_refund') ORDER BY paid_at DESC,id DESC LIMIT 1",
+            'SELECT due_date FROM ' . self::table() . " WHERE user_id=%d AND class_id=%d AND status IN ('paid','partial_refund') ORDER BY due_date DESC,id DESC LIMIT 1",
             $user_id, $class_id
         ) );
+    }
+
+    /** The exclusive due date is the first day on which a new month can be paid. */
+    public static function has_active_tuition( int $class_id, int $user_id ): bool {
+        $due = self::due_date( $user_id, $class_id );
+        return (bool) preg_match( '/^\d{4}-\d{2}-\d{2}$/D', $due ) && $due > current_time( 'Y-m-d' );
     }
 
     public static function days_remaining( int $user_id, int $class_id ): ?int {
@@ -145,6 +151,9 @@ class MonthlyTuition {
             || get_post_meta( $class_id, '_class_approved', true ) !== 'yes'
             || $user_id <= 0 || $coach <= 0 || (int) get_user_meta( $user_id, 'coach_id', true ) !== $coach ) {
             throw new RuntimeException( 'این کلاس تأیید نشده یا متعلق به مربی انتخاب‌شده شما نیست.' );
+        }
+        if ( self::has_active_tuition( $class_id, $user_id ) ) {
+            throw new RuntimeException( 'شهریه ماه جاری پرداخت شده است؛ ثبت نام دوره بعد از تاریخ سررسید امکان‌پذیر است.' );
         }
         $club_post = get_post( $club );
         if ( ! \IMAOCustom\Helpers\UserRoles::has( get_userdata( $coach ), 'coach' )

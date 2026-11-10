@@ -23,6 +23,7 @@ namespace {
     if ( ! function_exists( 'get_woocommerce_currency' ) ) { function get_woocommerce_currency() { return 'IRT'; } }
     final class MonthlyClassCheckoutTest extends TestCase {
         protected function setUp(): void {
+            unset( $GLOBALS['test_tuition_due'] );
             $GLOBALS['test_post_meta'] = [ 10 => [ '_imao_monthly_class_id' => 100 ], 100 => [ '_class_coach_id' => 2, '_class_club_id' => 200,
                 '_class_approved' => 'yes', '_class_fee' => 300000, '_class_fee_unit' => 'toman', '_class_shares' => [ 'referrer' => 20, 'coach' => 30, 'club' => 50 ] ] ];
             $GLOBALS['wpdb'] = new class {
@@ -31,7 +32,7 @@ namespace {
                 public function prepare( $query, ...$args ) { return [ $query, $args ]; }
                 public function get_row( $query ) { return null; }
                 public function query( $query ) { $this->owner = $this->owner ?: $query[1][3]; return 1; }
-                public function get_var( $query ) { return $this->owner; }
+                public function get_var( $query ) { return strpos( $query[0], 'SELECT due_date' ) !== false ? ( $GLOBALS['test_tuition_due'] ?? '' ) : $this->owner; }
             };
         }
 
@@ -77,6 +78,23 @@ namespace {
         public function test_underpriced_order_is_rejected_before_enrollment_is_claimed(): void {
             $this->expectException( RuntimeException::class );
             ( new MonthlyTuition() )->prepare_order( $this->order( 501, 1 ) );
+        }
+
+        public function test_active_month_is_paid_until_exclusive_due_date(): void {
+            $today = \IMAOCustom\Services\current_time( 'Y-m-d' );
+            $GLOBALS['test_tuition_due'] = ( new DateTimeImmutable( $today ) )->modify( '+1 day' )->format( 'Y-m-d' );
+            $this->assertTrue( MonthlyTuition::has_active_tuition( 100, 1 ) );
+            $GLOBALS['test_tuition_due'] = $today;
+            $this->assertFalse( MonthlyTuition::has_active_tuition( 100, 1 ) );
+            $GLOBALS['test_tuition_due'] = '';
+            $this->assertFalse( MonthlyTuition::has_active_tuition( 100, 1 ) );
+        }
+
+        public function test_paid_month_cannot_be_purchased_again_via_direct_request(): void {
+            $GLOBALS['test_tuition_due'] = '2099-01-01';
+            $this->expectException( RuntimeException::class );
+            $this->expectExceptionMessage( 'شهریه ماه جاری پرداخت شده است' );
+            MonthlyTuition::checkout_snapshot( 100, 1 );
         }
 
         public function test_frontend_payment_adds_class_product_and_redirects_to_checkout(): void {

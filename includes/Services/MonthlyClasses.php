@@ -417,17 +417,24 @@ class MonthlyClasses {
             echo '<p>ساعت کلاس: ' . esc_html( get_post_meta( $id, '_class_start_time', true ) . ' تا ' . get_post_meta( $id, '_class_end_time', true ) ) . '</p>';
             echo '<p>شهریه ماهانه: ' . esc_html( MonthlyClassBilling::display_fee( $id ) ) . '</p>';
             if ( class_exists( MonthlyTuition::class ) ) {
-                $quote = MonthlyTuition::billing_quote( $id, $user_id );
-                echo '<p>دورهٔ ثبت‌نام: ' . esc_html( $quote['period'] ) . '؛ مبلغ قابل پرداخت: ' . esc_html( number_format( $quote['amount_toman'], 0, '.', ',' ) ) . ' تومان</p>';
+                $paid = MonthlyTuition::has_active_tuition( $id, $user_id );
+                if ( ! $paid ) {
+                    $quote = MonthlyTuition::billing_quote( $id, $user_id );
+                    echo '<p>دورهٔ ثبت‌نام: ' . esc_html( $quote['period'] ) . '؛ مبلغ قابل پرداخت: ' . esc_html( number_format( $quote['amount_toman'], 0, '.', ',' ) ) . ' تومان</p>';
+                }
                 $due = MonthlyTuition::due_date( $user_id, $id );
                 $days = MonthlyTuition::days_remaining( $user_id, $id );
                 echo '<p>سررسید: ' . esc_html( $due !== '' ? Date::to_jalali( $due, 'Y/m/d' ) : 'هنوز پرداخت نشده' ) . '</p>';
                 if ( $days !== null ) {
                     echo '<p>' . esc_html( $days >= 0 ? 'روزهای باقی‌مانده: ' . $days : 'روزهای گذشته از سررسید: ' . abs( $days ) ) . '</p>';
                 }
+                if ( $paid ) {
+                    echo '<p class="imao-success" role="status">شهریه ماه جاری پرداخت شده است. ثبت نام دوره بعد از تاریخ سررسید امکان‌پذیر است.</p>';
+                } else {
                 echo '<form method="post" action="' . esc_url( MonthlyTuition::checkout_submission_url() ) . '"><input type="hidden" name="action" value="imao_pay_monthly_class"><input type="hidden" name="class_id" value="' . esc_attr( $id ) . '">';
                 wp_nonce_field( 'imao_pay_monthly_class_' . $id, 'imao_monthly_class_nonce' );
                 echo '<p>ثبت‌نام هر ماه جداگانه انجام می‌شود. پرداخت نخست تا پایان ماه شمسی روزشمار است؛ تمدیدها شهریهٔ کامل ماه را دارند.</p><button class="button" type="submit">ثبت نام ماه جاری و پرداخت</button></form>';
+                }
             } else {
                 echo '<p>سامانه پرداخت شهریه در حال آماده‌سازی است.</p>';
             }
@@ -554,9 +561,13 @@ class MonthlyClasses {
             }
             echo '<p>شهریه ماهانه: ' . esc_html( MonthlyClassBilling::display_fee( $id ) ) . '</p>';
             if ( $selected_coach > 0 && $selected_coach === $coach_id && class_exists( MonthlyTuition::class ) ) {
+                if ( MonthlyTuition::has_active_tuition( $id, get_current_user_id() ) ) {
+                    echo '<p class="imao-success" role="status">شهریه ماه جاری پرداخت شده است.</p>';
+                } else {
                 echo '<form method="post" action="' . esc_url( MonthlyTuition::checkout_submission_url() ) . '"><input type="hidden" name="action" value="imao_pay_monthly_class"><input type="hidden" name="class_id" value="' . esc_attr( $id ) . '">';
                 wp_nonce_field( 'imao_pay_monthly_class_' . $id, 'imao_monthly_class_nonce' );
                 echo '<button type="submit" class="button">ثبت نام ماه جاری و پرداخت</button></form>';
+                }
             }
             echo '</section>';
         }
