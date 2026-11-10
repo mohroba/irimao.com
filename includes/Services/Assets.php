@@ -37,7 +37,8 @@ class Assets {
 });"
         );
         // This endpoint contains only document uploads, not the other account forms.
-        if ( function_exists( 'is_wc_endpoint_url' ) && is_wc_endpoint_url( 'identity-professional' ) ) {
+        $identity_endpoint = array_key_exists( 'identity-professional', (array) ( $GLOBALS['wp']->query_vars ?? [] ) );
+        if ( $identity_endpoint || ( function_exists( 'is_wc_endpoint_url' ) && is_wc_endpoint_url( 'identity-professional' ) ) ) {
             wp_enqueue_style( 'imao-identity-professional', $url . 'assets/css/identity-professional.css', [], '1.0.0' );
             wp_enqueue_script( 'imao-identity-professional', $url . 'assets/js/identity-professional.js', [ 'imao-sweetalert2' ], '20261110', true );
             return;
