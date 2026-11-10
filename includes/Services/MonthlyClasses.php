@@ -425,9 +425,9 @@ class MonthlyClasses {
                 if ( $days !== null ) {
                     echo '<p>' . esc_html( $days >= 0 ? 'روزهای باقی‌مانده: ' . $days : 'روزهای گذشته از سررسید: ' . abs( $days ) ) . '</p>';
                 }
-                echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="imao_pay_monthly_class"><input type="hidden" name="class_id" value="' . esc_attr( $id ) . '">';
+                echo '<form method="post" action="' . esc_url( MonthlyTuition::checkout_submission_url() ) . '"><input type="hidden" name="action" value="imao_pay_monthly_class"><input type="hidden" name="class_id" value="' . esc_attr( $id ) . '">';
                 wp_nonce_field( 'imao_pay_monthly_class_' . $id, 'imao_monthly_class_nonce' );
-                echo '<p>ثبت‌نام هر ماه جداگانه انجام می‌شود. پرداخت نخست تا پایان ماه شمسی روزشمار است؛ تمدیدها شهریهٔ کامل ماه را دارند.</p><button class="button" type="submit">ثبت‌نام این ماه و پرداخت</button></form>';
+                echo '<p>ثبت‌نام هر ماه جداگانه انجام می‌شود. پرداخت نخست تا پایان ماه شمسی روزشمار است؛ تمدیدها شهریهٔ کامل ماه را دارند.</p><button class="button" type="submit">ثبت نام ماه جاری و پرداخت</button></form>';
             } else {
                 echo '<p>سامانه پرداخت شهریه در حال آماده‌سازی است.</p>';
             }
@@ -554,9 +554,9 @@ class MonthlyClasses {
             }
             echo '<p>شهریه ماهانه: ' . esc_html( MonthlyClassBilling::display_fee( $id ) ) . '</p>';
             if ( $selected_coach > 0 && $selected_coach === $coach_id && class_exists( MonthlyTuition::class ) ) {
-                echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="imao_pay_monthly_class"><input type="hidden" name="class_id" value="' . esc_attr( $id ) . '">';
+                echo '<form method="post" action="' . esc_url( MonthlyTuition::checkout_submission_url() ) . '"><input type="hidden" name="action" value="imao_pay_monthly_class"><input type="hidden" name="class_id" value="' . esc_attr( $id ) . '">';
                 wp_nonce_field( 'imao_pay_monthly_class_' . $id, 'imao_monthly_class_nonce' );
-                echo '<button type="submit" class="button">ثبت‌نام ماهانه و پرداخت</button></form>';
+                echo '<button type="submit" class="button">ثبت نام ماه جاری و پرداخت</button></form>';
             }
             echo '</section>';
         }

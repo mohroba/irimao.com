@@ -1,6 +1,13 @@
 <?php
 
 namespace IMAOCustom\Services {
+    function absint( $value ) { return abs( (int) $value ); }
+    function check_admin_referer( $action, $name ) { $GLOBALS['checkout_nonce_checked'] = [ $action, $name ]; }
+    function WC() { return $GLOBALS['checkout_wc']; }
+    function wc_get_checkout_url() { return '/checkout/'; }
+    function wp_safe_redirect( $url ) { $GLOBALS['checkout_redirect'] = $url; throw new \RuntimeException( 'test-redirect' ); }
+    function wp_die( $message, ...$args ) { throw new \RuntimeException( $message ); }
+    function esc_html( $value ) { return $value; }
     function get_post( $id ) { return (object) ( $id === 100 ? [ 'post_type' => 'imao_monthly_class', 'post_status' => 'publish' ] : [ 'post_type' => 'club_application', 'post_status' => 'publish', 'post_author' => 2 ] ); }
     function get_post_meta( $id, $key, $single = true ) { return $GLOBALS['test_post_meta'][$id][$key] ?? ''; }
     function get_user_meta( $id, $key, $single = true ) { return [ 'coach_id' => 2, 'referrer_id' => 3, 'identity_verified_professional' => 'approved' ][$key] ?? ''; }
@@ -70,6 +77,23 @@ namespace {
         public function test_underpriced_order_is_rejected_before_enrollment_is_claimed(): void {
             $this->expectException( RuntimeException::class );
             ( new MonthlyTuition() )->prepare_order( $this->order( 501, 1 ) );
+        }
+
+        public function test_frontend_payment_adds_class_product_and_redirects_to_checkout(): void {
+            $_SERVER['REQUEST_METHOD'] = 'POST';
+            $_GET = [ 'imao_class_action' => 'pay' ];
+            $_POST = [ 'action' => 'imao_pay_monthly_class', 'class_id' => 100 ];
+            $GLOBALS['test_post_meta'][100]['_class_product_id'] = 10;
+            $GLOBALS['checkout_wc'] = (object) [
+                'session' => new class { public bool $cookie = false; public function set_customer_session_cookie( $value ) { $this->cookie = $value; } },
+                'cart' => new class { public array $added = []; public function add_to_cart( $id, $quantity ) { $this->added = [ $id, $quantity ]; return 'cart-key'; } },
+            ];
+            try { ( new MonthlyTuition() )->handle_frontend_checkout(); }
+            catch ( RuntimeException $error ) { $this->assertSame( 'test-redirect', $error->getMessage() ); }
+            $this->assertSame( [ 'imao_pay_monthly_class_100', 'imao_monthly_class_nonce' ], $GLOBALS['checkout_nonce_checked'] );
+            $this->assertSame( [ 10, 1 ], $GLOBALS['checkout_wc']->cart->added );
+            $this->assertTrue( $GLOBALS['checkout_wc']->session->cookie );
+            $this->assertSame( '/checkout/', $GLOBALS['checkout_redirect'] );
         }
     }
 }

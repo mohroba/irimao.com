@@ -14,6 +14,7 @@ class MonthlyTuition {
     public function register(): void {
         add_action( 'init', [ $this, 'install' ], 4 );
         add_action( 'admin_post_imao_pay_monthly_class', [ $this, 'start_checkout' ] );
+        add_action( 'wp_loaded', [ $this, 'handle_frontend_checkout' ], 25 );
         add_filter( 'woocommerce_add_to_cart_validation', [ $this, 'validate_cart' ], 20, 6 );
         add_action( 'woocommerce_check_cart_items', [ $this, 'check_cart' ] );
         add_action( 'woocommerce_before_calculate_totals', [ $this, 'price_cart' ], 30 );
@@ -175,9 +176,23 @@ class MonthlyTuition {
         return $class_id;
     }
 
+    public static function checkout_submission_url(): string {
+        return add_query_arg( 'imao_class_action', 'pay', home_url( '/' ) );
+    }
+
+    /** Dispatch before template redirects, after WooCommerce initializes the cart. */
+    public function handle_frontend_checkout(): void {
+        if ( ( $_SERVER['REQUEST_METHOD'] ?? '' ) !== 'POST'
+            || ( $_GET['imao_class_action'] ?? '' ) !== 'pay'
+            || ( $_POST['action'] ?? '' ) !== 'imao_pay_monthly_class' ) {
+            return;
+        }
+        $this->start_checkout();
+    }
+
     public function start_checkout(): void {
         if ( ( $_SERVER['REQUEST_METHOD'] ?? '' ) !== 'POST' || ! is_user_logged_in() ) {
-            wp_die( 'ابتدا وارد حساب خود شوید.' );
+            wp_die( 'ابتدا وارد حساب خود شوید.', '', [ 'response' => 403 ] );
         }
         $id = absint( $_POST['class_id'] ?? 0 );
         check_admin_referer( 'imao_pay_monthly_class_' . $id, 'imao_monthly_class_nonce' );
