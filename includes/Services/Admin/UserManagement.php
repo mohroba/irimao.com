@@ -13,6 +13,7 @@ class UserManagement {
         add_action( 'wp_ajax_crm_admin_id_status', [ $this, 'change_status' ] );
         add_action( 'wp_ajax_crm_admin_toggle_ban', [ $this, 'toggle_ban' ] );
         add_action( 'admin_post_imao_login_as', [ $this, 'login_as_user' ] );
+        ( new ProfessionalIdentityTable() )->register();
     }
 
     public function add_menu(): void {
@@ -30,8 +31,8 @@ class UserManagement {
         wp_enqueue_script( 'imao-datatables', $base . 'js/jquery.dataTables.min.js', [ 'jquery' ], null, true );
         wp_enqueue_style( 'imao-select2', $base . 'css/select2.min.css' );
         wp_enqueue_script( 'imao-select2', $base . 'js/select2.min.js', [ 'jquery' ], null, true );
-        $admin_css = dirname( __DIR__, 2 ) . '/assets/css/crm-admin.css';
-        $admin_js  = dirname( __DIR__, 2 ) . '/assets/js/crm-admin.js';
+        $admin_css = dirname( __DIR__, 3 ) . '/assets/css/crm-admin.css';
+        $admin_js  = dirname( __DIR__, 3 ) . '/assets/js/crm-admin.js';
         wp_enqueue_style( 'imao-admin', $base . 'css/crm-admin.css', [], is_file( $admin_css ) ? (string) filemtime( $admin_css ) : null );
         wp_enqueue_script( 'imao-admin', $base . 'js/crm-admin.js', [ 'jquery', 'imao-datatables', 'imao-select2' ], is_file( $admin_js ) ? (string) filemtime( $admin_js ) : null, true );
         wp_localize_script( 'imao-admin', 'CRM_ADMIN', [
@@ -183,6 +184,11 @@ class UserManagement {
     }
 
     public function prof_identity_page(): void {
+        ( new ProfessionalIdentityTable() )->render_page();
+    }
+
+    /** Render only the requested page, retaining the existing action controls. */
+    public function professional_rows( array $users ): array {
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( 'Access denied' );
         }
@@ -191,21 +197,16 @@ class UserManagement {
             'birth_certificate' => 'تصویر شناسنامه',
             'national_id_card'  => 'تصویر کارت ملی',
         ];
-        $users = get_users();
-        echo '<div class="wrap"><h1>تأیید هویت حرفه‌ای</h1>';
-        echo '<table id="crm-prof-table" class="wp-list-table widefat striped"><thead><tr>';
-        echo '<th>ID</th><th>نام</th><th>استان</th><th>شهرستان</th><th>تاریخ عضویت</th>';
-        foreach ( $pro_fields as $lbl ) {
-            echo '<th>' . esc_html( $lbl ) . '</th>';
-        }
-        echo '<th>وضعیت</th><th>نقش</th><th>عملیات</th></tr></thead><tbody>';
+        $rows = [];
+        $provinces = \IMAOCustom\Helpers\CityMap::get_provinces();
         foreach ( $users as $u ) {
+            ob_start();
             $status = get_user_meta( $u->ID, 'identity_verified_professional', true ) ?: 'pending';
             $label  = $status === 'approved' ? 'مورد تایید' : ( $status === 'disapproved' ? 'مردود' : 'در انتظار' );
-            echo '<tr>';
-            $province = $this->display_value( 'residence_province', get_user_meta( $u->ID, 'residence_province', true ) );
-            $city     = $this->display_value( 'residence_city', get_user_meta( $u->ID, 'residence_city', true ) );
-            echo '<td>' . esc_html( $u->ID ) . '</td><td>' . esc_html( $u->display_name ) . '</td><td>' . esc_html( $province ?: '—' ) . '</td><td>' . esc_html( $city ?: '—' ) . '</td><td>' . esc_html( Date::to_jalali( (string) ( $u->user_registered ?? '' ) ) ?: '—' ) . '</td>';
+            $province_code = (string) get_user_meta( $u->ID, 'residence_province', true );
+            $province = $provinces[ $province_code ] ?? $province_code;
+            $city = (string) get_user_meta( $u->ID, 'residence_city', true );
+            echo '<td>' . esc_html( $u->ID ) . '</td><td>' . esc_html( $this->user_display_name( $u ) ) . '</td><td>' . esc_html( $province ?: '—' ) . '</td><td>' . esc_html( $city ?: '—' ) . '</td><td>' . esc_html( Date::to_jalali( (string) ( $u->user_registered ?? '' ) ) ?: '—' ) . '</td>';
             foreach ( $pro_fields as $key => $lbl ) {
                 $uurl = get_user_meta( $u->ID, $key, true );
                 $cell = $uurl ? '<a href="' . esc_url( $uurl ) . '" target="_blank">مشاهده</a>' : '-';
@@ -230,9 +231,11 @@ class UserManagement {
             $ban_act = $banned ? 'unban' : 'ban';
             echo '<button class="button ban-user-btn" data-user="' . $u->ID . '" data-action="' . $ban_act . '">' . $ban_lbl . '</button>';
             echo '</td>';
-            echo '</tr>';
+            // Cells contain escaped text and controls, never nested tables.
+            preg_match_all( '~<td>(.*?)</td>~s', (string) ob_get_clean(), $cells );
+            $rows[] = $cells[1];
         }
-        echo '</tbody></table></div>';
+        return $rows;
     }
 
     public function update_role(): void {

@@ -36,6 +36,12 @@ class Assets {
     });
 });"
         );
+        // This endpoint contains only document uploads, not the other account forms.
+        if ( function_exists( 'is_wc_endpoint_url' ) && is_wc_endpoint_url( 'identity-professional' ) ) {
+            wp_enqueue_style( 'imao-identity-professional', $url . 'assets/css/identity-professional.css', [], '1.0.0' );
+            wp_enqueue_script( 'imao-identity-professional', $url . 'assets/js/identity-professional.js', [ 'imao-sweetalert2' ], '20261110', true );
+            return;
+        }
         wp_enqueue_style( 'imao-self-declaration', $url . 'assets/css/self-declaration.css', [], '1.0.1' );
         wp_enqueue_style( 'imao-select2', $url . 'assets/css/select2.min.css', [], '1.0.0' );
         wp_enqueue_style( 'imao-identity-professional', $url . 'assets/css/identity-professional.css', [], '1.0.0' );
@@ -51,7 +57,7 @@ class Assets {
             'championAgeMap'  => SelfDeclarationData::champion_age_map(),
         ] );
         wp_localize_script( 'imao-edit-basic-info', 'CBIF_CITIES', CityMap::get_map() );
-        wp_enqueue_script( 'imao-identity-professional', $url . 'assets/js/identity-professional.js', [], '1.0.0', true );
+        wp_enqueue_script( 'imao-identity-professional', $url . 'assets/js/identity-professional.js', [ 'imao-sweetalert2' ], '20261110', true );
         wp_enqueue_script( 'imao-club-register', $url . 'assets/js/club-register.js', [ 'jquery' ], '1.0.0', true );
         wp_enqueue_script( 'imao-vip-subscription', $url . 'assets/js/vip-subscription.js', [ 'jquery' ], '1.0.0', true );
         wp_enqueue_script( 'imao-jalali-datepicker-frontend', $url . 'assets/js/jalalidatepicker.min.js', [], '1.0.0', true );

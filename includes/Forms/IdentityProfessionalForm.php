@@ -168,7 +168,7 @@ class IdentityProfessionalForm extends BaseForm {
             echo '</div>';
             echo '<div class="upload-thumbnail">';
             if ( $current ) {
-                echo '<a href="' . esc_url( $current ) . '" target="_blank"><img src="' . esc_url( $current ) . '" alt=""></a>';
+                echo '<a href="' . esc_url( $current ) . '" target="_blank" rel="noopener"><img src="' . esc_url( $current ) . '" alt="' . esc_attr( $label ) . '" loading="lazy" decoding="async"></a>';
             } else {
                 echo '<img src="' . esc_url( $placeholder ) . '" alt="">';
             }

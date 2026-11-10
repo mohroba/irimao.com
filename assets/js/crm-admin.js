@@ -58,6 +58,21 @@ jQuery(function ($) {
   /* جدول هویت حرفه‌ای */
   const professionalTable = $('#crm-prof-table').DataTable({
     pageLength: 15,
+    serverSide: true,
+    processing: true,
+    searchDelay: 500,
+    lengthMenu: [15, 25, 50, 100],
+    order: [[0, 'desc']],
+    columnDefs: [{targets: [2, 3, 5, 6, 7, 8, 9, 10], orderable: false}],
+    ajax: {
+      url: $('#crm-prof-table').data('profUrl'),
+      type: 'POST',
+      data: function (data) {
+        $('#imao-prof-filters').serializeArray().forEach(function (item) { data[item.name] = item.value; });
+        data.action = 'imao_professional_rows';
+        data.nonce = $('#crm-prof-table').data('nonce');
+      }
+    },
     responsive: true,
     language: {
       search: "جستجو:",
@@ -72,6 +87,27 @@ jQuery(function ($) {
   });
 
   initializeRoleSelects(professionalTable.table().body());
+
+  $('#imao-prof-filters').on('submit', function (event) {
+    event.preventDefault();
+    professionalTable.ajax.reload();
+  }).on('reset', function () {
+    window.setTimeout(function () { professionalTable.search('').ajax.reload(); }, 0);
+  });
+  $('.imao-prof-export').on('click', function () {
+    const table = $('#crm-prof-table');
+    const form = $('<form>', {method: 'POST', action: table.data('exportUrl'), target: '_blank'});
+    const order = professionalTable.order()[0] || [0, 'desc'];
+    const fields = $('#imao-prof-filters').serializeArray().concat([
+      {name: 'action', value: 'imao_professional_export'},
+      {name: 'nonce', value: table.data('nonce')},
+      {name: 'format', value: $(this).data('format')},
+      {name: 'search_text', value: professionalTable.search()},
+      {name: 'sort_column', value: order[0]}, {name: 'sort_dir', value: order[1]}
+    ]);
+    fields.forEach(function (field) { $('<input>', {type: 'hidden', name: field.name, value: field.value}).appendTo(form); });
+    form.appendTo(document.body).trigger('submit').remove();
+  });
 
   /* Select2 role selector: delegated so controls on every DataTables page work. */
   $(document).on('change', '#crm-prof-table .role-select', function () {

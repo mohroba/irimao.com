@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var form = document.querySelector('.crm-identity-verification-form form');
     if (form) {
         var status = form.dataset.status;
-        if (status && status !== 'pending' && status !== 'disapproved') {
+        if (status === 'approved') {
             form.querySelectorAll('input[type="file"]').forEach(function(inp){ inp.disabled = true; });
             form.querySelectorAll('button[type="submit"]').forEach(function(btn){ btn.disabled = true; });
             form.querySelectorAll('.custom-file-btn').forEach(function(btn){ btn.disabled = true; });

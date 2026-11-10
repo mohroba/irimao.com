@@ -29,6 +29,14 @@ class DataGrid
         }
 
         $url = plugin_dir_url(dirname(__DIR__, 2)) . 'assets/';
+        if ($page === 'imao-prof-identity') {
+            // Its own server-side grid exports on the server, without Buttons/JSZip.
+            wp_enqueue_style('imao-admin-data-grid', $url . 'css/admin-data-grid.css', [], '1.1.1');
+            wp_enqueue_style('imao-jalali-datepicker', $url . 'css/jalalidatepicker.min.css', [], '1.0.0');
+            wp_enqueue_script('imao-jalali-datepicker', $url . 'js/jalalidatepicker.min.js', [], '1.0.0', true);
+            wp_add_inline_script('imao-jalali-datepicker', 'jQuery(function(){if(window.jalaliDatepicker){jalaliDatepicker.startWatch({persianDigits:false});}});');
+            return;
+        }
         $dt_handle = $this->first_enqueued(['imao-datatables', 'datatables', 'dt-js', 'imao-dt']);
         if ($dt_handle === '') {
             $dt_handle = 'imao-admin-datatables';
