@@ -12,7 +12,14 @@ namespace IMAOCustom\Tests\Services {
     use PHPUnit\Framework\TestCase;
 
     final class MonthlyClassEligibilityTest extends TestCase {
+        private $previous_database;
         protected function setUp(): void {
+            $this->previous_database = $GLOBALS['wpdb'];
+            $GLOBALS['wpdb'] = new class {
+                public string $prefix = 'test_';
+                public function prepare( $query, ...$args ) { return $query; }
+                public function get_var( $query ) { return ''; }
+            };
             $GLOBALS['class_eligibility_posts'] = [
                 100 => (object) [ 'post_type' => 'imao_monthly_class', 'post_status' => 'publish' ],
                 200 => (object) [ 'post_type' => 'club_application', 'post_status' => 'publish', 'post_author' => 2 ],
@@ -23,6 +30,10 @@ namespace IMAOCustom\Tests\Services {
                 2 => [ 'identity_verified_professional' => 'approved' ] ];
             $GLOBALS['class_eligibility_accounts'] = [ 1 => (object) [ 'ID' => 1, 'roles' => [ 'subscriber' ] ],
                 2 => (object) [ 'ID' => 2, 'roles' => [ 'subscriber', 'coach' ] ], 3 => (object) [ 'ID' => 3 ] ];
+        }
+
+        protected function tearDown(): void {
+            $GLOBALS['wpdb'] = $this->previous_database;
         }
 
         public function test_multi_role_coach_and_shared_club_owner_are_valid(): void {
