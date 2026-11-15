@@ -11,6 +11,7 @@ class WalletOrderNeedsPaymentTest extends TestCase {
                 $meta = [
                     'crm_wallet_planned_use' => 100.0,
                     'crm_wallet_gateway_due' => 0.0,
+                    'crm_wallet_processed' => 'completed',
                 ];
 
                 return $meta[ $key ] ?? 0.0;
@@ -38,6 +39,13 @@ class WalletOrderNeedsPaymentTest extends TestCase {
         $result = $wallet->order_needs_payment( true, $order, [] );
 
         $this->assertTrue( $result );
+    }
+
+    public function test_planned_wallet_amount_is_not_proof_of_payment(): void {
+        $order = new class {
+            public function get_meta( $key ) { return [ 'crm_wallet_planned_use' => 100, 'crm_wallet_gateway_due' => 0, 'crm_wallet_processed' => 'pending' ][ $key ] ?? ''; }
+        };
+        $this->assertTrue( ( new Wallet() )->order_needs_payment( true, $order, [] ) );
     }
 }
 

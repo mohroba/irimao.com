@@ -83,6 +83,7 @@ class Plugin {
         CheckoutPrefill::class,
         OrderStatus::class,
         UserManagement::class,
+        \IMAOCustom\Services\OrderDateIntegrity::class,
         Settings::class,
         DataGrid::class,
         DataTransfer::class,

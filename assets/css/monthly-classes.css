@@ -109,6 +109,40 @@
     margin: 6px 0;
 }
 
+.imao-class-type {
+    display: inline-block;
+    padding: 4px 12px;
+    margin-block: 4px 8px;
+    border: 1px solid currentColor;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+}
+.imao-class-type--public { color: #060097; background: #eeedff; }
+.imao-class-type--private { color: #8a3800; background: #fff0df; }
+.imao-class-type--semi-private { color: #166044; background: #e9f7ef; }
+.imao-class-weekdays { margin: 0; padding: 10px; border: 1px solid #e1e7f0; }
+.imao-class-weekdays legend { font-weight: 600; }
+.imao-class-weekdays label,
+.imao-monthly .imao-class-weekdays label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    margin-inline-end: 12px;
+    cursor: pointer;
+}
+.imao-class-weekdays input[type="checkbox"],
+.imao-monthly .imao-class-weekdays input[type="checkbox"] {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    flex: 0 0 auto;
+}
+
 .imao-monthly .imao-class-card form {
     margin-top: 14px;
 }

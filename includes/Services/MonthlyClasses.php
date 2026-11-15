@@ -163,7 +163,7 @@ class MonthlyClasses {
 
     private static function configuration( int $post_id ): array {
         $configuration = [];
-        foreach ( [ '_class_coach_id', '_class_club_id', '_class_fee', '_class_fee_unit', '_class_start_time', '_class_end_time', '_class_shares', '_class_product_id', '_class_approved' ] as $key ) {
+        foreach ( [ '_class_coach_id', '_class_club_id', '_class_fee', '_class_fee_unit', '_class_start_time', '_class_end_time', '_class_shares', '_class_product_id', '_class_approved', '_class_weekdays', '_class_age_category', '_class_type' ] as $key ) {
             $configuration[ $key ] = get_post_meta( $post_id, $key, true );
         }
         return $configuration;
@@ -176,13 +176,21 @@ class MonthlyClasses {
         $start = MonthlyClassBilling::time( self::input( '_class_start_time' ) );
         $end = MonthlyClassBilling::time( self::input( '_class_end_time' ) );
         $shares = self::validate_shares( isset( $_POST['_class_shares'] ) ? wp_unslash( $_POST['_class_shares'] ) : null );
+        $restrictions = self::submitted_restrictions( true );
         // Revoke approval before validation so invalid edits cannot remain payable.
         update_post_meta( $post_id, '_class_approved', 'no' );
+        if ( $restrictions === null ) {
+            $this->set_error( 'روزهای هفته، رده سنی دارای بازه معتبر و نوع کلاس را انتخاب کنید.' );
+            return;
+        }
         if ( ! self::valid_coach( $coach_id ) || ! self::club_belongs_to_coach( $club_id, $coach_id ) || $fee === '' || $shares === null || $start === '' || $end <= $start ) {
             $this->set_error( 'اطلاعات کلاس نامعتبر است؛ مربی، مالکیت باشگاه، شهریه و مجموع سهم‌ها را بررسی کنید.' );
             return;
         }
         foreach ( [ '_class_coach_id' => $coach_id, '_class_club_id' => $club_id, '_class_fee' => $fee, '_class_fee_unit' => 'toman', '_class_start_time' => $start, '_class_end_time' => $end, '_class_shares' => $shares ] as $key => $value ) {
+            update_post_meta( $post_id, $key, $value );
+        }
+        foreach ( $restrictions as $key => $value ) {
             update_post_meta( $post_id, $key, $value );
         }
         if ( self::input( '_class_approved' ) !== 'yes' || $post->post_status !== 'publish' ) {
@@ -254,6 +262,7 @@ class MonthlyClasses {
 
     public function enqueue_form_assets(): void {
         wp_enqueue_script( 'imao-monthly-class-form', plugin_dir_url( IMAO_PLUGIN_FILE ) . 'assets/js/monthly-classes.js', [], '20261108', true );
+        wp_enqueue_script( 'imao-monthly-class-weekdays', plugin_dir_url( IMAO_PLUGIN_FILE ) . 'assets/js/monthly-class-weekdays.js', [], '20261115', true );
     }
 
     public function schedule_title( array $data, array $postarr ): array {
@@ -267,6 +276,67 @@ class MonthlyClasses {
     private function schedule_fields( int $id = 0, bool $admin = false ): void {
         foreach ( [ 'start' => 'ساعت شروع', 'end' => 'ساعت پایان' ] as $key => $label ) {
             echo '<p><label>' . esc_html( $label ) . ' <input type="time" name="' . ( $admin ? '_class_' : 'class_' ) . $key . '_time" value="' . esc_attr( $id ? get_post_meta( $id, '_class_' . $key . '_time', true ) : '' ) . '" required></label></p>';
+        }
+        $this->restriction_fields( $id, $admin );
+    }
+
+    private static function submitted_restrictions( bool $admin = false ): ?array {
+        $prefix = $admin ? '_class_' : 'class_';
+        return MonthlyClassRestrictions::validate(
+            isset( $_POST[ $prefix . 'weekdays' ] ) ? wp_unslash( $_POST[ $prefix . 'weekdays' ] ) : null,
+            self::input( $prefix . 'age_category' ), self::input( $prefix . 'type' )
+        );
+    }
+
+    private function restriction_fields( int $id, bool $admin ): void {
+        $prefix = $admin ? '_class_' : 'class_';
+        $days = $id ? get_post_meta( $id, '_class_weekdays', true ) : [];
+        $days = is_array( $days ) ? $days : [];
+        echo '<fieldset class="imao-class-weekdays" data-imao-weekdays><legend>روزهای هفته (حداقل یک روز)</legend>';
+        foreach ( MonthlyClassRestrictions::weekdays() as $value => $label ) {
+            echo '<label><input type="checkbox" name="' . esc_attr( $prefix . 'weekdays[]' ) . '" value="' . esc_attr( $value ) . '" ' . checked( in_array( $value, $days, true ), true, false ) . '> ' . esc_html( $label ) . '</label>';
+        }
+        echo '</fieldset>';
+        echo '<p><label>رده سنی <select required name="' . esc_attr( $prefix . 'age_category' ) . '"><option value="">انتخاب رده سنی</option>';
+        foreach ( MonthlyClassRestrictions::age_categories() as $term ) {
+            if ( MonthlyClassRestrictions::age_bounds( (int) $term->term_id ) === null ) {
+                continue;
+            }
+            echo '<option value="' . (int) $term->term_id . '" ' . selected( $id ? get_post_meta( $id, '_class_age_category', true ) : '', $term->term_id, false ) . '>' . esc_html( $term->name ) . '</option>';
+        }
+        echo '</select></label></p><p class="description">رده‌ها از رده‌های سنی موجود با حداقل و حداکثر سن معتبر خوانده می‌شوند.</p>';
+        echo '<p><label>نوع کلاس <select required name="' . esc_attr( $prefix . 'type' ) . '"><option value="">انتخاب نوع کلاس</option>';
+        foreach ( MonthlyClassRestrictions::types() as $value => $label ) {
+            echo '<option value="' . esc_attr( $value ) . '" ' . selected( $id ? get_post_meta( $id, '_class_type', true ) : '', $value, false ) . '>' . esc_html( $label ) . '</option>';
+        }
+        echo '</select></label></p>';
+    }
+
+    /** Call from MonthlyTuition::checkout_snapshot before constructing the payment snapshot. */
+    public static function assert_student_eligible( int $class_id, int $user_id ): void {
+        $error = MonthlyClassRestrictions::eligibility_error( $class_id, $user_id );
+        if ( $error !== '' ) {
+            throw new \RuntimeException( $error );
+        }
+    }
+
+    private function restriction_summary( int $id ): void {
+        $days = get_post_meta( $id, '_class_weekdays', true );
+        $labels = [];
+        foreach ( is_array( $days ) ? $days : [] as $day ) {
+            if ( is_string( $day ) && isset( MonthlyClassRestrictions::weekdays()[ $day ] ) ) {
+                $labels[] = MonthlyClassRestrictions::weekdays()[ $day ];
+            }
+        }
+        $category = get_post_meta( $id, '_class_age_category', true );
+        $term = is_scalar( $category ) && (int) $category > 0 ? get_term( (int) $category, 'age_category' ) : null;
+        $type = get_post_meta( $id, '_class_type', true );
+        if ( is_string( $type ) && isset( MonthlyClassRestrictions::types()[ $type ] ) ) {
+            echo '<span class="imao-class-type imao-class-type--' . esc_attr( $type ) . '" data-class-type="' . esc_attr( $type ) . '">' . esc_html( MonthlyClassRestrictions::types()[ $type ] ) . '</span>';
+        }
+        foreach ( [ 'روزهای هفته' => $labels ? implode( '، ', $labels ) : 'تعیین نشده',
+            'رده سنی' => $term && ! is_wp_error( $term ) ? $term->name : ( $category === '' ? 'بدون محدودیت' : 'نامعتبر' ) ] as $label => $value ) {
+            echo '<p>' . esc_html( $label . ': ' . $value ) . '</p>';
         }
     }
 
@@ -357,6 +427,11 @@ class MonthlyClasses {
         $start = MonthlyClassBilling::time( self::input( 'class_start_time' ) );
         $end = MonthlyClassBilling::time( self::input( 'class_end_time' ) );
         $title = $start . '–' . $end;
+        $restrictions = self::submitted_restrictions();
+        if ( $restrictions === null ) {
+            wp_die( 'روزهای هفته، رده سنی دارای بازه معتبر و نوع کلاس را انتخاب کنید.', '', [ 'response' => 400 ] );
+            return;
+        }
         if ( $start === '' || $end <= $start || $fee === '' || ! self::club_belongs_to_coach( $club_id, $coach_id ) ) {
             wp_die( 'ساعت شروع و پایان، شهریه و باشگاه متعلق به خود را به‌درستی وارد کنید. ساعت پایان باید بعد از ساعت شروع باشد.', '', [ 'response' => 400 ] );
             return;
@@ -368,7 +443,7 @@ class MonthlyClasses {
         }
         $data = [
             'post_type' => self::POST_TYPE, 'post_title' => $title, 'post_status' => 'pending', 'post_author' => $coach_id,
-            'meta_input' => [ '_class_coach_id' => $coach_id, '_class_club_id' => $club_id, '_class_fee' => $fee, '_class_fee_unit' => 'toman', '_class_start_time' => $start, '_class_end_time' => $end, '_class_approved' => 'no' ],
+            'meta_input' => array_merge( [ '_class_coach_id' => $coach_id, '_class_club_id' => $club_id, '_class_fee' => $fee, '_class_fee_unit' => 'toman', '_class_start_time' => $start, '_class_end_time' => $end, '_class_approved' => 'no' ], $restrictions ),
         ];
         if ( $class_id ) {
             $data['ID'] = $class_id;
@@ -397,14 +472,14 @@ class MonthlyClasses {
             return '<p>هنوز مربی شما مشخص نشده است.</p>';
         }
         $page = isset( $_GET['monthly_class_page'] ) && is_scalar( $_GET['monthly_class_page'] ) ? max( 1, absint( $_GET['monthly_class_page'] ) ) : 1;
-        $query = new \WP_Query( [
+        $query = new \WP_Query( self::student_query_args( [
             'post_type' => self::POST_TYPE, 'post_status' => 'publish', 'posts_per_page' => 20, 'paged' => $page,
             'orderby' => 'title', 'order' => 'ASC',
             'meta_query' => [
                 [ 'key' => '_class_coach_id', 'value' => $coach_id, 'compare' => '=', 'type' => 'NUMERIC' ],
                 [ 'key' => '_class_approved', 'value' => 'yes' ],
             ],
-        ] );
+        ], $user_id ) );
         ob_start();
         echo '<div dir="rtl" class="imao-monthly imao-monthly-classes"><div class="crm-course-title">کلاس‌های ماهانه شما</div>';
         if ( ! $query->posts ) {
@@ -415,10 +490,12 @@ class MonthlyClasses {
             $fee = get_post_meta( $id, '_class_fee', true );
             echo '<section class="imao-class-card"><h3>' . esc_html( $class->post_title ) . '</h3><p>باشگاه: ' . esc_html( get_the_title( (int) get_post_meta( $id, '_class_club_id', true ) ) ) . '</p>';
             echo '<p>ساعت کلاس: ' . esc_html( get_post_meta( $id, '_class_start_time', true ) . ' تا ' . get_post_meta( $id, '_class_end_time', true ) ) . '</p>';
+            $this->restriction_summary( $id );
+            $eligibility_error = MonthlyClassRestrictions::eligibility_error( $id, $user_id );
             echo '<p>شهریه ماهانه: ' . esc_html( MonthlyClassBilling::display_fee( $id ) ) . '</p>';
             if ( class_exists( MonthlyTuition::class ) ) {
                 $paid = MonthlyTuition::has_active_tuition( $id, $user_id );
-                if ( ! $paid ) {
+                if ( ! $paid && $eligibility_error === '' ) {
                     $quote = MonthlyTuition::billing_quote( $id, $user_id );
                     echo '<p>دورهٔ ثبت‌نام: ' . esc_html( $quote['period'] ) . '؛ مبلغ قابل پرداخت: ' . esc_html( number_format( $quote['amount_toman'], 0, '.', ',' ) ) . ' تومان</p>';
                 }
@@ -430,6 +507,8 @@ class MonthlyClasses {
                 }
                 if ( $paid ) {
                     echo '<p class="imao-success" role="status">شهریه ماه جاری پرداخت شده است. ثبت نام دوره بعد از تاریخ سررسید امکان‌پذیر است.</p>';
+                } elseif ( $eligibility_error !== '' ) {
+                    echo '<p class="woocommerce-info" role="status">' . esc_html( $eligibility_error ) . '</p>';
                 } else {
                 echo '<form method="post" action="' . esc_url( MonthlyTuition::checkout_submission_url() ) . '"><input type="hidden" name="action" value="imao_pay_monthly_class"><input type="hidden" name="class_id" value="' . esc_attr( $id ) . '">';
                 wp_nonce_field( 'imao_pay_monthly_class_' . $id, 'imao_monthly_class_nonce' );
@@ -491,6 +570,16 @@ class MonthlyClasses {
         return $args;
     }
 
+    /** Staff and coaches retain their directory; students see only eligible ages. */
+    public static function student_query_args( array $args, int $user_id ): array {
+        if ( $user_id <= 0 || current_user_can( 'manage_options' ) || UserRoles::has( get_userdata( $user_id ), 'coach' ) ) {
+            return $args;
+        }
+        $args['meta_query'] = [ 'relation' => 'AND', $args['meta_query'] ?? [],
+            MonthlyClassRestrictions::visibility_meta_query( $user_id ) ];
+        return $args;
+    }
+
     public function directory_shortcode( $attributes = [] ): string {
         $filters = self::directory_filters( is_array( $attributes ) ? $attributes : [], $_GET );
         $club_ids = [];
@@ -503,7 +592,7 @@ class MonthlyClasses {
             }
             $club_ids = get_posts( [ 'post_type' => 'club_application', 'post_status' => 'publish', 'posts_per_page' => -1, 'fields' => 'ids', 'meta_query' => $meta ] );
         }
-        $query = new \WP_Query( self::directory_query_args( $filters, $club_ids ) );
+        $query = new \WP_Query( self::student_query_args( self::directory_query_args( $filters, $club_ids ), get_current_user_id() ) );
         $provinces = \IMAOCustom\Helpers\CityMap::get_provinces();
         $selected_coach = is_user_logged_in() ? (int) get_user_meta( get_current_user_id(), 'coach_id', true ) : 0;
         // A relative, escaped URL cannot inherit an attacker-supplied host.
@@ -556,13 +645,17 @@ class MonthlyClasses {
             $province = (string) get_post_meta( $club_id, 'club_province', true );
             $fee = get_post_meta( $id, '_class_fee', true );
             echo '<section class="imao-class-card"><h3>' . esc_html( $class->post_title ) . '</h3>';
+            $this->restriction_summary( $id );
             foreach ( [ 'مربی' => $coach ? $coach->display_name : '', 'باشگاه' => $club_id > 0 ? get_the_title( $club_id ) : '', 'استان' => $provinces[ $province ] ?? $province, 'شهر' => get_post_meta( $club_id, 'club_city', true ) ] as $label => $value ) {
                 echo '<p>' . esc_html( $label . ': ' . $value ) . '</p>';
             }
             echo '<p>شهریه ماهانه: ' . esc_html( MonthlyClassBilling::display_fee( $id ) ) . '</p>';
             if ( $selected_coach > 0 && $selected_coach === $coach_id && class_exists( MonthlyTuition::class ) ) {
+                $eligibility_error = MonthlyClassRestrictions::eligibility_error( $id, get_current_user_id() );
                 if ( MonthlyTuition::has_active_tuition( $id, get_current_user_id() ) ) {
                     echo '<p class="imao-success" role="status">شهریه ماه جاری پرداخت شده است.</p>';
+                } elseif ( $eligibility_error !== '' ) {
+                    echo '<p class="woocommerce-info" role="status">' . esc_html( $eligibility_error ) . '</p>';
                 } else {
                 echo '<form method="post" action="' . esc_url( MonthlyTuition::checkout_submission_url() ) . '"><input type="hidden" name="action" value="imao_pay_monthly_class"><input type="hidden" name="class_id" value="' . esc_attr( $id ) . '">';
                 wp_nonce_field( 'imao_pay_monthly_class_' . $id, 'imao_monthly_class_nonce' );

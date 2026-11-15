@@ -664,10 +664,14 @@ JS;
             $product_id
         ) );
         if ( ! $order_ids ) return [];
-        $orders = wc_get_orders( [ 'limit' => -1, 'status' => [ 'processing', 'completed' ], 'include' => array_map( 'intval', $order_ids ), 'orderby' => 'date', 'order' => 'DESC' ] );
+        $orders = wc_get_orders( [ 'type' => 'shop_order', 'limit' => -1, 'status' => [ 'processing', 'completed' ], 'include' => array_map( 'intval', $order_ids ), 'orderby' => 'date', 'order' => 'DESC' ] );
         $entries = [];
         $seen = [];
         foreach ( $orders as $order ) {
+            // Refunds can share product metadata but do not represent registrations.
+            if ( ! $order instanceof WC_Order || $order instanceof \WC_Order_Refund ) {
+                continue;
+            }
             $user_id = (int) $order->get_customer_id();
             if ( $user_id <= 0 ) {
                 continue;

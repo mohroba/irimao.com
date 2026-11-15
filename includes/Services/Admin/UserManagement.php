@@ -6,6 +6,7 @@ use IMAOCustom\Helpers\FieldLabel;
 use IMAOCustom\Helpers\Date;
 
 class UserManagement {
+    private ?array $province_labels = null;
     public function register(): void {
         add_action( 'admin_menu', [ $this, 'add_menu' ] );
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue' ] );
@@ -14,6 +15,8 @@ class UserManagement {
         add_action( 'wp_ajax_crm_admin_toggle_ban', [ $this, 'toggle_ban' ] );
         add_action( 'admin_post_imao_login_as', [ $this, 'login_as_user' ] );
         ( new ProfessionalIdentityTable() )->register();
+        ( new BasicInfoTable() )->register();
+        ( new BasicInfoTable( true ) )->register();
     }
 
     public function add_menu(): void {
@@ -68,6 +71,10 @@ class UserManagement {
     }
 
     private function display_value( string $key, $value ): string {
+        if ( in_array( $key, [ 'birth_province', 'residence_province' ], true ) ) {
+            $this->province_labels ??= \IMAOCustom\Helpers\CityMap::get_provinces();
+            return $this->province_labels[(string) $value] ?? (string) $value;
+        }
         if ( in_array( $key, [ 'club_id', 'coach_id' ], true ) && $value ) {
             if ( $key === 'club_id' ) {
                 $club_name = get_user_meta( (int) $value, 'club_name', true );
@@ -120,32 +127,41 @@ class UserManagement {
             $this->basic_info_edit_form( (int) $_GET['edit_user'] );
             return;
         }
-        $fields = self::basic_fields();
-        $users  = $filter_user_id ? array_filter( [ get_userdata( $filter_user_id ) ] ) : get_users();
+        $table = new BasicInfoTable();
         echo '<div class="wrap table-responsive" style="max-width:90vw;overflow-x:auto;"><h1>اطلاعات پایه کاربران</h1>';
-        echo '<table id="crm-basic-table" class="wp-list-table widefat striped">';
-        echo '<thead><tr><th>ID</th><th>نام</th><th>وضعیت</th><th>تاریخ عضویت</th>';
-        foreach ( $fields as $lbl ) {
-            echo '<th>' . esc_html( $lbl ) . '</th>';
+        $table->render_filters( $filter_user_id );
+        echo '<table id="crm-basic-table" class="wp-list-table widefat striped"' . $table->attributes() . '><thead><tr>';
+        foreach ( array_merge( [ 'ID', 'نام', 'وضعیت', 'تاریخ عضویت' ], array_values( self::basic_fields() ), [ 'عملیات' ] ) as $label ) {
+            echo '<th>' . esc_html( $label ) . '</th>';
         }
-        echo '<th>عملیات</th></tr></thead><tbody>';
+        echo '</tr></thead><tbody></tbody></table></div>';
+    }
+
+    /** Use identical values for paginated rows and full exports. */
+    public function basic_rows( array $users, bool $export = false ): array {
+        $rows = [];
         foreach ( $users as $u ) {
-            echo '<tr>';
-            $user_status = get_user_meta( $u->ID, 'imao_banned', true ) ? 'مسدود' : 'فعال';
-            echo '<td>' . esc_html( $u->ID ) . '</td><td>' . esc_html( $this->user_display_name( $u ) ) . '</td><td>' . esc_html( $user_status ) . '</td><td>' . esc_html( Date::to_jalali( (string) ( $u->user_registered ?? '' ) ) ?: '—' ) . '</td>';
-            foreach ( $fields as $k => $lbl ) {
-                $raw = get_user_meta( $u->ID, $k, true );
-                if ( $k === 'billing_email' && ! $raw ) {
+            $row = [
+                (string) $u->ID, $this->user_display_name( $u ),
+                get_user_meta( $u->ID, 'imao_banned', true ) ? 'مسدود' : 'فعال',
+                Date::to_jalali( (string) ( $u->user_registered ?? '' ) ) ?: '—',
+            ];
+            foreach ( self::basic_fields() as $key => $label ) {
+                $raw = get_user_meta( $u->ID, $key, true );
+                if ( $key === 'billing_email' && ! $raw ) {
                     $raw = $u->user_email;
                 }
-                $val = $this->display_value( $k, $raw );
-                echo '<td>' . esc_html( $val ) . '</td>';
+                $row[] = $this->display_value( $key, $raw );
             }
-            $edit_link  = admin_url( 'users.php?page=imao-basic-info&edit_user=' . $u->ID );
-            $login_link = wp_nonce_url( admin_url( 'admin-post.php?action=imao_login_as&user_id=' . $u->ID ), 'imao_login_as_' . $u->ID );
-            echo '<td><a class="button" href="' . esc_url( $edit_link ) . '">ویرایش</a> <a class="button" href="' . esc_url( $login_link ) . '">ورود</a></td></tr>';
+            if ( ! $export ) {
+                $row = array_map( 'esc_html', $row );
+                $edit_link = admin_url( 'users.php?page=imao-basic-info&edit_user=' . $u->ID );
+                $login_link = wp_nonce_url( admin_url( 'admin-post.php?action=imao_login_as&user_id=' . $u->ID ), 'imao_login_as_' . $u->ID );
+                $row[] = '<a class="button" href="' . esc_url( $edit_link ) . '">ویرایش</a> <a class="button" href="' . esc_url( $login_link ) . '">ورود</a>';
+            }
+            $rows[] = $row;
         }
-        echo '</tbody></table></div>';
+        return $rows;
     }
 
     private function basic_info_edit_form( int $user_id ): void {

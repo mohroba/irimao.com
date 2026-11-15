@@ -42,6 +42,9 @@ class Wallet {
         add_action( 'woocommerce_checkout_update_order_review', [ $this, 'store_wallet_flag' ] );
         add_action( 'woocommerce_cart_calculate_fees', [ $this, 'apply_wallet_discount' ] );
         add_action( 'woocommerce_checkout_create_order', [ $this, 'save_used_wallet' ], 10, 2 );
+        add_action( 'init', [ new \IMAOCustom\Services\WalletCheckoutLedger(), 'install' ], 4 );
+        add_action( 'woocommerce_checkout_order_processed', [ $this, 'process_wallet_checkout' ], 40, 3 );
+        add_action( 'woocommerce_store_api_checkout_order_processed', [ $this, 'process_store_wallet_checkout' ], 40 );
         add_filter( 'woocommerce_order_needs_payment', [ $this, 'order_needs_payment' ], 10, 3 );
         add_action( 'woocommerce_payment_complete', [ $this, 'after_payment' ] );
         add_action( 'woocommerce_order_status_cancelled', [ $this, 'refund_wallet' ], 10 );
@@ -276,9 +279,34 @@ class Wallet {
             $order->add_order_note( 'خلاصه پرداخت: مجموع ' . wc_price( $original_total ) . '، سهم کیف پول ' . wc_price( $planned_use ) . '، باقیمانده برای درگاه ' . wc_price( $remaining_for_pg ) );
         }
 
-        if ( $remaining_for_pg <= 0.0 && $planned_use > 0 && $user_id > 0 ) {
-            $this->finalize_wallet_only_payment( $order, $user_id, $planned_use, $original_total, $balance_before );
+        // Only record intent here: the order is not persisted or validated yet.
+    }
+
+    /** Runs after order creation, line items and monthly enrollment validation. */
+    public function process_wallet_checkout( $order_id, $data = [], $order = null ): void {
+        $order = $order ?: wc_get_order( $order_id );
+        if ( ! $order || ! method_exists( $order, 'get_meta' ) ) {
+            return;
         }
+        $planned = (float) $order->get_meta( self::META_PLANNED_USE );
+        if ( $planned <= 0 || (float) $order->get_meta( self::META_GATEWAY_DUE ) > 0 ) {
+            return;
+        }
+        if ( $order->get_meta( self::META_PROCESSED ) === 'completed' ) {
+            return;
+        }
+        if ( method_exists( $order, 'is_paid' ) && $order->is_paid() ) {
+            throw new \RuntimeException( 'وضعیت پرداخت سفارش با کیف پول مطابقت ندارد.' );
+        }
+        if ( method_exists( $order, 'get_items' ) ) {
+            ( new \IMAOCustom\Services\MonthlyTuition() )->prepare_order( $order );
+        }
+        $this->finalize_wallet_only_payment( $order, (int) $order->get_customer_id(), $planned,
+            (float) $order->get_meta( self::META_ORIGINAL_TOTAL ), (float) $order->get_meta( self::META_BALANCE_BEFORE ) );
+    }
+
+    public function process_store_wallet_checkout( $order ): void {
+        $this->process_wallet_checkout( $order->get_id(), [], $order );
     }
 
     public function order_needs_payment( bool $needs_payment, $order, array $valid_order_statuses ): bool {
@@ -289,7 +317,7 @@ class Wallet {
         $planned_use = (float) $order->get_meta( self::META_PLANNED_USE );
         $gateway_due = (float) $order->get_meta( self::META_GATEWAY_DUE );
 
-        if ( $planned_use > 0 && $gateway_due <= 0.0 ) {
+        if ( $planned_use > 0 && $gateway_due <= 0.0 && $order->get_meta( self::META_PROCESSED ) === 'completed' ) {
             return false;
         }
 
@@ -344,6 +372,9 @@ class Wallet {
             $balance_before = self::get_balance( $user_id );
         }
         $planned_use = method_exists( $order, 'get_meta' ) ? (float) $order->get_meta( self::META_PLANNED_USE ) : $requested;
+        if ( $planned_use <= 0 && $requested > 0 ) {
+            $planned_use = $requested;
+        }
 
         $paid_amount = 0.0;
         if ( method_exists( $order, 'get_total_paid' ) ) {
@@ -418,15 +449,13 @@ class Wallet {
     }
 
     private function finalize_wallet_only_payment( $order, int $user_id, float $planned_use, float $original_total, float $balance_before ): void {
-        $available = self::get_balance( $user_id );
-        $deduct    = min( $planned_use, $available, $original_total );
-        $balance_after = $available;
-
-        if ( $deduct > 0 ) {
-            self::deduct_balance( $user_id, $deduct );
-            $balance_after = self::get_balance( $user_id );
-            self::add_log( $user_id, -$deduct, 'پرداخت کامل با کیف پول' );
+        if ( $original_total <= 0 || abs( $planned_use - $original_total ) > 0.01 ) {
+            throw new \RuntimeException( 'مبلغ پرداخت کامل کیف پول معتبر نیست.' );
         }
+        $record = ( new \IMAOCustom\Services\WalletCheckoutLedger() )->debit( (int) $order->get_id(), $user_id, $original_total );
+        $deduct = (float) $record['amount'];
+        $balance_before = (float) $record['balance_before'];
+        $balance_after = (float) $record['balance_after'];
 
         $breakdown = [
             'wallet_balance_before' => $balance_before,
@@ -454,7 +483,8 @@ class Wallet {
             $order->update_meta_data( self::META_BALANCE_AFTER, $balance_after );
             $order->update_meta_data( self::META_GATEWAY_DUE, 0 );
         }
-
+        // Persist the committed debit before firing gateway/tuition callbacks.
+        $order->save();
         if ( method_exists( $order, 'payment_complete' ) ) {
             $order->payment_complete();
         }
@@ -470,10 +500,13 @@ class Wallet {
         }
         $user_id = $order->get_customer_id();
         $used    = (float) $order->get_meta( self::META_USED );
-        if ( $used > 0 ) {
-            self::add_balance( $user_id, $used );
-            self::add_log( $user_id, $used, 'بازگشت وجه سفارش لغو شده #' . $order_id );
+        $processed = (string) $order->get_meta( self::META_PROCESSED );
+        $breakdown = (array) $order->get_meta( self::META_BREAKDOWN );
+        $deducted = isset( $breakdown['wallet_deducted'] ) ? (float) $breakdown['wallet_deducted'] : $used;
+        if ( $used > 0 && $processed === 'completed' && $deducted > 0 ) {
+            ( new \IMAOCustom\Services\WalletCheckoutLedger() )->refund( $order_id, (int) $user_id, min( $used, $deducted ), true );
             $order->delete_meta_data( self::META_USED );
+            $order->update_meta_data( self::META_PROCESSED, 'refunded' );
             $order->save();
         }
     }
@@ -488,15 +521,9 @@ class Wallet {
         }
         $url = plugin_dir_url( dirname( __DIR__, 2 ) );
         wp_enqueue_style( 'dt-css', $url . 'assets/css/jquery.dataTables.min.css' );
-        wp_enqueue_style( 'dt-buttons-css', 'https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css', [ 'dt-css' ], '2.4.2' );
-
         wp_enqueue_script( 'dt-js', $url . 'assets/js/jquery.dataTables.min.js', [ 'jquery' ], null, true );
-        wp_enqueue_script( 'dt-buttons', 'https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js', [ 'dt-js' ], '2.4.2', true );
-        wp_enqueue_script( 'dt-jszip', 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js', [ 'dt-buttons' ], '3.10.1', true );
-        wp_enqueue_script( 'dt-buttons-html5', 'https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js', [ 'dt-jszip' ], '2.4.2', true );
-        wp_enqueue_script( 'dt-buttons-print', 'https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js', [ 'dt-buttons' ], '2.4.2', true );
-
-        wp_register_script( 'crm-wallet-manager', $url . 'assets/js/wallet-manager.js', [ 'jquery', 'dt-buttons-print' ], '1.1.0', true );
+        $script = dirname( __DIR__, 3 ) . '/assets/js/wallet-manager.js';
+        wp_register_script( 'crm-wallet-manager', $url . 'assets/js/wallet-manager.js', [ 'jquery', 'dt-js' ], is_file( $script ) ? (string) filemtime( $script ) : null, true );
         wp_localize_script( 'crm-wallet-manager', 'crmWalletManager', [
             'ajaxUrl'   => admin_url( 'admin-ajax.php' ),
             'ajaxNonce' => wp_create_nonce( 'crm_wallet_manager_table' ),
@@ -530,7 +557,9 @@ class Wallet {
             }
         }
         echo '<div class="wrap"><h1>مدیریت کیف پول کاربران</h1>';
-        echo '<table id="crm-wallet-table" class="widefat striped nowrap" style="width:100%">'
+        $directory = new \IMAOCustom\Services\Admin\BasicInfoTable( true );
+        $directory->render_filters();
+        echo '<table id="crm-wallet-table" class="widefat striped nowrap" style="width:100%"' . $directory->attributes() . '>'
             . '<thead><tr><th>ردیف</th><th>نام</th><th>نام خانوادگی</th><th>استان</th><th>شهرستان</th><th>وضعیت</th><th>تاریخ عضویت</th><th>موجودی</th><th>شماره کارت</th><th>شماره شبا</th><th>مبلغ</th><th>پرداخت بابت</th><th>عملیات</th></tr></thead>'
             . '<tbody></tbody>'
             . '</table></div>';
@@ -543,43 +572,19 @@ class Wallet {
 
         check_ajax_referer( 'crm_wallet_manager_table' );
 
-        $draw   = isset( $_POST['draw'] ) ? (int) $_POST['draw'] : 0;
-        $start  = isset( $_POST['start'] ) ? max( 0, (int) $_POST['start'] ) : 0;
-        $length = isset( $_POST['length'] ) ? (int) $_POST['length'] : 50;
-        $length = $length === -1 ? -1 : ( $length > 0 ? $length : 50 );
-
-        $search_value = isset( $_POST['search']['value'] ) ? sanitize_text_field( wp_unslash( $_POST['search']['value'] ) ) : '';
-        $order        = $_POST['order'][0] ?? [ 'column' => 3, 'dir' => 'desc' ];
-        $order_col    = isset( $order['column'] ) ? (int) $order['column'] : 3;
-        $order_dir    = ( isset( $order['dir'] ) && strtolower( $order['dir'] ) === 'asc' ) ? 'ASC' : 'DESC';
-
-        $args = [
-            'number'      => $length,
-            'count_total' => true,
-            'fields'      => [ 'ID', 'display_name', 'user_email', 'user_registered' ],
-            'orderby'     => 'display_name',
-            'order'       => $order_dir,
-        ];
-
-        if ( $length !== -1 ) {
-            $args['offset'] = $start;
+        try {
+            $response = ( new \IMAOCustom\Services\Admin\BasicInfoTable( true ) )->page( $_POST );
+            $response['data'] = $this->wallet_manager_rows( $response['users'], max( 0, (int) ( $_POST['start'] ?? 0 ) ) );
+            unset( $response['users'] );
+        } catch ( \InvalidArgumentException $error ) {
+            $response = [ 'draw' => max( 0, (int) ( $_POST['draw'] ?? 0 ) ), 'recordsTotal' => 0, 'recordsFiltered' => 0, 'data' => [], 'error' => $error->getMessage() ];
         }
+        wp_send_json( $response );
+    }
 
-        if ( $search_value !== '' ) {
-            $args['search']          = '*' . $search_value . '*';
-            $args['search_columns']  = [ 'user_email', 'user_nicename', 'display_name' ];
-        }
-
-        if ( $order_col === 7 ) {
-            $args['orderby']   = 'meta_value_num';
-            $args['meta_key']  = WalletHelper::get_meta_key();
-            $args['meta_type'] = 'NUMERIC';
-        }
-
-        $query          = new \WP_User_Query( $args );
-        $total_users    = (int) $query->get_total();
-        $filtered_total = $total_users;
-        $users          = $query->get_results();
+    /** Render only the requested users; exports omit adjustment controls. */
+    public function wallet_manager_rows( array $users, int $start = 0, bool $export = false ): array {
+        $provinces = CityMap::get_provinces();
         $nonce_field_tpl = function (): string {
             return wp_nonce_field( 'crm_wallet_adj_nonce', '_wpnonce', true, false );
         };
@@ -587,6 +592,26 @@ class Wallet {
         $rows = [];
         foreach ( $users as $index => $user ) {
             $balance    = self::get_balance( $user->ID );
+
+
+            $first_name = $this->first_user_meta( (int) $user->ID, [ 'first_name_fa', 'first_name', 'billing_first_name' ] );
+            $last_name  = $this->first_user_meta( (int) $user->ID, [ 'last_name_fa', 'last_name', 'billing_last_name' ] );
+            if ( $first_name === '' && $last_name === '' ) {
+                $first_name = (string) $user->display_name;
+            }
+            $card       = get_user_meta( $user->ID, 'card_number', true );
+            $iban       = get_user_meta( $user->ID, 'iban', true );
+            $province_code = (string) get_user_meta( $user->ID, 'residence_province', true );
+            $province      = $provinces[ $province_code ] ?? $province_code;
+            $city          = (string) get_user_meta( $user->ID, 'residence_city', true );
+            $status        = get_user_meta( $user->ID, 'imao_banned', true ) ? 'مسدود' : 'فعال';
+
+            if ( $export ) {
+                $rows[] = [ (string) $user->ID, $first_name, $last_name, $province, $city, $status,
+                    Date::to_jalali( (string) $user->user_registered ), (string) $balance, (string) $card, (string) $iban ];
+                continue;
+            }
+
             $form_id    = 'crm-wallet-form-' . $user->ID;
             $amount     = '<input type="number" class="crm-wallet-amount" name="amount" form="' . esc_attr( $form_id ) . '" step="0.01" required style="width:120px">';
             $memo       = '<input type="text" class="crm-wallet-memo" name="memo" form="' . esc_attr( $form_id ) . '" style="width:100%">';
@@ -598,18 +623,6 @@ class Wallet {
                         . '<button class="button" name="action" value="sub">کاهش</button> '
                         . '<button class="button" name="action" value="set">تنظیم موجودی</button>'
                         . '</form>';
-
-            $first_name = $this->first_user_meta( (int) $user->ID, [ 'first_name_fa', 'first_name', 'billing_first_name' ] );
-            $last_name  = $this->first_user_meta( (int) $user->ID, [ 'last_name_fa', 'last_name', 'billing_last_name' ] );
-            if ( $first_name === '' && $last_name === '' ) {
-                $first_name = (string) $user->display_name;
-            }
-            $card       = get_user_meta( $user->ID, 'card_number', true );
-            $iban       = get_user_meta( $user->ID, 'iban', true );
-            $province_code = (string) get_user_meta( $user->ID, 'residence_province', true );
-            $province      = CityMap::get_provinces()[ $province_code ] ?? $province_code;
-            $city          = (string) get_user_meta( $user->ID, 'residence_city', true );
-            $status        = get_user_meta( $user->ID, 'imao_banned', true ) ? 'مسدود' : 'فعال';
 
             $rows[] = [
                 'row_number'  => $start + $index + 1,
@@ -629,12 +642,7 @@ class Wallet {
             ];
         }
 
-        wp_send_json( [
-            'draw'            => $draw,
-            'recordsTotal'    => $total_users,
-            'recordsFiltered' => $filtered_total,
-            'data'            => $rows,
-        ] );
+        return $rows;
     }
 
     /** @param string[] $keys */

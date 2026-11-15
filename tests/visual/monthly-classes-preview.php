@@ -14,10 +14,17 @@ function is_user_logged_in() { return true; }
 function get_current_user_id() { return 1; }
 function wp_get_current_user() { return get_userdata( 1 ); }
 function get_userdata( $id ) { return $id === 1 ? (object) [ 'ID' => 1, 'display_name' => 'مربی نمونه', 'roles' => [ 'subscriber', 'coach' ] ] : false; }
-function get_user_meta( $id, $key, $single = true ) { return [ 'coach_id' => 1, 'identity_verified_professional' => 'approved' ][ $key ] ?? ''; }
+function get_user_meta( $id, $key, $single = true ) { return [ 'coach_id' => 1, 'identity_verified_professional' => 'approved', 'birth_date' => '1370/01/01' ][ $key ] ?? ''; }
+function current_user_can( $capability ) { return false; }
+function get_terms( $args ) { return [ get_term( 71, 'age_category' ) ]; }
+function get_term( $id, $taxonomy ) { return $id === 71 ? (object) [ 'term_id' => 71, 'parent' => 0, 'name' => 'بزرگسالان', 'taxonomy' => 'age_category' ] : false; }
+function get_term_meta( $id, $key, $single = true ) { return [ 'age_start' => '18', 'age_end' => '80' ][ $key ] ?? ''; }
+function is_wp_error( $value ) { return false; }
 function get_post_meta( $id, $key, $single = true ) {
     $data = [
-        51 => [ '_class_coach_id' => 1, '_class_club_id' => 61, '_class_fee' => 250000, '_class_approved' => 'yes' ],
+        51 => [ '_class_coach_id' => 1, '_class_club_id' => 61, '_class_fee' => 250000, '_class_approved' => 'yes',
+            '_class_weekdays' => [ 'saturday', 'monday', 'wednesday' ], '_class_type' => 'semi-private',
+            '_class_age_category' => 71, '_class_start_time' => '18:00', '_class_end_time' => '19:30' ],
         61 => [ 'club_province' => 'THR', 'club_city' => 'تهران' ],
     ];
     return $data[ $id ][ $key ] ?? '';
@@ -47,6 +54,7 @@ function absint( $value ) { return abs( (int) $value ); }
 function wp_unique_id( $prefix = '' ) { static $index = 0; return $prefix . ++$index; }
 function wp_unslash( $value ) { return stripslashes( $value ); }
 function selected( $a, $b, $echo = true ) { $text = $a == $b ? 'selected' : ''; if ( $echo ) echo $text; return $text; }
+function checked( $a, $b, $echo = true ) { $text = $a == $b ? 'checked' : ''; if ( $echo ) echo $text; return $text; }
 function remove_query_arg( $keys ) { return '/my-account/monthly-class-list/'; }
 function add_query_arg( $args, $value = null, $url = '' ) { return ( $url ?: '/my-account/monthly-class-list/' ) . '?' . http_build_query( is_array( $args ) ? $args : [ $args => $value ] ); }
 function wp_parse_url( $url, $component ) { return parse_url( $url, $component ); }
@@ -67,4 +75,4 @@ $classes = new IMAOCustom\Services\MonthlyClasses();
 <?php echo $classes->classes_shortcode(); ?>
 <?php echo $classes->directory_shortcode(); ?>
 <?php echo $classes->submission_shortcode(); ?>
-<script src="/assets/js/monthly-classes.js"></script></body></html>
+<script src="/assets/js/monthly-classes.js"></script><script src="/assets/js/monthly-class-weekdays.js"></script></body></html>

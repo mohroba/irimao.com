@@ -144,6 +144,7 @@ class MonthlyTuition {
     }
 
     public static function checkout_snapshot( int $class_id, int $user_id ): array {
+        MonthlyClasses::assert_student_eligible( $class_id, $user_id );
         $class = get_post( $class_id );
         $coach = (int) get_post_meta( $class_id, '_class_coach_id', true );
         $club = (int) get_post_meta( $class_id, '_class_club_id', true );

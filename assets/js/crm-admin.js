@@ -41,22 +41,51 @@ jQuery(function ($) {
   }
 
  /* جدول اطلاعات پایه */
-  $('#crm-basic-table').DataTable({
-    pageLength: 20,              // تعداد ردیف در هر صفحه
-    responsive: true,
-    stateSave: true,             // به خاطر سپردن صفحه و فیلتر
-    language: {
-      search: "جستجو:",
-      lengthMenu: "نمایش _MENU_ ردیف",
-      info: "صفحه _PAGE_ از _PAGES_",
-      infoEmpty: "بدون داده",
-      paginate: { next: "بعدی", previous: "قبلی" },
-      zeroRecords: "داده‌ای یافت نشد"
-    }
-  });
+  const $basic = $('#crm-basic-table');
+  if ($basic.length) {
+    const basicTable = $basic.DataTable({
+      pageLength: 25, lengthMenu: [15, 25, 50, 100],
+      serverSide: true, processing: true, searchDelay: 500,
+      order: [[0, 'desc']], scrollX: true,
+      columnDefs: [{targets: [0, 1, 3], orderable: true}, {targets: '_all', orderable: false}],
+      ajax: {
+        url: $basic.data('directoryUrl'), type: 'POST',
+        data: function (data) {
+          $('.imao-directory-filters').serializeArray().forEach(function (item) { data[item.name] = item.value; });
+          data.action = 'imao_basic_rows';
+          data.nonce = $basic.data('nonce');
+        }
+      },
+      language: {search: 'جستجو:', lengthMenu: 'نمایش _MENU_ ردیف', info: 'نمایش _START_ تا _END_ از _TOTAL_', zeroRecords: 'داده‌ای یافت نشد', paginate: {next: 'بعدی', previous: 'قبلی'}}
+    });
+    bindDirectoryControls(basicTable, $basic);
+  }
+
+  function bindDirectoryControls(api, $table) {
+    $('.imao-directory-filters').on('submit', function (event) {
+      event.preventDefault();
+      api.ajax.reload();
+    }).on('reset', function () {
+      window.setTimeout(function () { api.search('').ajax.reload(); }, 0);
+    });
+    $('.imao-directory-export').on('click', function () {
+      const form = $('<form>', {method: 'POST', action: $table.data('exportUrl'), target: '_blank'});
+      const order = api.order()[0] || [0, 'desc'];
+      const fields = $('.imao-directory-filters').serializeArray().concat([
+        {name: 'action', value: $table.data('exportAction')},
+        {name: 'nonce', value: $table.data('nonce')},
+        {name: 'format', value: $(this).data('format')},
+        {name: 'search_text', value: api.search()},
+        {name: 'sort_column', value: order[0]}, {name: 'sort_dir', value: order[1]}
+      ]);
+      fields.forEach(function (field) { $('<input>', {type: 'hidden', name: field.name, value: field.value}).appendTo(form); });
+      form.appendTo(document.body).trigger('submit').remove();
+    });
+  }
 
   /* جدول هویت حرفه‌ای */
-  const professionalTable = $('#crm-prof-table').DataTable({
+  const $professional = $('#crm-prof-table');
+  const professionalTable = $professional.length ? $professional.DataTable({
     pageLength: 15,
     serverSide: true,
     processing: true,
@@ -84,9 +113,9 @@ jQuery(function ($) {
     drawCallback: function () {
       initializeRoleSelects(this.api().table().body());
     }
-  });
+  }) : null;
 
-  initializeRoleSelects(professionalTable.table().body());
+  if (professionalTable) initializeRoleSelects(professionalTable.table().body());
 
   $('#imao-prof-filters').on('submit', function (event) {
     event.preventDefault();

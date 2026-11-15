@@ -138,7 +138,7 @@
 
     function enhance($table) {
         // Server-side grids provide their own full-dataset filters and exports.
-        if ($table.attr('data-prof-url')) return;
+        if ($table.attr('data-prof-url') || $table.attr('data-directory-url')) return;
         if ($table.data('imaoGridReady')) return;
         $table.data('imaoGridReady', true);
 

@@ -5,6 +5,7 @@ namespace IMAOCustom\Services\Admin {
     function get_users() { return [ (object) ['ID' => 1, 'display_name' => 'کاربر', 'user_email' => 'user@example.com'] ]; }
     function admin_url( $url = '' ) { return $url ?: '/wp-admin/'; }
     function esc_html( $text ) { return $text; }
+    function esc_attr( $text ) { return $text; }
     function esc_url( $text ) { return $text; }
     function wp_create_nonce( $action ) { return 'valid'; }
     function wp_nonce_url( $url, $action ) { return $url . '&_wpnonce=valid'; }
@@ -41,14 +42,26 @@ class UserManagementTest extends TestCase {
         $this->assertArrayHasKey( 'billing_email', $fields );
     }
 
-    public function test_basic_info_page_displays_email(): void {
+    public function test_basic_info_page_renders_empty_server_side_grid(): void {
         $um = new UserManagement();
         ob_start();
         $um->basic_info_page();
         $html = ob_get_clean();
         $this->assertStringContainsString('ایمیل', $html);
-        $this->assertStringContainsString('user@example.com', $html);
-        $this->assertStringContainsString('ورود', $html);
+        $this->assertStringContainsString('data-directory-url=', $html);
+        $this->assertStringContainsString('<tbody></tbody>', $html);
+        $this->assertStringNotContainsString('user@example.com', $html);
+    }
+
+    public function test_basic_rows_preserve_email_and_actions_but_exports_omit_controls(): void {
+        $um = new UserManagement();
+        $users = [ (object) [ 'ID' => 1, 'display_name' => 'کاربر', 'user_email' => 'user@example.com', 'user_registered' => '2026-11-10 10:00:00' ] ];
+        $rows = $um->basic_rows( $users );
+        $export = $um->basic_rows( $users, true );
+        $this->assertContains( 'user@example.com', $export[0] );
+        $this->assertStringContainsString( 'edit_user=1', end( $rows[0] ) );
+        $this->assertStringContainsString( 'imao_login_as', end( $rows[0] ) );
+        $this->assertCount( count( $rows[0] ) - 1, $export[0] );
     }
 
     public function test_login_as_user_sets_auth_cookie_and_redirects(): void {

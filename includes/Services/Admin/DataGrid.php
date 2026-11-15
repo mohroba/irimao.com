@@ -29,7 +29,7 @@ class DataGrid
         }
 
         $url = plugin_dir_url(dirname(__DIR__, 2)) . 'assets/';
-        if ($page === 'imao-prof-identity') {
+        if (in_array($page, ['imao-prof-identity', 'imao-basic-info', 'crm-wallet-manager'], true)) {
             // Its own server-side grid exports on the server, without Buttons/JSZip.
             wp_enqueue_style('imao-admin-data-grid', $url . 'css/admin-data-grid.css', [], '1.1.1');
             wp_enqueue_style('imao-jalali-datepicker', $url . 'css/jalalidatepicker.min.css', [], '1.0.0');

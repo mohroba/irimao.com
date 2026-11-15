@@ -66,9 +66,11 @@ class WalletSaveUsedWalletFallbackTest extends TestCase {
         $this->assertSame( 0.0, $order->total );
         $this->assertSame( 20000.0, $order->meta['crm_wallet_planned_use'] );
         $this->assertSame( 0.0, $order->meta['crm_wallet_gateway_due'] );
-        $this->assertTrue( $order->completed );
-        $this->assertTrue( $order->saved );
-        $this->assertSame( 0.0, $order->meta['crm_wallet_balance_after'] );
+        $this->assertFalse( $order->completed );
+        $this->assertFalse( $order->saved );
+        $this->assertSame( 20000.0, (float) $GLOBALS['test_user_meta'][5]['_wallet_balance'] );
+        $this->assertSame( 'pending', $order->meta['crm_wallet_processed'] );
+        $this->assertArrayNotHasKey( 'crm_wallet_balance_after', $order->meta );
     }
 
     public function test_partial_wallet_use_sets_remaining_gateway_amount(): void {

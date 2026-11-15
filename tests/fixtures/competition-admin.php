@@ -14,7 +14,9 @@ class WC_Order_Item_Product {
     public function delete_meta_data( $key ) { unset( $this->meta[$key] ); }
     public function save() {}
 }
-class FixtureOrder {
+class WC_Order {}
+class WC_Order_Refund { public function get_id() { return 999; } }
+class FixtureOrder extends WC_Order {
     public $id;
     public $item;
     public function __construct( int $id ) { $this->id = $id; $this->item = new WC_Order_Item_Product( $id ); }
@@ -30,7 +32,11 @@ $wpdb = new class {
     public function get_col( $sql ) { return range( 1, 45 ); }
 };
 function get_post_meta( $id, $key, $single = true ) { return $key === '_linked_product_id' ? 99 : ''; }
-function wc_get_orders( $args ) { return $GLOBALS['orders']; }
+function wc_get_orders( $args ) {
+    $GLOBALS['fixture_order_query'] = $args;
+    // Exercise the defensive guard even if an extension ignores the type filter.
+    return array_merge( [ new WC_Order_Refund(), new stdClass(), false ], $GLOBALS['orders'] );
+}
 function get_userdata( $id ) { return (object) [ 'display_name' => 'ورزشکار ' . $id ]; }
 function get_user_meta( $id, $key, $single = true ) { return [ 'first_name_fa' => 'ورزشکار', 'last_name_fa' => (string) $id, 'national_id' => '001234' . str_pad( (string) $id, 4, '0', STR_PAD_LEFT ), 'billing_phone' => '09120000000' ][$key] ?? ''; }
 function wp_nonce_field( ...$args ) {}
@@ -61,8 +67,20 @@ function check_ajax_referer( ...$args ) {}
 function nocache_headers() {}
 function wp_send_json( $data ) { $GLOBALS['fixture_json'] = $data; throw new RuntimeException( '__fixture_json__' ); }
 function wp_send_json_error( $data, $status = null ) { $GLOBALS['fixture_json_error'] = [ $data, $status ]; throw new RuntimeException( '__fixture_json__' ); }
+function wp_create_nonce( $action ) { return 'fixture-nonce'; }
+function get_the_title( $id ) { return 'Fixture competition'; }
+function get_edit_post_link( $id, $context ) { return '/edit.php'; }
+function wp_add_inline_script( $handle, $script ) { $GLOBALS['fixture_scripts'][$handle] = $script; }
 
 $service = new IMAOCustom\Services\CompetitionCards();
+if ( ( $argv[1] ?? '' ) === 'weigh-page' ) {
+    $_GET['competition_id'] = 13800;
+    ob_start();
+    $service->render_weigh_ins_page();
+    $html = ob_get_clean();
+    echo json_encode( [ 'html' => $html, 'script' => $GLOBALS['fixture_scripts']['imao-dt'] ], JSON_THROW_ON_ERROR );
+    exit;
+}
 if ( ( $argv[1] ?? '' ) === 'export' ) { $_GET['competition_id'] = 1; $service->export_dormitory(); }
 function render_fixture( $service ): string {
     ob_start();
@@ -80,6 +98,8 @@ verify_fixture( strpos( $html, 'مدیریت وزن‌کشی و صدور کار�
 $_POST = [ 'competition_id' => 1, 'draw' => 1, 'start' => 20, 'length' => 20, 'search' => [ 'value' => '' ] ];
 try { $service->ajax_weigh_ins_datatable(); } catch ( RuntimeException $e ) { if ( $e->getMessage() !== '__fixture_json__' ) throw $e; }
 verify_fixture( count( $GLOBALS['fixture_json']['data'] ) === 20, 'Server-side page two must return only 20 entries.' );
+verify_fixture( $GLOBALS['fixture_order_query']['type'] === 'shop_order', 'Order query must explicitly exclude refunds.' );
+verify_fixture( $GLOBALS['fixture_json']['recordsTotal'] === 45, 'Refunds and invalid objects must not count as registrations.' );
 verify_fixture( strpos( $GLOBALS['fixture_json']['data'][0]['actual_weight'], 'imao_weigh_ins[21][weight]' ) !== false, 'Page two starts at entry 21.' );
 verify_fixture( strpos( implode( ' ', array_column( $GLOBALS['fixture_json']['data'], 'actual_weight' ) ), 'imao_weigh_ins[1][weight]' ) === false, 'Page one inputs must be absent.' );
 verify_fixture( count( $service->dormitory_rows( 1 ) ) === 25, 'Dormitory export must span pages.' );
@@ -92,4 +112,4 @@ $service->save_weigh_ins( 1, new WP_Post() );
 verify_fixture( $orders[20]->item->get_meta( '_imao_dormitory_requested' ) === 'no', 'Unchecked dormitory must save on submitted row.' );
 verify_fixture( $orders[0]->item->get_meta( '_imao_dormitory_requested' ) === 'yes', 'Off-page checkbox state must be preserved.' );
 verify_fixture( $orders[20]->item->get_meta( '_imao_actual_weight' ) === 70.0, 'Weight must save on submitted row.' );
-echo "Competition admin integration: 9 checks passed.\n";
+echo "Competition admin integration: 11 checks passed.\n";

@@ -1,6 +1,8 @@
 <?php
 
 namespace IMAOCustom\Services {
+    function get_term( $id, $taxonomy ) { return (object) [ 'term_id' => 12, 'parent' => 0, 'name' => 'بزرگسالان' ]; }
+    function get_term_meta( $id, $key, $single = true ) { return $key === 'age_start' ? '18' : '50'; }
     function get_userdata( $id ) { return (object) [ 'ID' => 1, 'roles' => [ 'subscriber', 'coach' ] ]; }
     function get_user_meta( $id, $key, $single = true ) { return 'approved'; }
     function get_post( $id ) { return (object) [ 'post_type' => 'club_application', 'post_status' => 'publish', 'post_author' => 1 ]; }
@@ -30,7 +32,8 @@ namespace {
     final class MonthlyClassSubmissionTest extends TestCase {
         protected function setUp(): void {
             $_SERVER['REQUEST_METHOD'] = 'POST';
-            $_POST = [ 'class_start_time' => '10:00', 'class_end_time' => '11:00', 'class_fee' => '۱,۰۰۰,۰۰۰', 'class_club_id' => 5 ];
+            $_POST = [ 'class_start_time' => '10:00', 'class_end_time' => '11:00', 'class_fee' => '۱,۰۰۰,۰۰۰', 'class_club_id' => 5,
+                'class_weekdays' => [ 'saturday', 'monday' ], 'class_age_category' => '12', 'class_type' => 'public' ];
             unset( $GLOBALS['submitted_class'] );
         }
 
