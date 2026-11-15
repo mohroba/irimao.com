@@ -310,15 +310,22 @@ class Wallet {
     }
 
     public function order_needs_payment( bool $needs_payment, $order, array $valid_order_statuses ): bool {
-        if ( ! $needs_payment || ! $order || ! method_exists( $order, 'get_meta' ) ) {
+        if ( ! $order || ! method_exists( $order, 'get_meta' ) ) {
             return $needs_payment;
         }
 
         $planned_use = (float) $order->get_meta( self::META_PLANNED_USE );
         $gateway_due = (float) $order->get_meta( self::META_GATEWAY_DUE );
 
-        if ( $planned_use > 0 && $gateway_due <= 0.0 && $order->get_meta( self::META_PROCESSED ) === 'completed' ) {
-            return false;
+        if ( $planned_use > 0 && $gateway_due <= 0.0 ) {
+            if ( $order->get_meta( self::META_PROCESSED ) === 'completed' ) {
+                return false;
+            }
+            if ( method_exists( $order, 'get_status' ) && ! in_array( $order->get_status(), $valid_order_statuses, true ) ) {
+                return $needs_payment;
+            }
+            // A zero total caused by a planned wallet fee is not proof of payment.
+            return true;
         }
 
         return $needs_payment;
@@ -503,8 +510,11 @@ class Wallet {
         $processed = (string) $order->get_meta( self::META_PROCESSED );
         $breakdown = (array) $order->get_meta( self::META_BREAKDOWN );
         $deducted = isset( $breakdown['wallet_deducted'] ) ? (float) $breakdown['wallet_deducted'] : $used;
-        if ( $used > 0 && $processed === 'completed' && $deducted > 0 ) {
-            ( new \IMAOCustom\Services\WalletCheckoutLedger() )->refund( $order_id, (int) $user_id, min( $used, $deducted ), true );
+        $ledger = new \IMAOCustom\Services\WalletCheckoutLedger();
+        $record = $used > 0 ? $ledger->record( $order_id ) : null;
+        $actual = $record ? (float) $record['amount'] : min( $used, $deducted );
+        if ( $used > 0 && ( $record || $processed === 'completed' ) && $actual > 0 ) {
+            $ledger->refund( $order_id, (int) $user_id, $actual, $record === null );
             $order->delete_meta_data( self::META_USED );
             $order->update_meta_data( self::META_PROCESSED, 'refunded' );
             $order->save();

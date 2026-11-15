@@ -20,6 +20,15 @@ final class WalletCheckoutLedger {
         return $this->mutate( $order_id, $user_id, $amount, false, false );
     }
 
+    public function record( int $order_id ): ?array {
+        global $wpdb;
+        $record = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::table() . ' WHERE order_id=%d', $order_id ), ARRAY_A );
+        if ( $wpdb->last_error !== '' ) {
+            throw new \RuntimeException( 'خواندن سابقه تراکنش کیف پول ناموفق بود.' );
+        }
+        return $record ?: null;
+    }
+
     /** A legacy refund requires a verified completed debit, never a planned amount. */
     public function refund( int $order_id, int $user_id, float $amount, bool $legacy = false ): array {
         return $this->mutate( $order_id, $user_id, $amount, true, $legacy );

@@ -2,6 +2,7 @@
 
 namespace IMAOCustom\Services {
     class WalletCheckoutLedger {
+        public function record( $order ) { return $GLOBALS['committed_ledger_record'] ?? null; }
         public function debit( $order, $user, $amount ) {
             ++$GLOBALS['ledger_debits'];
             return [ 'amount' => $amount, 'balance_before' => 100, 'balance_after' => 100 - $amount ];
@@ -49,6 +50,7 @@ namespace {
         protected function setUp(): void {
             $GLOBALS['ledger_debits'] = $GLOBALS['ledger_refunds'] = $GLOBALS['enrollment_checks'] = 0;
             $GLOBALS['enrollment_error'] = false;
+            unset( $GLOBALS['committed_ledger_record'] );
             $GLOBALS['lifecycle_order'] = new LifecycleWalletOrder();
         }
 
@@ -84,6 +86,12 @@ namespace {
             $wallet->refund_wallet( 20 );
             $this->assertSame( 1, $GLOBALS['ledger_refunds'] );
             $this->assertSame( 'refunded', $GLOBALS['lifecycle_order']->meta['crm_wallet_processed'] );
+        }
+
+        public function test_committed_debit_can_be_refunded_after_a_metadata_save_failure(): void {
+            $GLOBALS['committed_ledger_record'] = [ 'amount' => 30, 'status' => 'debited' ];
+            ( new Wallet() )->refund_wallet( 20 );
+            $this->assertSame( 1, $GLOBALS['ledger_refunds'] );
         }
     }
 }

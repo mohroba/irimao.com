@@ -46,6 +46,7 @@ class WalletOrderNeedsPaymentTest extends TestCase {
             public function get_meta( $key ) { return [ 'crm_wallet_planned_use' => 100, 'crm_wallet_gateway_due' => 0, 'crm_wallet_processed' => 'pending' ][ $key ] ?? ''; }
         };
         $this->assertTrue( ( new Wallet() )->order_needs_payment( true, $order, [] ) );
+        $this->assertTrue( ( new Wallet() )->order_needs_payment( false, $order, [] ) );
     }
 }
 
